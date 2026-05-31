@@ -1,0 +1,49 @@
+﻿# Python environment and caches
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Generated exports and local data
+gemini_daily_brief.json
+gemini_daily_brief.txt
+deep_dive_*.json
+deep_dive_*.txt
+market_intel_dump.txt
+market_memory.db
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# Agent scratch/backup artifacts
+*.codex_bak
+codex_workspace/
+dont-change-anything-but-you-are/
+
+# Local reference/model artifacts not suitable for a public repo
+Gemini Ref.txt
+Modelfile.*
+
+# Browser/page capture artifacts
+*_files/
+Arena _ Benchmark & Compare the Best AI Models.html
+Rith _ Google AI Studio.html
+
+# Logs and OS/editor clutter
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Research dump folders that are not runtime code
+groky/

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MarketBot — Warlord Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/dashboard/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header id="app-header">
+        <div class="header-left">
+            <h1>⚔️ WARLORD</h1>
+            <span class="header-sub" id="timestamp">Loading...</span>
+        </div>
+        <div class="header-right">
+            <span class="pipeline-badge" id="pipeline-time">—</span>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav id="tab-nav">
+        <button class="tab active" data-tab="prices" id="tab-prices">
+            <span class="tab-icon">📊</span>
+            <span class="tab-label">Market</span>
+        </button>
+        <button class="tab" data-tab="arsenal" id="tab-arsenal">
+            <span class="tab-icon">⚔️</span>
+            <span class="tab-label">Arsenal</span>
+        </button>
+        <button class="tab" data-tab="intel" id="tab-intel">
+            <span class="tab-icon">🛰️</span>
+            <span class="tab-label">Intel</span>
+        </button>
+        <button class="tab" data-tab="raw" id="tab-raw">
+            <span class="tab-icon">📋</span>
+            <span class="tab-label">Raw</span>
+        </button>
+    </nav>
+
+    <!-- Content Panels -->
+    <main id="content">
+        <!-- PRICES TAB -->
+        <section class="panel active" id="panel-prices">
+            <div class="section-header">
+                <h2>Asset Prices</h2>
+                <span class="badge" id="ticker-count">0 tickers</span>
+            </div>
+            <div class="card-grid" id="price-grid"></div>
+
+            <div class="section-header mt">
+                <h2>Technical Alerts</h2>
+                <span class="badge" id="alert-count">0</span>
+            </div>
+            <div id="tech-alerts-list" class="alert-list"></div>
+
+            <div class="section-header mt">
+                <h2>Sector Rotation</h2>
+            </div>
+            <div id="sector-rotation" class="info-card"></div>
+        </section>
+
+        <!-- ARSENAL TAB -->
+        <section class="panel" id="panel-arsenal">
+            <div class="section-header">
+                <h2>🎯 Gamma Sweeps</h2>
+                <span class="badge" id="gamma-count">0</span>
+            </div>
+            <div id="gamma-list" class="alert-list"></div>
+
+            <div class="section-header mt">
+                <h2>🔄 Backwardation</h2>
+            </div>
+            <div id="backwardation-list" class="alert-list"></div>
+
+            <div class="section-header mt">
+                <h2>🔮 Retail Contrarian</h2>
+            </div>
+            <div id="contrarian-list" class="alert-list"></div>
+
+            <div class="section-header mt">
+                <h2>📉 Options Flow</h2>
+            </div>
+            <div id="options-list" class="alert-list"></div>
+        </section>
+
+        <!-- INTEL TAB -->
+        <section class="panel" id="panel-intel">
+            <div class="section-header">
+                <h2>📰 Headlines</h2>
+            </div>
+            <div id="headlines-list" class="text-list"></div>
+
+            <div class="section-header mt">
+                <h2>🏛️ SEC Filings</h2>
+            </div>
+            <div id="sec-list" class="text-list"></div>
+
+            <div class="section-header mt">
+                <h2>💊 PDUFA Catalysts</h2>
+            </div>
+            <div id="pdufa-list" class="text-list"></div>
+
+            <div class="section-header mt">
+                <h2>⛏️ CEO.ca / Uranium</h2>
+            </div>
+            <div id="ceo-list" class="text-list"></div>
+
+            <div class="section-header mt">
+                <h2>💬 Social Whispers</h2>
+            </div>
+            <div id="whispers-list" class="text-list"></div>
+
+            <div class="section-header mt">
+                <h2>🐦 X/Twitter</h2>
+            </div>
+            <div id="twitter-list" class="text-list"></div>
+
+            <div class="section-header mt">
+                <h2>👤 Insider Clusters</h2>
+            </div>
+            <div id="insider-list" class="text-list"></div>
+        </section>
+
+        <!-- RAW TAB -->
+        <section class="panel" id="panel-raw">
+            <div class="section-header">
+                <h2>Raw Dump</h2>
+                <button class="copy-btn" id="copy-all-btn" onclick="copyRawDump()">📋 Copy All</button>
+            </div>
+            <pre class="raw-dump" id="raw-dump">Loading...</pre>
+        </section>
+    </main>
+
+    <!-- Floating Copy FAB -->
+    <button class="fab" id="fab-copy" onclick="copyRawDump()" title="Copy raw dump to clipboard">📋</button>
+
+    <script src="/dashboard/app.js"></script>
+</body>
+</html>

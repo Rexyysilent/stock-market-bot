@@ -1,0 +1,13 @@
+discord.py
+ollama
+praw
+yfinance
+requests
+beautifulsoup4
+python-dotenv
+pandas
+lxml
+numpy
+newsapi-python
+playwright
+feedparser
