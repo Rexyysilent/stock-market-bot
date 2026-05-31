@@ -79,6 +79,10 @@ See `docs/EXPORT_SCHEMA.md` for the JSON shape.
 
 For current limitations and planned improvements, see `docs/ROADMAP.md`.
 
+## License
+
+MIT License. See [LICENSE](LICENSE).
+
 ## Tests
 
 These are lightweight smoke/regression scripts, not a full pytest suite.
