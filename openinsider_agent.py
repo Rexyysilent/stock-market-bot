@@ -65,6 +65,7 @@ class OpenInsiderAgent:
             "fdlyh": "",
             "daysago": "",
             "xp": "1",
+            "xs": "1",
             "vl": "",
             "vh": "",
             "ocl": "",
