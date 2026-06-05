@@ -1,8 +1,10 @@
-﻿import requests
+import requests
+import time
 import re
 import xml.etree.ElementTree as ET
 import logging
 import os
+from html import unescape
 from copy import deepcopy
 from threading import Lock
 
@@ -52,15 +54,17 @@ class SocialAgent:
                 logger.error(f"PRAW auth failed, falling back to JSON API: {e}")
                 self.reddit = None
         else:
-            logger.info("Using public Reddit JSON API (set REDDIT_CLIENT_ID/SECRET in .env for better access)")
+            logger.info("Using Reddit RSS feeds (no API key needed — set REDDIT_CLIENT_ID/SECRET in .env for full PRAW access)")
 
-        self._set_health_value("reddit_mode", "praw" if self.reddit else "json")
+        self._last_reddit_rss_time = 0
+        self._set_health_value("reddit_mode", "praw" if self.reddit else "rss")
 
     def _empty_health(self):
         return {
             "reddit_mode": "unknown",
             "reddit_requests": 0,
             "reddit_status_counts": {},
+            "reddit_rss_requests": 0,
             "reddit_failures": [],
             "reddit_failures_omitted": 0,
             "rss_status_counts": {},
@@ -171,21 +175,24 @@ class SocialAgent:
                 except Exception as e:
                     logger.error(f"PRAW search r/{sub_name} for {ticker}: {e}")
         else:
-            # Fallback: JSON API
+            # Fallback: RSS search (no auth needed)
+            ns = {'atom': 'http://www.w3.org/2005/Atom'}
             for sub in search_subs:
                 try:
-                    url = f"https://www.reddit.com/r/{sub}/search.json?q={ticker}&restrict_sr=1&sort=new&limit=5"
-                    response = requests.get(url, headers=self.headers, timeout=5)
+                    self._rss_rate_wait()
+                    url = f"https://www.reddit.com/r/{sub}/search.rss?q={ticker}&restrict_sr=1&sort=new&limit=5"
+                    response = requests.get(url, headers=self.headers, timeout=10)
                     if response.status_code == 200:
-                        json_data = response.json()
-                        for post in json_data.get('data', {}).get('children', []):
-                            p = post['data']
-                            if not p.get('stickied') and not self._is_bot(p.get('title', '')):
-                                whispers.append(
-                                    f"[r/{sub}] {p['title']} (Score: {p.get('score', 0)} | Cmts: {p.get('num_comments', 0)})"
-                                )
+                        root = ET.fromstring(response.content)
+                        for entry in root.findall('atom:entry', ns):
+                            title_el = entry.find('atom:title', ns)
+                            title = title_el.text if title_el is not None else ''
+                            if title and not self._is_bot(title):
+                                whispers.append(f"[r/{sub}] {title}")
+                    else:
+                        logger.warning(f"Reddit RSS search returned {response.status_code} for r/{sub} q={ticker}")
                 except Exception as e:
-                    logger.error(f"Error searching r/{sub} for {ticker}: {e}")
+                    logger.error(f"Error searching r/{sub} for {ticker} via RSS: {e}")
 
         return whispers
 
@@ -223,11 +230,11 @@ class SocialAgent:
         return items
 
     def _fetch_reddit(self, subreddit, category, limit, min_score=0, min_comments=0):
-        """Fetch posts from a subreddit. Uses PRAW if available, else JSON API."""
+        """Fetch posts from a subreddit. Uses PRAW if available, else RSS feeds."""
         
         if self.reddit:
             return self._fetch_reddit_praw(subreddit, category, limit, min_score, min_comments)
-        return self._fetch_reddit_json(subreddit, category, limit, min_score, min_comments)
+        return self._fetch_reddit_rss(subreddit, category, limit, min_score, min_comments)
 
     def _fetch_reddit_praw(self, subreddit, category, limit, min_score=0, min_comments=0):
         """PRAW-based Reddit fetcher â€” authenticated, better rate limits."""
@@ -252,38 +259,73 @@ class SocialAgent:
         except Exception as e:
             logger.error(f"PRAW error fetching r/{subreddit}/{category}: {e}")
             self._record_source_failure("reddit_failures", f"r/{subreddit}/{category}", "praw_exception", e)
-            # Fallback to JSON on PRAW failure
-            data_list = self._fetch_reddit_json(subreddit, category, limit, min_score, min_comments)
+            # Fallback to RSS on PRAW failure
+            data_list = self._fetch_reddit_rss(subreddit, category, limit, min_score, min_comments)
         return data_list
 
-    def _fetch_reddit_json(self, subreddit, category, limit, min_score=0, min_comments=0):
-        """Public JSON API fallback â€” no auth needed, rate limited."""
-        url = f"https://www.reddit.com/r/{subreddit}/{category}.json?limit={limit}"
+    def _rss_rate_wait(self):
+        """Simple rate limiter for Reddit RSS — 1 req/sec to avoid 429s."""
+        elapsed = time.time() - self._last_reddit_rss_time
+        if elapsed < 1.0:
+            time.sleep(1.0 - elapsed)
+        self._last_reddit_rss_time = time.time()
+
+    def _fetch_reddit_rss(self, subreddit, category, limit, min_score=0, min_comments=0):
+        """RSS-based Reddit fetcher - no auth needed, no API key required.
+
+        Reddit RSS does not expose score/comment counts reliably, so keep the
+        high-traffic filters strict instead of pretending RSS can satisfy them.
+        """
+        source = f"r/{subreddit}/{category}"
+        rss_source = f"{source}/rss"
+        if min_score or min_comments:
+            self._record_source_failure(
+                "reddit_failures",
+                source,
+                "rss_skipped_threshold_filter",
+                "Reddit RSS lacks score/comment metadata for high-traffic filters.",
+            )
+            return []
+
+        url = f"https://www.reddit.com/r/{subreddit}/{category}.rss?limit={max(limit * 3, 10)}"
         data_list = []
         try:
-            self._bump_health("reddit_requests")
-            response = requests.get(url, headers=self.headers, timeout=5)
-            self._record_source_status("reddit_status_counts", f"r/{subreddit}/{category}", response.status_code)
+            self._rss_rate_wait()
+            self._bump_health("reddit_rss_requests")
+            response = requests.get(url, headers=self.headers, timeout=10)
+            self._record_source_status(
+                "reddit_status_counts", rss_source, response.status_code
+            )
             if response.status_code == 200:
-                json_data = response.json()
-                for post in json_data['data']['children']:
-                    p = post['data']
-                    if (not p.get('stickied')
-                            and not self._is_bot(p.get('title', ''))
-                            and p.get('score', 0) >= min_score
-                            and p.get('num_comments', 0) >= min_comments):
-                        data_list.append(
-                            f"[r/{subreddit}] {p.get('title', 'No title')} (Score: {p.get('score', 0)} | Cmts: {p.get('num_comments', 0)})"
-                        )
+                # Reddit RSS uses Atom format
+                ns = {'atom': 'http://www.w3.org/2005/Atom'}
+                root = ET.fromstring(response.content)
+                entries = root.findall('atom:entry', ns) or root.findall('.//entry')
+
+                for entry in entries:
+                    if len(data_list) >= limit:
+                        break
+
+                    title_el = entry.find('atom:title', ns)
+                    if title_el is None:
+                        title_el = entry.find('title')
+                    if title_el is None or not title_el.text:
+                        continue
+                    title = unescape(title_el.text).strip()
+
+                    if not title or self._is_bot(title):
+                        continue
+
+                    data_list.append(f"[r/{subreddit} RSS] {title} (via Reddit RSS)")
             elif response.status_code == 429:
-                logger.warning(f"Reddit rate limited on r/{subreddit}")
-                self._record_source_failure("reddit_failures", f"r/{subreddit}/{category}", response.status_code)
+                logger.warning(f"Reddit RSS rate limited on r/{subreddit}")
+                self._record_source_failure("reddit_failures", rss_source, response.status_code)
             else:
-                logger.warning(f"Reddit returned {response.status_code} for r/{subreddit}/{category}")
-                self._record_source_failure("reddit_failures", f"r/{subreddit}/{category}", response.status_code)
+                logger.warning(f"Reddit RSS returned {response.status_code} for r/{subreddit}/{category}")
+                self._record_source_failure("reddit_failures", rss_source, response.status_code)
         except Exception as e:
-            logger.error(f"Error fetching r/{subreddit}/{category}: {e}")
-            self._record_source_failure("reddit_failures", f"r/{subreddit}/{category}", "exception", e)
+            logger.error(f"Error fetching r/{subreddit}/{category} via RSS: {e}")
+            self._record_source_failure("reddit_failures", rss_source, "rss_exception", e)
         return data_list
 
     def _is_bot(self, text):
