@@ -39,6 +39,45 @@ WATCHLIST_DEFENSE = ["LMT", "NOC", "ITA"]
 # Market Gauges
 WATCHLIST_GAUGES = ["^VIX"]  # Fear gauge
 
+# Daily brief deep-dive focus ticker (the export builds a dedicated section for it)
+FOCUS_TICKER = "ROKU"
+
+# Universe metadata for the daily brief dataset (version is derived from the ticker list)
+UNIVERSE_NAME = "default-watchlist"
+
+# Company-name aliases for entity linking and headline relevance scoring.
+# Conservative: unambiguous names only (bare "crispr" or "gold" would false-hit).
+TICKER_ALIASES = {
+    "TSLA": ("tesla",),
+    "ROKU": ("roku",),
+    "PLTR": ("palantir",),
+    "CRSP": ("crispr therapeutics",),
+    "ACHR": ("archer aviation",),
+    "SHOP": ("shopify",),
+    "SCCO": ("southern copper",),
+    "NTLA": ("intellia",),
+    "FCX": ("freeport",),
+    "VRT": ("vertiv",),
+    "COIN": ("coinbase",),
+    "RIVN": ("rivian",),
+    "AMAT": ("applied materials",),
+    "VNDA": ("vanda",),
+    "UUUU": ("energy fuels",),
+    "CCJ": ("cameco",),
+    "NXE": ("nexgen",),
+    "DNN": ("denison",),
+    "RGNX": ("regenxbio",),
+    "LMT": ("lockheed",),
+    "NOC": ("northrop",),
+}
+
+# Macro themes for headline relevance scoring
+MACRO_KEYWORDS = [
+    "fed", "fomc", "rate cut", "rate hike", "interest rate", "inflation", "cpi",
+    "tariff", "recession", "treasury", "yield", "opec", "crude", "uranium",
+    "fda", "earnings", "layoffs", "china", "semiconductor", "crypto", "bitcoin",
+]
+
 # All tickers combined (deduplicated, preserves order)
 _all = (WATCHLIST_STOCKS + WATCHLIST_COMMODITIES + WATCHLIST_URANIUM
         + WATCHLIST_DEFENSE + WATCHLIST_VULTURE + WATCHLIST_GAUGES)

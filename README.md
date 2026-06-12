@@ -13,7 +13,7 @@ Running the daily exporter writes two ignored local files:
 
 The JSON includes a top-level `health` block that reports source freshness, retries, fallbacks, and missing sections so a reviewer can tell whether the dump is complete or degraded.
 
-## Signals Covered
+## Indicators Covered
 
 - Market headlines from Google News RSS
 - Watchlist prices and technical indicators via yfinance
@@ -21,9 +21,9 @@ The JSON includes a top-level `health` block that reports source freshness, retr
 - OpenInsider HTML table scraping with pandas/BeautifulSoup fallback and staleness checks
 - X/Twitter-style narrative feeds through Nitter with Google News fallback
 - Reddit, Hacker News, RSS, and Substack social whisper feeds
-- Options flow, put/call ratios, and short-dated gamma sweep detection
+- Options flow, put/call ratios, and short-dated options activity detection
 - Earnings calendar dates, timing, and EPS estimates
-- Biotech PDUFA/clinical-trial catalysts and cash-runway alerts
+- Biotech PDUFA/clinical-trial catalysts and cash-runway notes
 - Sector rotation and physical-versus-paper commodity divergence checks
 
 ## Quickstart

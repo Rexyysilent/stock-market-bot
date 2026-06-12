@@ -1,5 +1,5 @@
 """
-Daily Export for Gemini Analysis — WARLORD EDITION
+Daily Export for Market Analysis
 ThreadPoolExecutor parallelized pipeline. All 12 steps fire concurrently.
 
 Output: 
@@ -9,8 +9,11 @@ Output:
 import sys
 sys.path.insert(0, '.')
 
+import hashlib
 import io
 import json
+import math
+import os
 import re
 import requests
 import numpy as np
@@ -41,13 +44,317 @@ from agents.watcher_agent import WatcherAgent
 from agents.research_agent import ResearchAgent
 from agents.twitter_agent import TwitterAgent
 from agents.sec_agent import SECAgent
-from config import ALL_TICKERS, WATCHLIST_STOCKS, WATCHLIST_VULTURE
+from config import (
+    ALL_TICKERS, WATCHLIST_STOCKS, WATCHLIST_VULTURE, FOCUS_TICKER,
+    UNIVERSE_NAME, TICKER_ALIASES,
+)
+
+SCHEMA_VERSION = "2.0"
+
+# P2-8: entity linking for social whispers
+CASHTAG_RE = re.compile(r"\$([A-Za-z]{1,5})\b")
 
 
 # Extract source from strings like '[r/wallstreetbets] Post title (Score: 123)'
 def parse_source_from_string(text):
     match = re.match(r'\[([^\]]+)\]', text)
     return match.group(1) if match else "unknown"
+
+
+def link_whisper_entities(whispers):
+    """P2-8: anchor whispers to universe tickers. Returns (linked, unanchored).
+
+    relevance: 1.0 = explicit cashtag, 0.8 = bare uppercase ticker symbol,
+    0.6 = company-name alias. Universe whitelist prevents false hits on
+    common acronyms (CEO, RSS, ...). Zero-ticker whispers are quarantined,
+    not deleted.
+    """
+    universe = {t.upper() for t in ALL_TICKERS}
+    linked, unanchored = [], []
+    for w in whispers:
+        text_lower = w.lower()
+        tickers = set()
+        relevance = 0.0
+        for m in CASHTAG_RE.finditer(w):
+            sym = m.group(1).upper()
+            if sym in universe:
+                tickers.add(sym)
+                relevance = max(relevance, 1.0)
+        for sym in universe:
+            if re.search(rf"(?<![A-Za-z0-9]){re.escape(sym)}(?![A-Za-z0-9])", w):
+                tickers.add(sym)
+                relevance = max(relevance, 0.8)
+        for sym, aliases in TICKER_ALIASES.items():
+            if sym in universe and any(alias in text_lower for alias in aliases):
+                tickers.add(sym)
+                relevance = max(relevance, 0.6)
+        rec = {"text": w, "source": parse_source_from_string(w)}
+        if tickers:
+            rec["tickers"] = sorted(tickers)
+            rec["relevance"] = relevance
+            linked.append(rec)
+        else:
+            unanchored.append(rec)
+    return linked, unanchored
+
+
+# P2-10: baseline-relative signal scoring
+BASELINE_STATE_FILE = os.path.join("state", "signal_baselines.json")
+BASELINE_WINDOW = 20      # trailing runs kept per (ticker, metric)
+BASELINE_MIN_POINTS = 5   # minimum prior readings before z-scores are emitted
+BASELINE_Z_ALERT = 2.0
+
+
+def update_baselines_and_score(options_flow, technicals, run_date):
+    """P2-10: score put/call and volume ratios against each ticker's own
+    trailing baseline instead of absolute thresholds.
+
+    Keeps a rolling window of readings (one per run date) in
+    state/signal_baselines.json. Returns (z_scores, baseline_alerts);
+    z is null until a ticker has BASELINE_MIN_POINTS prior readings.
+    """
+    try:
+        with open(BASELINE_STATE_FILE, encoding="utf-8") as f:
+            state = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        state = {}
+
+    z_scores = {}
+    alerts = []
+
+    def score_and_append(ticker, metric, value):
+        if not isinstance(value, (int, float)) or value != value:
+            return None
+        history = state.setdefault(ticker, {}).setdefault(metric, [])
+        prior = [h["value"] for h in history if h["date"] != run_date]
+        z = None
+        if len(prior) >= BASELINE_MIN_POINTS:
+            mean = sum(prior) / len(prior)
+            std = (sum((v - mean) ** 2 for v in prior) / len(prior)) ** 0.5
+            # floor the std at 5% of the mean so a flat history (std=0) still
+            # yields a finite z instead of swallowing genuine deviations
+            std = max(std, abs(mean) * 0.05)
+            if std > 1e-9:
+                z = round((value - mean) / std, 2)
+        history[:] = [h for h in history if h["date"] != run_date]
+        history.append({"date": run_date, "value": value})
+        history[:] = history[-BASELINE_WINDOW:]
+        return z
+
+    for ticker, flow in options_flow.items():
+        value = flow.get("put_call_vol_ratio")
+        z = score_and_append(ticker, "put_call_vol_ratio", value)
+        z_scores.setdefault(ticker, {})["put_call_vol_z"] = z
+        if z is not None and abs(z) >= BASELINE_Z_ALERT:
+            alerts.append({
+                "ticker": ticker,
+                "metric": "put_call_vol_ratio",
+                "value": value,
+                "z_score": z,
+                "signal": "BEARISH_VS_BASELINE" if z > 0 else "BULLISH_VS_BASELINE",
+            })
+
+    for ticker, tech in technicals.items():
+        value = tech.get("volume_ratio")
+        z = score_and_append(ticker, "volume_ratio", value)
+        z_scores.setdefault(ticker, {})["volume_ratio_z"] = z
+        if z is not None and abs(z) >= BASELINE_Z_ALERT:
+            alerts.append({
+                "ticker": ticker,
+                "metric": "volume_ratio",
+                "value": value,
+                "z_score": z,
+                "signal": "UNUSUAL_VOLUME_VS_BASELINE",
+            })
+
+    os.makedirs(os.path.dirname(BASELINE_STATE_FILE), exist_ok=True)
+    with open(BASELINE_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=1)
+    return z_scores, alerts
+
+
+def sanitize_nans(obj, path, nulled):
+    """Replace NaN/inf floats with None anywhere in the JSON tree.
+
+    Records the JSON path of every nulled field in `nulled` so the
+    data_quality block can surface them instead of silently dropping data.
+    """
+    if isinstance(obj, dict):
+        return {k: sanitize_nans(v, f"{path}.{k}", nulled) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [sanitize_nans(v, f"{path}[{i}]", nulled) for i, v in enumerate(obj)]
+    if isinstance(obj, (float, np.floating)) and (math.isnan(obj) or math.isinf(obj)):
+        nulled.append(path)
+        return None
+    return obj
+
+
+def strip_render_fields(record, fields=("premium_fmt",)):
+    """Drop presentation-only fields from a record before it enters the data layer."""
+    return {k: v for k, v in record.items() if k not in fields}
+
+
+ACTIVE_TRIAL_STATUSES = ("RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION")
+
+
+def build_clinical_catalysts(pdufa_catalysts, clinical_trials):
+    """Split the raw PDUFA scan into clinical_catalysts and biotech_news.
+
+    The raw scan mixes ClinicalTrials.gov NCT records with undated Google News
+    items (status "NEWS"). News items go to biotech_news. NCT records are merged
+    with the clinical_trials feed (deduped on nct_id), then filtered: keep only
+    active statuses and drop past-dated trials. days_until stays null for trials
+    with no parseable completion date.
+    """
+    biotech_news = []
+    merged = {}
+
+    for cat in pdufa_catalysts:
+        if cat.get('status') == 'NEWS' or not cat.get('nct_id'):
+            biotech_news.append({
+                'title': cat.get('title'),
+                'link': cat.get('link'),
+                'published': cat.get('target_date') or None,
+                'is_priority': cat.get('is_priority', False),
+                'source': cat.get('source'),
+            })
+            continue
+        merged[cat['nct_id']] = {
+            'nct_id': cat['nct_id'],
+            'title': cat.get('title'),
+            'sponsor': cat.get('sponsor'),
+            'status': cat.get('status'),
+            'phase': cat.get('phase') if cat.get('phase') not in ('', 'N/A') else None,
+            'target_date': cat.get('target_date') if cat.get('target_date') not in ('', 'TBD') else None,
+            'days_until': cat.get('days_until'),
+            'is_priority': cat.get('is_priority', False),
+            'source': 'ClinicalTrials.gov',
+            'link': cat.get('link'),
+        }
+
+    for trial in clinical_trials:
+        nct_id = trial.get('nct_id')
+        if not nct_id or nct_id == 'N/A' or nct_id in merged:
+            continue
+        merged[nct_id] = {
+            'nct_id': nct_id,
+            'title': trial.get('title'),
+            'sponsor': trial.get('sponsor'),
+            'status': trial.get('status'),
+            'phase': trial.get('phase') if trial.get('phase') not in ('', 'N/A') else None,
+            'target_date': None,
+            'days_until': None,
+            'is_priority': False,
+            'source': 'ClinicalTrials.gov',
+            'link': trial.get('link'),
+        }
+
+    catalysts = [
+        rec for rec in merged.values()
+        if rec['status'] in ACTIVE_TRIAL_STATUSES
+        and (rec['days_until'] is None or rec['days_until'] >= 0)
+    ]
+    catalysts.sort(key=lambda r: (
+        0 if r['is_priority'] else 1,
+        r['days_until'] if r['days_until'] is not None else 9999,
+    ))
+    return catalysts, biotech_news
+
+
+def build_cash_runway_record(fin):
+    """Pure-numeric cash runway record from a research_agent financials dict.
+
+    Sign convention: burn_musd positive = cash consumed per quarter
+    (negative = cash generated). runway_quarters is null when the company
+    is cash-flow positive (see cash_flow_positive) or unknown.
+    """
+    def _musd(val):
+        if val is None:
+            return None
+        return round(val / 1e6, 1)
+
+    runway = fin.get("runway_quarters")
+    cash_flow_positive = runway == 999
+    burn = fin.get("quarterly_burn")
+    return {
+        "ticker": fin.get("ticker"),
+        "risk_level": fin.get("risk_level"),
+        "cash_musd": _musd(fin.get("cash_and_equivalents")),
+        "burn_musd": _musd(-burn) if burn is not None else None,
+        "debt_musd": _musd(fin.get("total_debt")),
+        "runway_quarters": None if cash_flow_positive else runway,
+        "cash_flow_positive": cash_flow_positive,
+        "market_cap_musd": _musd(fin.get("market_cap")),
+    }
+
+
+# P3-13: key fields that identify a record within each section. record_id is a
+# hash of these, so the same underlying record gets the same id across days.
+RECORD_ID_KEYS = {
+    "headlines": ("text",),
+    "prices": ("ticker",),
+    "technicals": ("ticker",),
+    "sec_filings": ("accession_number",),
+    "clinical_catalysts": ("nct_id",),
+    "biotech_news": ("link", "title"),
+    "cash_runway": ("ticker",),
+    "cash_runway_alerts": ("ticker",),
+    "insider_clusters": ("ticker", "period_days"),
+    "earnings_calendar": ("ticker", "earnings_date"),
+    "ceo_ca_signals": ("link", "title"),
+    "social_whispers": ("text",),
+    "social_whispers_unanchored": ("text",),
+    "twitter_signals": ("link",),
+    "baseline_alerts": ("ticker", "metric"),
+}
+
+
+def _record_id(section, rec, keys):
+    basis = section + "|" + "|".join(str(rec.get(k, "")) for k in keys)
+    return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:16]
+
+
+def add_record_metadata(sections, generated_at):
+    """P3-13: stamp every list-section record with record_id and as_of.
+
+    as_of = when the underlying data was true. Falls back to the run timestamp
+    for sources that carry no event time of their own.
+    """
+    for section, keys in RECORD_ID_KEYS.items():
+        records = sections.get(section)
+        if not isinstance(records, list):
+            continue
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            rec["record_id"] = _record_id(section, rec, keys)
+            rec.setdefault("as_of", rec.get("filed_at") or generated_at)
+
+    # gamma sweeps live inside options_flow[ticker]
+    for ticker, flow in sections.get("options_flow", {}).items():
+        for sweep in flow.get("gamma_sweeps", []):
+            sweep["record_id"] = _record_id(
+                "gamma_sweeps", sweep, ("ticker", "strike", "type", "expiration")
+            )
+            sweep.setdefault("as_of", generated_at)
+
+
+def write_snapshot(json_data, run_dt):
+    """P3-14: point-in-time snapshot under briefs/YYYY-MM-DD/. Never overwrites.
+
+    The first run of a day owns gemini_daily_brief.json; later runs the same day get
+    timestamped siblings so no snapshot is ever rewritten or backfilled.
+    """
+    snap_dir = os.path.join("briefs", run_dt.strftime("%Y-%m-%d"))
+    os.makedirs(snap_dir, exist_ok=True)
+    snap_path = os.path.join(snap_dir, "gemini_daily_brief.json")
+    if os.path.exists(snap_path):
+        snap_path = os.path.join(
+            snap_dir, f"gemini_daily_brief_{run_dt.strftime('%H%M%S')}.json"
+        )
+    with open(snap_path, "w", encoding="utf-8") as f:
+        json.dump(json_data, f, indent=2, ensure_ascii=False, cls=NumpySafeEncoder, allow_nan=False)
+    return snap_path
 
 
 def _count_social_sources(whispers):
@@ -151,7 +458,7 @@ def build_export_health(
         item.get("account") == "GoogleNews" for item in twitter_data
     ) or twitter_health.get("fallback_used")
     if not twitter_data:
-        _add_unique(warnings, "Twitter/X signals are empty; narrative velocity is degraded.")
+        _add_unique(warnings, "Twitter/X indicators are empty; narrative coverage is degraded.")
     elif twitter_used_google:
         _add_unique(warnings, "Twitter/X used Google News fallback; treat as a slower narrative proxy.")
 
@@ -227,7 +534,7 @@ def build_export_health(
 
 def generate_daily_brief():
     print("=" * 60)
-    print("  WARLORD EDITION — Market Intelligence Daily Brief")
+    print("  Market Intelligence Daily Brief")
     print("  ThreadPoolExecutor Parallel Pipeline")
     print("=" * 60)
     
@@ -259,7 +566,7 @@ def generate_daily_brief():
         fut_options    = pool.submit(watcher_agent.get_all_options_flow)
         fut_earnings   = pool.submit(watcher_agent.get_earnings_calendar)
         fut_rotation   = pool.submit(watcher_agent.get_sector_rotation)
-        # Warlord Arsenal
+        # Market structure indicators
         fut_backwrd    = pool.submit(watcher_agent.check_backwardation)
         fut_contrarian = pool.submit(social_agent.get_retail_contrarian_index)
 
@@ -319,7 +626,7 @@ def generate_daily_brief():
     filename_txt = "gemini_daily_brief.txt"
     with open(filename_txt, "w", encoding="utf-8") as f:
         f.write("=" * 70 + "\n")
-        f.write(f"MARKET INTELLIGENCE DAILY BRIEF — WARLORD EDITION\n")
+        f.write(f"MARKET INTELLIGENCE DAILY BRIEF\n")
         f.write(f"Generated: {timestamp}\n")
         f.write(f"Pipeline Time: {elapsed:.1f}s (ThreadPoolExecutor)\n")
         f.write("=" * 70 + "\n\n")
@@ -350,17 +657,17 @@ def generate_daily_brief():
         for ticker, tech in technicals.items():
             f.write(f"- {ticker}: RSI={tech.get('rsi', '?')} | Trend={tech.get('trend', '?')}")
             if tech.get('alerts'):
-                f.write(f" | ALERTS: {', '.join(tech['alerts'])}")
+                f.write(f" | Notes: {', '.join(tech['alerts'])}")
             f.write("\n")
         f.write("\n")
         
-        # === WARLORD ARSENAL ===
+        # === MARKET STRUCTURE INDICATORS ===
         f.write("=" * 70 + "\n")
-        f.write("## WARLORD ARSENAL\n")
+        f.write("## MARKET STRUCTURE INDICATORS\n")
         f.write("=" * 70 + "\n\n")
 
-        # Gamma Sweeps
-        f.write("--- GAMMA SQUEEZE ATTEMPTS (Vol/OI > 5x, DTE ≤ 5, Premium > $500K) ---\n")
+        # Short-dated options activity
+        f.write("--- SHORT-DATED OPTIONS ACTIVITY (Vol/OI > 5x, DTE <= 5, Premium > $500K) ---\n")
         if all_gamma_sweeps:
             for sweep in all_gamma_sweeps:
                 f.write(
@@ -369,13 +676,13 @@ def generate_daily_brief():
                     f"Premium={sweep['premium_fmt']} (Exp: {sweep['expiration']})\n"
                 )
         else:
-            f.write("- No gamma squeeze attempts detected\n")
+            f.write("- No short-dated high Vol/OI options activity detected\n")
         f.write("\n")
 
         # Backwardation
         f.write("--- PHYSICAL vs PAPER DIVERGENCE (Backwardation) ---\n")
         for pair in backwardation.get("pairs", []):
-            status = "🚨 BACKWARDATION" if pair["backwardation"] else "✅ NORMAL"
+            status = "BACKWARDATION" if pair["backwardation"] else "NORMAL"
             f.write(
                 f"- [{status}] {pair['commodity']}: "
                 f"Physical ({pair['physical_ticker']}) {pair['physical_5d_chg']:+.1f}% vs "
@@ -387,10 +694,10 @@ def generate_daily_brief():
                 f.write(f"  {alert}\n")
         f.write("\n")
 
-        # Retail Contrarian Index
-        f.write("--- RETAIL CONTRARIAN INDEX (Inverse Sentiment) ---\n")
+        # Retail sentiment index
+        f.write("--- RETAIL SENTIMENT INDEX (Elevated Sentiment) ---\n")
         for sub in contrarian.get("subreddits", []):
-            status = "🚨 TOPPED" if sub["is_topped"] else "🟢 NORMAL"
+            status = "ELEVATED" if sub["is_topped"] else "BASELINE"
             f.write(
                 f"- [{status}] r/{sub['subreddit']}: "
                 f"{sub['euphoria_ratio']:.0%} euphoria "
@@ -403,7 +710,7 @@ def generate_daily_brief():
                 f.write(f"  {alert}\n")
         f.write("\n")
 
-        # === END WARLORD ARSENAL ===
+        # === END MARKET STRUCTURE INDICATORS ===
         
         f.write("## SEC EDGAR FILINGS (Source: SEC EDGAR)\n")
         f.write("-" * 40 + "\n")
@@ -418,10 +725,10 @@ def generate_daily_brief():
         f.write("Risk: GREEN (>6Q) | YELLOW (4-6Q) | RED (<4Q cash runway)\n")
         f.write("-" * 40 + "\n")
         
-        # Bankruptcy risk alerts first
+        # Cash-runway risk notes first
         alerts = pdufa_data.get('alerts', [])
         if alerts:
-            f.write("\n--- BANKRUPTCY RISK ALERTS ---\n")
+            f.write("\n--- CASH RUNWAY RISK NOTES ---\n")
             for alert in alerts:
                 if isinstance(alert, dict):
                     f.write(f"- {alert['message']}\n")
@@ -474,8 +781,8 @@ def generate_daily_brief():
             f.write(f"  Link: {t['link']}\n")
         f.write("\n")
 
-        # Dip Anticipation Signals
-        f.write("## DIP ANTICIPATION SIGNALS\n")
+        # Technical context indicators
+        f.write("## TECHNICAL CONTEXT INDICATORS\n")
         f.write("-" * 40 + "\n")
         
         # RSI Divergences
@@ -497,7 +804,7 @@ def generate_daily_brief():
             f.write("- No insider selling clusters detected\n")
         
         # Options Flow
-        f.write("\n--- OPTIONS FLOW (PUT/CALL SIGNALS) ---\n")
+        f.write("\n--- OPTIONS FLOW (PUT/CALL INDICATORS) ---\n")
         for ticker, data in options_flow.items():
             if data.get('alerts') or data.get('put_call_vol_ratio'):
                 f.write(f"- {ticker}: P/C Vol={data.get('put_call_vol_ratio', '?')} | P/C OI={data.get('put_call_oi_ratio', '?')} | Puts={data.get('total_put_volume', '?')} Calls={data.get('total_call_volume', '?')}\n")
@@ -507,7 +814,7 @@ def generate_daily_brief():
         
         # Sector Rotation
         f.write("\n--- SECTOR ROTATION ---\n")
-        f.write(f"- Signal: {sector_rotation.get('signal', 'N/A')}\n")
+        f.write(f"- Indicator: {sector_rotation.get('signal', 'N/A')}\n")
         f.write(f"- Growth 5d: {sector_rotation.get('growth_5d', 'N/A')} | Defensive 5d: {sector_rotation.get('defensive_5d', 'N/A')}\n")
         spread_5d = sector_rotation.get('spread_5d', 'N/A')
         if isinstance(spread_5d, (int, float)):
@@ -548,7 +855,7 @@ def generate_daily_brief():
             f.write(f"- {w}\n")
         f.write("\n")
         
-        f.write("## X/TWITTER SIGNALS (Source: X/Twitter via Nitter/RSS)\n")
+        f.write("## X/TWITTER INDICATORS (Source: X/Twitter via Nitter/RSS)\n")
         f.write("-" * 40 + "\n")
         for tw in twitter_data:
             f.write(f"- [{tw.get('account', tw.get('query', 'X'))}] {tw['title']}\n")
@@ -573,7 +880,7 @@ def generate_daily_brief():
             if roku_tech.get('rsi_divergence'):
                 f.write(f"- RSI Divergence: {roku_tech['rsi_divergence'].upper()}\n")
             if roku_tech.get('alerts'):
-                f.write(f"- ALERTS: {', '.join(roku_tech['alerts'])}\n")
+                f.write(f"- Notes: {', '.join(roku_tech['alerts'])}\n")
             if roku_tech.get('sma_50'):
                 f.write(f"- SMA-50: {roku_tech.get('sma_50', '?')} | SMA-200: {roku_tech.get('sma_200', '?')}\n")
         else:
@@ -588,12 +895,12 @@ def generate_daily_brief():
             f.write(f"- Total Put Volume: {roku_options.get('total_put_volume', '?')}\n")
             f.write(f"- Total Call Volume: {roku_options.get('total_call_volume', '?')}\n")
             if roku_options.get('gamma_sweeps'):
-                f.write("- 🎯 GAMMA SWEEPS:\n")
+                f.write("- Short-dated options activity:\n")
                 for sweep in roku_options['gamma_sweeps']:
                     f.write(f"  ${sweep['strike']}{sweep['type'][0]} DTE={sweep['dte']} Vol/OI={sweep['vol_oi_ratio']}x Premium={sweep['premium_fmt']}\n")
             if roku_options.get('alerts'):
                 for alert in roku_options['alerts']:
-                    f.write(f"  ALERT: {alert}\n")
+                    f.write(f"  Note: {alert}\n")
         else:
             f.write("- No significant options flow data\n")
         f.write("\n")
@@ -653,7 +960,7 @@ def generate_daily_brief():
                 f.write(f"- [{tw.get('account', tw.get('query', 'X'))}] {tw['title']}\n")
                 f.write(f"  Link: {tw['link']}\n")
         else:
-            f.write("- No ROKU-specific Twitter signals\n")
+            f.write("- No ROKU-specific Twitter indicators\n")
         f.write("\n")
         
         f.write("=" * 70 + "\n")
@@ -683,7 +990,7 @@ def generate_daily_brief():
             "total_earnings_tracked": len(earnings_cal),
             "sector_rotation_signal": sector_rotation.get('signal', 'N/A'),
             "rsi_divergences": len({t: d for t, d in technicals.items() if d.get('rsi_divergence')}),
-            # Warlord Arsenal
+            # Market structure indicators
             "total_gamma_sweeps": len(all_gamma_sweeps),
             "backwardation_alerts": len(backwardation.get('alerts', [])),
             "contrarian_alerts": len(contrarian.get('alerts', [])),
@@ -708,11 +1015,11 @@ def generate_daily_brief():
                 }
                 for ticker, tech in technicals.items()
             ],
-            # === WARLORD ARSENAL ===
+            # === MARKET STRUCTURE INDICATORS ===
             "gamma_sweeps": all_gamma_sweeps,
             "backwardation": backwardation,
             "retail_contrarian": contrarian,
-            # === END WARLORD ARSENAL ===
+            # === END MARKET STRUCTURE INDICATORS ===
             "sec_filings": [
                 {
                     "ticker": f["ticker"],
@@ -804,22 +1111,22 @@ def generate_daily_brief():
     print(f"  Total whispers:         {len(whispers)}")
     print(f"  Total headlines:        {len(headlines)}")
     print(f"  Total tickers:          {len(prices)}")
-    print(f"  Total CEO.ca signals:   {len(ceo_signals)}")
+    print(f"  Total CEO.ca indicators: {len(ceo_signals)}")
     print(f"  Total clinical trials:  {len(clinical_trials)}")
-    print(f"  Total Twitter signals:  {len(twitter_data)}")
+    print(f"  Total Twitter indicators: {len(twitter_data)}")
     print(f"  Total SEC filings:      {len(sec_filings)}")
-    print(f"  Total technical alerts: {sum(1 for t in technicals.values() if t.get('alerts'))}")
+    print(f"  Total technical notes:  {sum(1 for t in technicals.values() if t.get('alerts'))}")
     print(f"  Total PDUFA catalysts:  {len(pdufa_data.get('catalysts', []))}")
-    print(f"  Total cash runway alerts: {len(pdufa_data.get('alerts', []))}")
+    print(f"  Total cash runway notes: {len(pdufa_data.get('alerts', []))}")
     print(f"  Total insider clusters: {len(insider_clusters)}")
     print(f"  Total options flow:     {len({t: d for t, d in options_flow.items() if d.get('alerts')})}")
     print(f"  Total earnings tracked: {len(earnings_cal)}")
-    print(f"  Sector rotation signal: {sector_rotation.get('signal', 'N/A')}")
+    print(f"  Sector rotation indicator: {sector_rotation.get('signal', 'N/A')}")
     print(f"  RSI divergences:        {len({t: d for t, d in technicals.items() if d.get('rsi_divergence')})}")
-    print(f"  === WARLORD ARSENAL ===")
-    print(f"  Gamma sweeps:           {len(all_gamma_sweeps)}")
-    print(f"  Backwardation alerts:   {len(backwardation.get('alerts', []))}")
-    print(f"  Contrarian alerts:      {len(contrarian.get('alerts', []))}")
+    print(f"  === MARKET STRUCTURE INDICATORS ===")
+    print(f"  Short-dated options items: {len(all_gamma_sweeps)}")
+    print(f"  Backwardation notes:    {len(backwardation.get('alerts', []))}")
+    print(f"  Sentiment notes:        {len(contrarian.get('alerts', []))}")
     print(f"  Export health:          {health['status']} ({len(health['warnings'])} warnings)")
     for warning in health["warnings"][:5]:
         print(f"    - {warning}")

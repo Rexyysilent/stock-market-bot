@@ -254,8 +254,8 @@ class SECAgent:
 
     def detect_insider_clusters(self, days_back=30):
         """
-        Detect insider selling clusters — when multiple insiders sell
-        within a 14-day window. Strong bearish signal.
+        Detect insider selling clusters when multiple insiders sell
+        within a 14-day window. Treat as a risk indicator for review.
         Tries OpenInsider's parsed trade table first, then falls back to SEC EDGAR.
         Returns list of {ticker, insider_count, filings, alert_level}
         """

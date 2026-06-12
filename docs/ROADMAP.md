@@ -40,7 +40,7 @@ Nitter instances are unreliable. Some accounts may return `404`, `429`, empty XM
 Current mitigation:
 
 - The Twitter agent records which Nitter instance worked.
-- The export warns when Twitter falls back to Google News or returns no signals.
+- The export warns when Twitter falls back to Google News or returns no indicators.
 - The design treats X/Twitter as narrative velocity, not a hard dependency.
 
 Planned improvement:

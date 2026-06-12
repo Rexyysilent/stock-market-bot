@@ -122,7 +122,7 @@ class SocialAgent:
         for sub in SUBREDDITS_VOLATILE:
             vol_whispers = self._fetch_reddit(sub, "hot", limit=10, min_score=300, min_comments=100)
             if vol_whispers:
-                whispers.append(f"--- ðŸš¨ HIGH TRAFFIC ALERT in r/{sub} ---")
+                whispers.append(f"--- HIGH TRAFFIC NOTE in r/{sub} ---")
                 whispers.extend(vol_whispers)
 
         # 4. Scrape Hacker News
@@ -337,9 +337,9 @@ class SocialAgent:
     def _fetch_hacker_news(self, limit):
         """
         HN API â€” great for tech stocks (PLTR, TSLA, CRSP).
-        WARLORD UPGRADE: Structural Layoff Ratio.
-        Distinguishes Efficiency Buy (fire managers, hire AI engineers)
-        from Liquidation Sell (fire core product engineers).
+        Structural layoff context.
+        Distinguishes efficiency restructuring from deeper operational stress.
+
         """
         hn_list = []
         layoff_keywords = [
@@ -347,13 +347,13 @@ class SocialAgent:
             "hiring freeze", "workforce reduction", "downsizing", "restructuring",
             "job cuts", "let go", "severance"
         ]
-        # Efficiency Buy indicators â€” firing bloat, hiring builders
+        # Efficiency restructuring indicators - cost cuts paired with builder hiring
         efficiency_keywords = [
             "ai engineer", "ai hiring", "machine learning", "compute",
             "middle management", "managers", "restructuring to", "efficiency",
             "streamlin", "automat", "cost cutting", "reorganiz"
         ]
-        # Liquidation Sell indicators â€” firing the builders
+        # Operational stress indicators - cuts to core teams or shutdown language
         liquidation_keywords = [
             "core team", "product engineer", "entire team", "division shut",
             "office clos", "wind down", "bankruptcy", "chapter 11",
@@ -376,21 +376,21 @@ class SocialAgent:
                         title_lower = title.lower()
 
                         if any(kw in title_lower for kw in layoff_keywords):
-                            # Classify: Efficiency Buy vs Liquidation Sell
+                            # Classify restructuring context
                             is_efficiency = any(kw in title_lower for kw in efficiency_keywords)
                             is_liquidation = any(kw in title_lower for kw in liquidation_keywords)
 
                             if is_liquidation:
                                 hn_list.append(
-                                    f"[HackerNews] ðŸ”´ LIQUIDATION SELL: {title} (Score: {score})"
+                                    f"[HackerNews] Operational stress indicator: {title} (Score: {score})"
                                 )
                             elif is_efficiency:
                                 hn_list.append(
-                                    f"[HackerNews] ðŸŸ¢ EFFICIENCY BUY: {title} (Score: {score})"
+                                    f"[HackerNews] Efficiency restructuring indicator: {title} (Score: {score})"
                                 )
                             else:
                                 hn_list.append(
-                                    f"[HackerNews] ðŸ”´ LAYOFF SIGNAL: {title} (Score: {score})"
+                                    f"[HackerNews] Layoff indicator: {title} (Score: {score})"
                                 )
                         else:
                             hn_list.append(
@@ -403,14 +403,14 @@ class SocialAgent:
         return hn_list
 
     # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    # RETAIL CONTRARIAN INDEX â€” Inverse Sentiment Tracker
+    # RETAIL SENTIMENT INDEX - Elevated Sentiment Tracker
     # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     def get_retail_contrarian_index(self):
         """
         Measures retail euphoria in CONTRARIAN_SUBREDDITS.
-        When euphoria ratio exceeds threshold = immediate short-term top signal.
-        We measure the noise specifically so we can FADE it.
+        When euphoria ratio exceeds threshold, treat it as an elevated sentiment indicator.
+        We measure the noise so the reviewer can add context.
 
         Also pulls 4chan /biz/ threads via the official JSON API.
         """
@@ -445,10 +445,10 @@ class SocialAgent:
 
                 if sub_result["is_topped"]:
                     results["alerts"].append(
-                        f"ðŸš¨ INVERSE RETAIL TOP â€” r/{sub_name}: "
+                        f"Elevated retail euphoria - r/{sub_name}: "
                         f"{sub_result['euphoria_ratio']:.0%} euphoria ratio "
                         f"({sub_result['euphoric_posts']}/{sub_result['total_posts']} posts). "
-                        f"FADE THIS."
+                        f"Review with caution."
                     )
 
             except Exception as e:
@@ -469,13 +469,13 @@ class SocialAgent:
                 biz_ratio = biz_euphoric / len(biz_threads)
                 if biz_ratio >= CONTRARIAN_EUPHORIA_THRESHOLD:
                     results["alerts"].append(
-                        f"ðŸš¨ INVERSE RETAIL TOP â€” /biz/: "
-                        f"{biz_ratio:.0%} euphoria ratio. Anons are euphoric. FADE."
+                        f"Elevated retail euphoria - /biz/: "
+                        f"{biz_ratio:.0%} euphoria ratio. Review with caution."
                     )
         except Exception as e:
             logger.error(f"4chan /biz/ fetch error: {e}")
 
-        print(f"[SocialAgent] Retail Contrarian: {len(results['subreddits'])} subs scored, {len(results['alerts'])} alerts")
+        print(f"[SocialAgent] Retail sentiment: {len(results['subreddits'])} subs scored, {len(results['alerts'])} notes")
         return results
 
     def _fetch_4chan_biz(self, limit=15):
@@ -525,4 +525,3 @@ class SocialAgent:
             logger.error(f"Error fetching 4chan /biz/: {e}")
 
         return threads
-

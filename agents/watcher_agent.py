@@ -78,7 +78,7 @@ class WatcherAgent:
 
     def check_technical_indicators(self, ticker):
         """
-        Returns a dict of technical signals for a given ticker:
+        Returns a dict of technical indicators for a given ticker:
         - RSI (14-period)
         - Volume spike (current vs 20-day avg)
         - 52-week high/low proximity
@@ -102,18 +102,18 @@ class WatcherAgent:
             rsi = rsi_series.iloc[-1]
             signals["rsi"] = round(rsi, 1)
             if rsi >= RSI_OVERBOUGHT:
-                signals["alerts"].append(f"⚠️ RSI {rsi:.0f} — OVERBOUGHT")
+                signals["alerts"].append(f"RSI {rsi:.0f} - overbought condition")
             elif rsi <= RSI_OVERSOLD:
-                signals["alerts"].append(f"🔥 RSI {rsi:.0f} — OVERSOLD (potential buy)")
+                signals["alerts"].append(f"RSI {rsi:.0f} - oversold condition")
 
             # --- RSI Divergence ---
             divergence = self._detect_rsi_divergence(closes, rsi_series)
             if divergence:
                 signals["rsi_divergence"] = divergence
-                if divergence == "BEARISH":
-                    signals["alerts"].append("⚠️ BEARISH RSI DIVERGENCE — price up but momentum fading")
-                elif divergence == "BULLISH":
-                    signals["alerts"].append("🟢 BULLISH RSI DIVERGENCE — price down but momentum building")
+                if divergence == "DOWNSIDE":
+                    signals["alerts"].append("Downside RSI divergence - price up but momentum fading")
+                elif divergence == "UPSIDE":
+                    signals["alerts"].append("Upside RSI divergence - price down but momentum improving")
 
             # --- Volume spike ---
             avg_vol_20 = volumes.tail(20).mean()
@@ -156,14 +156,14 @@ class WatcherAgent:
                 prev_sma200 = closes.tail(201).head(200).mean()
 
                 if prev_sma50 < prev_sma200 and sma_50 > sma_200:
-                    signals["alerts"].append("✨ GOLDEN CROSS — 50 SMA crossed above 200 SMA")
+                    signals["alerts"].append("Golden cross - 50 SMA crossed above 200 SMA")
                 elif prev_sma50 > prev_sma200 and sma_50 < sma_200:
-                    signals["alerts"].append("💀 DEATH CROSS — 50 SMA crossed below 200 SMA")
+                    signals["alerts"].append("Death cross - 50 SMA crossed below 200 SMA")
 
                 if current_price > sma_50 > sma_200:
-                    signals["trend"] = "BULLISH (price > 50 SMA > 200 SMA)"
+                    signals["trend"] = "UPTREND (price > 50 SMA > 200 SMA)"
                 elif current_price < sma_50 < sma_200:
-                    signals["trend"] = "BEARISH (price < 50 SMA < 200 SMA)"
+                    signals["trend"] = "DOWNTREND (price < 50 SMA < 200 SMA)"
                 else:
                     signals["trend"] = "MIXED"
 
@@ -173,7 +173,7 @@ class WatcherAgent:
                 pct_change = ((current_price - open_price) / open_price) * 100
                 signals["daily_change_pct"] = round(pct_change, 2)
                 if abs(pct_change) >= PRICE_ALERT_PCT:
-                    direction = "📈 SURGING" if pct_change > 0 else "📉 DROPPING"
+                    direction = "RISING" if pct_change > 0 else "FALLING"
                     signals["alerts"].append(
                         f"{direction} {pct_change:+.1f}% intraday"
                     )
@@ -181,7 +181,7 @@ class WatcherAgent:
                 # --- Vulture alert (special drop threshold) ---
                 if ticker in self.vulture_list and pct_change <= -VULTURE_DROP_PCT:
                     signals["alerts"].insert(0,
-                        f"🦅 VULTURE ALERT — {ticker} down {pct_change:.1f}%! Potential buy-the-dip"
+                        f"PULLBACK WATCH - {ticker} down {pct_change:.1f}%; review setup and risk"
                     )
                     signals["vulture"] = True
 
@@ -239,20 +239,20 @@ class WatcherAgent:
         if "pct_from_52w_high" in s:
             lines.append(f"  52w High: {s['pct_from_52w_high']}%  |  52w Low: +{s.get('pct_from_52w_low', '?')}%")
         if s.get("vulture"):
-            lines.append("  🦅 VULTURE TARGET — watching for dip buy")
+            lines.append("  Pullback watchlist - review setup and risk")
         if s.get("alerts"):
-            lines.append("  🚨 " + " | ".join(s["alerts"]))
+            lines.append("  Notes: " + " | ".join(s["alerts"]))
         return "\n".join(lines)
 
     # ═══════════════════════════════════════════════════════════════════
-    # DIP ANTICIPATION — RSI DIVERGENCE
+    # TECHNICAL CONTEXT — RSI DIVERGENCE
     # ═══════════════════════════════════════════════════════════════════
 
     def _detect_rsi_divergence(self, closes, rsi_series, lookback=30):
         """
-        Detect bearish/bullish RSI divergence by comparing local peaks/troughs.
-        Bearish: price makes higher high, RSI makes lower high
-        Bullish: price makes lower low, RSI makes higher low
+        Detect downside/upside RSI divergence by comparing local peaks/troughs.
+        Downside: price makes higher high, RSI makes lower high
+        Upside: price makes lower low, RSI makes higher low
         """
         if len(closes) < lookback + 10 or len(rsi_series) < lookback + 10:
             return None
@@ -283,19 +283,19 @@ class WatcherAgent:
                     price_troughs.append((i, price_window[i]))
                     rsi_troughs.append((i, rsi_window[i]))
 
-            # Check bearish divergence: last 2 peaks — price higher, RSI lower
+            # Check downside divergence: last 2 peaks - price higher, RSI lower
             if len(price_peaks) >= 2 and len(rsi_peaks) >= 2:
                 p1, p2 = price_peaks[-2], price_peaks[-1]
                 r1, r2 = rsi_peaks[-2], rsi_peaks[-1]
                 if p2[1] > p1[1] and r2[1] < r1[1]:
-                    return "BEARISH"
+                    return "DOWNSIDE"
 
-            # Check bullish divergence: last 2 troughs — price lower, RSI higher
+            # Check upside divergence: last 2 troughs - price lower, RSI higher
             if len(price_troughs) >= 2 and len(rsi_troughs) >= 2:
                 p1, p2 = price_troughs[-2], price_troughs[-1]
                 r1, r2 = rsi_troughs[-2], rsi_troughs[-1]
                 if p2[1] < p1[1] and r2[1] > r1[1]:
-                    return "BULLISH"
+                    return "UPSIDE"
 
         except Exception as e:
             logger.error(f"RSI divergence detection error: {e}")
@@ -303,21 +303,21 @@ class WatcherAgent:
         return None
 
     # ═══════════════════════════════════════════════════════════════════
-    # DIP ANTICIPATION — OPTIONS FLOW (Put/Call Ratio)
+    # TECHNICAL CONTEXT — OPTIONS FLOW (Put/Call Ratio)
     # ═══════════════════════════════════════════════════════════════════
 
     def get_options_flow(self, ticker):
         """
-        WARLORD OPTIONS FLOW — Per-contract Vol/OI Gamma Squeeze Detection.
+        Options flow - per-contract Vol/OI activity detection.
         
         Scans ALL expirations within GAMMA_MAX_DTE (0-5 days).
         For each individual contract:
           - Computes vol_oi_ratio = volume / openInterest
           - Computes premium = lastPrice * volume * 100
-          - Flags GAMMA SQUEEZE ATTEMPT when:
+          - Flags short-dated high Vol/OI activity when:
             DTE <= 5 AND vol_oi_ratio > 5.0 AND premium > $500k
         
-        Also preserves aggregate P/C ratio as secondary signal.
+        Also preserves aggregate P/C ratio as a secondary indicator.
         """
         result = {"ticker": ticker, "alerts": [], "gamma_sweeps": []}
         today = datetime.now().date()
@@ -329,7 +329,7 @@ class WatcherAgent:
                 result["error"] = "No options data"
                 return result
 
-            # Aggregate totals for P/C ratio (secondary signal)
+            # Aggregate totals for P/C ratio (secondary indicator)
             total_call_vol = 0
             total_put_vol = 0
             total_call_oi = 0
@@ -375,7 +375,7 @@ class WatcherAgent:
                             total_put_vol += vol
                             total_put_oi += oi
 
-                        # === GAMMA SQUEEZE FILTER (0-5 DTE only) ===
+                        # === SHORT-DATED HIGH VOL/OI FILTER (0-5 DTE only) ===
                         if dte <= GAMMA_MAX_DTE and oi > 0 and vol > 0:
                             vol_oi_ratio = vol / oi
                             premium = price * vol * 100  # total premium flow
@@ -395,12 +395,12 @@ class WatcherAgent:
                                 }
                                 result["gamma_sweeps"].append(sweep)
                                 result["alerts"].append(
-                                    f"🎯 GAMMA SQUEEZE — {ticker} ${strike}{side[0]} "
+                                    f"Short-dated options activity - {ticker} ${strike}{side[0]} "
                                     f"DTE={dte} Vol/OI={vol_oi_ratio:.1f}x "
                                     f"Premium={sweep['premium_fmt']}"
                                 )
 
-            # === Aggregate P/C Ratio (secondary signal) ===
+            # === Aggregate P/C Ratio (secondary indicator) ===
             pc_vol_ratio = round(total_put_vol / total_call_vol, 2) if total_call_vol > 0 else 0
             pc_oi_ratio = round(total_put_oi / total_call_oi, 2) if total_call_oi > 0 else 0
 
@@ -412,16 +412,16 @@ class WatcherAgent:
             result["total_call_oi"] = int(total_call_oi)
 
             if pc_vol_ratio >= 2.0:
-                result["alerts"].append(f"🚨 P/C Vol {pc_vol_ratio:.1f} — HIGHLY BEARISH")
+                result["alerts"].append(f"P/C Vol {pc_vol_ratio:.1f} - strongly put-skewed")
             elif pc_vol_ratio >= PUT_CALL_ALERT_THRESHOLD:
-                result["alerts"].append(f"⚠️ P/C Vol {pc_vol_ratio:.1f} — BEARISH")
+                result["alerts"].append(f"P/C Vol {pc_vol_ratio:.1f} - put-skewed")
             elif 0 < pc_vol_ratio <= 0.5:
-                result["alerts"].append(f"🟢 P/C Vol {pc_vol_ratio:.1f} — BULLISH (calls dominating)")
+                result["alerts"].append(f"P/C Vol {pc_vol_ratio:.1f} - call-skewed")
 
             if pc_oi_ratio >= 2.0:
-                result["alerts"].append(f"🚨 P/C OI {pc_oi_ratio:.1f} — HEAVY PUT POSITIONING")
+                result["alerts"].append(f"P/C OI {pc_oi_ratio:.1f} - heavy put positioning")
             elif pc_oi_ratio >= PUT_CALL_ALERT_THRESHOLD:
-                result["alerts"].append(f"⚠️ P/C OI {pc_oi_ratio:.1f} — PUT HEAVY")
+                result["alerts"].append(f"P/C OI {pc_oi_ratio:.1f} - put-heavy positioning")
 
         except Exception as e:
             logger.error(f"Options flow error for {ticker}: {e}")
@@ -454,7 +454,7 @@ class WatcherAgent:
         """
         Compare physical commodity proxies vs paper ETF proxies.
         When physical trades significantly above paper = backwardation.
-        Backwardation = buyers panicking for immediate delivery = System Reset.
+        Backwardation can indicate elevated near-term physical demand.
         
         Pairs:
           - Uranium: SRUUF (Sprott Physical Trust) vs URA (ETF)
@@ -506,9 +506,9 @@ class WatcherAgent:
 
                 if entry["backwardation"]:
                     results["alerts"].append(
-                        f"🚨 BACKWARDATION — {commodity}: Physical ({phys_ticker}) outpacing "
+                        f"Backwardation indicator - {commodity}: Physical ({phys_ticker}) outpacing "
                         f"Paper ({paper_ticker}) by {spread:+.1f}% over 5d. "
-                        f"Buyers panicking for delivery."
+                        f"Physical proxy outperformance observed."
                     )
 
             except Exception as e:
@@ -518,7 +518,7 @@ class WatcherAgent:
         return results
 
     # ═══════════════════════════════════════════════════════════════════
-    # DIP ANTICIPATION — EARNINGS CALENDAR
+    # EVENT CONTEXT — EARNINGS CALENDAR
     # ═══════════════════════════════════════════════════════════════════
 
     def _parse_earnings_datetime(self, value):
@@ -701,13 +701,13 @@ class WatcherAgent:
         return earnings
 
     # ---------------------------------------------------------------
-    # DIP ANTICIPATION - SECTOR ROTATION
+    # MARKET REGIME CONTEXT - SECTOR ROTATION
     # ---------------------------------------------------------------
 
     def get_sector_rotation(self):
         """
         Compare growth vs defensive basket performance.
-        When defensives outperform growth = risk-off = dip signal.
+        When defensives outperform growth, it can indicate a more defensive market regime.
         """
         result = {"alerts": []}
 
@@ -744,7 +744,7 @@ class WatcherAgent:
         result["defensive_20d"] = defensive_20d
         result["spread_20d"] = spread_20d
 
-        # Determine rotation signal
+        # Determine rotation indicator
         if spread_5d > 3.0:
             result["signal"] = "RISK_OFF"
             result["alerts"].append(

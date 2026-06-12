@@ -37,7 +37,7 @@ class ResearchAgent:
     
     # ═══════════════════════════════════════════════════════════════════
     # CEO.CA PROXY (via Google News RSS - respects TOS)
-    # Warlord Filter: Regex extraction for geological reality
+    # Screening filter: regex extraction for geological context
     # ═══════════════════════════════════════════════════════════════════
 
     # Regex patterns for actual geological data (not promotional fluff)
@@ -80,7 +80,7 @@ class ResearchAgent:
     def _passes_drill_filter(self, grades):
         """
         Check if extracted grades meet minimum thresholds.
-        Returns True if the signal has structural alpha.
+        Returns True if the item passes the geological relevance filter.
         """
         if not grades:
             return False
@@ -104,7 +104,7 @@ class ResearchAgent:
         Fetches CEO.ca related discussions via Google News RSS proxy.
         Direct scraping of CEO.ca is prohibited by their TOS.
 
-        WARLORD UPGRADE:
+        Screening notes:
         - Query operators include actual geological terms (assay, intercept, % U3O8)
         - Regex extraction for real decimal grade values
         - Threshold filter: ≥1% U3O8, >5m intercept
@@ -204,10 +204,10 @@ class ResearchAgent:
         except Exception as e:
             logger.error(f"Error fetching uranium geology news: {e}")
 
-        # Sort: verified signals first
+        # Sort: verified items first
         signals.sort(key=lambda s: (0 if s.get('verified') else 1))
 
-        print(f"[ResearchAgent] Gathered {len(signals)} CEO.ca/Uranium signals ({sum(1 for s in signals if s.get('verified'))} verified)")
+        print(f"[ResearchAgent] Gathered {len(signals)} CEO.ca/Uranium indicators ({sum(1 for s in signals if s.get('verified'))} verified)")
         return signals
     
     # ═══════════════════════════════════════════════════════════════════
@@ -599,7 +599,7 @@ class ResearchAgent:
         Returns:
           - catalysts: list of PDUFA catalysts
           - financials: dict of {ticker: cash_runway_data} for checked companies
-          - alerts: list of RED/YELLOW flagged companies
+          - alerts: list of RED/YELLOW cash-runway notes
         """
         catalysts = self.get_pdufa_catalysts(days_ahead)
         
@@ -641,7 +641,7 @@ class ResearchAgent:
             if 'error' not in result:
                 financials[ticker] = result
         
-        # Build alerts list
+        # Build cash-runway notes list
         alerts = []
         for ticker, data in financials.items():
             if data['risk_level'] in ('RED', 'YELLOW'):
@@ -659,7 +659,7 @@ class ResearchAgent:
                               f"Burn: {data['burn_formatted']}/Q, Runway: {runway_str}, Debt: {data['debt_formatted']}"
                 })
         
-        print(f"[ResearchAgent] Cash runway checked for {len(financials)} tickers, {len(alerts)} risk alerts")
+        print(f"[ResearchAgent] Cash runway checked for {len(financials)} tickers, {len(alerts)} risk notes")
         return {
             'catalysts': catalysts,
             'financials': financials,
@@ -708,10 +708,10 @@ class ResearchAgent:
         
         pdufa_data = self.get_pdufa_with_financials()
         
-        # Print risk alerts first
+        # Print risk notes first
         if pdufa_data['alerts']:
             output.append("")
-            output.append("--- BANKRUPTCY RISK ALERTS ---")
+            output.append("--- CASH RUNWAY RISK NOTES ---")
             for alert in pdufa_data['alerts']:
                 output.append(alert['message'])
         

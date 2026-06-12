@@ -220,7 +220,7 @@ class TwitterAgent:
         else:
             self.health["status"] = "OK"
 
-        logger.info(f"Gathered {len(unique_tweets)} X/Twitter signals")
+        logger.info(f"Gathered {len(unique_tweets)} X/Twitter indicators")
         return unique_tweets
 
     def format_for_context(self, tweets):
@@ -252,4 +252,4 @@ if __name__ == "__main__":
     else:
         print("  No tweets found (Nitter may be down)")
 
-    print(f"\nTotal: {len(tweets)} signals")
+    print(f"\nTotal: {len(tweets)} indicators")
