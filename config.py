@@ -150,13 +150,13 @@ RSI_OVERSOLD = 30
 GROWTH_BASKET = ["TSLA", "ROKU", "PLTR", "SHOP", "VRT", "ACHR", "COIN"]
 DEFENSIVE_BASKET = ["GLD", "USO", "SI=F", "URA"]
 
-# Dip Anticipation — Options Flow
-PUT_CALL_ALERT_THRESHOLD = 1.5  # P/C ratio above this = bearish signal
+# Options Flow Context
+PUT_CALL_ALERT_THRESHOLD = 1.5  # P/C ratio above this is flagged as put-skewed
 
-# Gamma Squeeze Detection — The Warlord Filter
-GAMMA_VOL_OI_THRESHOLD = 5.0    # Vol/OI ratio for gamma squeeze detection
-GAMMA_MAX_DTE = 5               # Only scan 0-5 DTE contracts (Friday expiry weapons)
-GAMMA_MIN_PREMIUM = 500_000     # $500k minimum premium to filter retail lotto tickets
+# Short-Dated Options Activity Detection
+GAMMA_VOL_OI_THRESHOLD = 5.0    # Vol/OI ratio for high-activity detection
+GAMMA_MAX_DTE = 5               # Only scan 0-5 DTE contracts
+GAMMA_MIN_PREMIUM = 500_000     # $500k minimum premium to filter low-conviction flow
 
 # Backwardation Tracker — Physical vs Paper Divergence
 # SRUUF = Sprott Physical Uranium Trust (physical proxy)

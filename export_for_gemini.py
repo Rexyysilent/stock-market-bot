@@ -2,7 +2,7 @@
 Daily Export for Market Analysis
 ThreadPoolExecutor parallelized pipeline. All 12 steps fire concurrently.
 
-Output: 
+Output:
   - gemini_daily_brief.txt (human readable)
   - gemini_daily_brief.json (structured for LLM parsing)
 """
@@ -53,12 +53,6 @@ SCHEMA_VERSION = "2.0"
 
 # P2-8: entity linking for social whispers
 CASHTAG_RE = re.compile(r"\$([A-Za-z]{1,5})\b")
-
-
-# Extract source from strings like '[r/wallstreetbets] Post title (Score: 123)'
-def parse_source_from_string(text):
-    match = re.match(r'\[([^\]]+)\]', text)
-    return match.group(1) if match else "unknown"
 
 
 def link_whisper_entities(whispers):
@@ -357,6 +351,12 @@ def write_snapshot(json_data, run_dt):
     return snap_path
 
 
+# Extract source from strings like '[r/wallstreetbets] Post title (Score: 123)'
+def parse_source_from_string(text):
+    match = re.match(r'\[([^\]]+)\]', text)
+    return match.group(1) if match else "unknown"
+
+
 def _count_social_sources(whispers):
     counts = {}
     for item in whispers:
@@ -381,18 +381,15 @@ def _add_unique(items, value):
 def build_export_health(
     generated_at,
     elapsed,
-    headlines,
     whispers,
     prices,
     technicals,
     twitter_data,
     sec_filings,
-    insider_clusters,
     options_flow,
     earnings_cal,
-    pdufa_data,
+    ceo_signals,
     all_gamma_sweeps,
-    backwardation,
     social_agent,
     twitter_agent,
     sec_agent,
@@ -471,9 +468,17 @@ def build_export_health(
     if not earnings_cal:
         _add_unique(warnings, "Earnings calendar returned zero rows; yfinance calendar may be stale/unavailable.")
 
+    unverified_ceo = sum(1 for s in ceo_signals if not s.get("verified"))
+    if ceo_signals and unverified_ceo == len(ceo_signals):
+        _add_unique(
+            warnings,
+            f"CEO.ca indicators: {unverified_ceo}/{len(ceo_signals)} unverified (Google News proxy); "
+            "treat as low-confidence narrative, not data.",
+        )
+
     missing_prices = sorted([
         ticker for ticker, value in prices.items()
-        if value in (None, "N/A")
+        if not value or value.get("price") is None
     ])
     if missing_prices:
         _add_unique(warnings, f"Missing price data for: {', '.join(missing_prices[:12])}")
@@ -487,25 +492,13 @@ def build_export_health(
         _add_unique(warnings, f"Technical indicators had errors for {len(technical_errors)} tickers.")
 
     status = "ERROR" if errors else "WARN" if warnings else "OK"
+    # Content totals live in `summary`; health carries only status/warnings/errors/timing/sources.
     return {
         "status": status,
         "generated_at": generated_at,
         "pipeline_time_seconds": round(elapsed, 1),
         "warnings": warnings,
         "errors": errors,
-        "section_counts": {
-            "headlines": len(headlines),
-            "social_whispers": len(whispers),
-            "twitter_signals": len(twitter_data),
-            "sec_filings": len(sec_filings),
-            "insider_clusters": len(insider_clusters),
-            "options_tickers": len(options_flow),
-            "gamma_sweeps": len(all_gamma_sweeps),
-            "earnings_calendar": len(earnings_cal),
-            "pdufa_catalysts": len(pdufa_data.get("catalysts", [])),
-            "cash_runway_alerts": len(pdufa_data.get("alerts", [])),
-            "backwardation_alerts": len(backwardation.get("alerts", [])),
-        },
         "sources": {
             "social": social_source_counts,
             "social_agent": social_agent_health,
@@ -555,7 +548,7 @@ def generate_daily_brief():
         # Core intelligence
         fut_news       = pool.submit(news_agent.get_global_headlines)
         fut_social     = pool.submit(social_agent.get_whisper)
-        fut_prices     = pool.submit(watcher_agent.get_full_report)
+        fut_prices     = pool.submit(watcher_agent.get_full_report_data)
         fut_techs      = pool.submit(watcher_agent.get_all_technicals)
         fut_ceo        = pool.submit(research_agent.get_ceo_ca_signals)
         fut_trials     = pool.submit(research_agent.get_clinical_trials)
@@ -566,6 +559,7 @@ def generate_daily_brief():
         fut_options    = pool.submit(watcher_agent.get_all_options_flow)
         fut_earnings   = pool.submit(watcher_agent.get_earnings_calendar)
         fut_rotation   = pool.submit(watcher_agent.get_sector_rotation)
+        fut_vix        = pool.submit(watcher_agent.get_vix_term_structure)
         # Market structure indicators
         fut_backwrd    = pool.submit(watcher_agent.check_backwardation)
         fut_contrarian = pool.submit(social_agent.get_retail_contrarian_index)
@@ -588,6 +582,7 @@ def generate_daily_brief():
     options_flow    = fut_options.result()
     earnings_cal    = fut_earnings.result()
     sector_rotation = fut_rotation.result()
+    vix_term        = fut_vix.result()
     backwardation   = fut_backwrd.result()
     contrarian      = fut_contrarian.result()
 
@@ -599,24 +594,34 @@ def generate_daily_brief():
     for ticker, data in options_flow.items():
         all_gamma_sweeps.extend(data.get("gamma_sweeps", []))
 
+    # Split/merge the raw PDUFA scan and clinical trials feed (P0-2 / P1-5)
+    clinical_catalysts, biotech_news = build_clinical_catalysts(
+        pdufa_data.get('catalysts', []), clinical_trials
+    )
+
+    # Entity-link whispers to universe tickers (P2-8)
+    linked_whispers, unanchored_whispers = link_whisper_entities(whispers)
+
+    # Baseline-relative z-scores for P/C and volume ratios (P2-10)
+    baseline_z, baseline_alerts = update_baselines_and_score(
+        options_flow, technicals, datetime.now().strftime("%Y-%m-%d")
+    )
+
     # Generate timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     iso_timestamp = datetime.now().isoformat()
     health = build_export_health(
         iso_timestamp,
         elapsed,
-        headlines,
         whispers,
         prices,
         technicals,
         twitter_data,
         sec_filings,
-        insider_clusters,
         options_flow,
         earnings_cal,
-        pdufa_data,
+        ceo_signals,
         all_gamma_sweeps,
-        backwardation,
         social_agent,
         twitter_agent,
         sec_agent,
@@ -649,7 +654,7 @@ def generate_daily_brief():
         f.write("## ASSET PRICES (Source: yfinance)\n")
         f.write("-" * 40 + "\n")
         for ticker, price in prices.items():
-            f.write(f"- {ticker}: {price}\n")
+            f.write(f"- {ticker}: {watcher_agent.render_price(price) or 'N/A'}\n")
         f.write("\n")
         
         f.write("## TECHNICAL INDICATORS\n")
@@ -719,8 +724,8 @@ def generate_daily_brief():
             f.write(f"  Filed: {filing['date']} | Link: {filing['link']}\n")
         f.write("\n")
 
-        # PDUFA Catalysts + Cash Runway (structured format matching reference)
-        f.write("## FDA PDUFA CATALYSTS + CASH RUNWAY\n")
+        # Clinical Catalysts + Cash Runway (structured format matching reference)
+        f.write("## CLINICAL CATALYSTS + CASH RUNWAY\n")
         f.write("Priority: CRSP, NTLA, RGNX | Window: 60 days\n")
         f.write("Risk: GREEN (>6Q) | YELLOW (4-6Q) | RED (<4Q cash runway)\n")
         f.write("-" * 40 + "\n")
@@ -748,18 +753,24 @@ def generate_daily_brief():
                     f"Debt {data.get('debt_formatted', 'N/A')} | MCap {data.get('mcap_formatted', 'N/A')}\n"
                 )
         
-        # Upcoming catalysts with details
-        catalysts = pdufa_data.get('catalysts', [])
-        if catalysts:
+        # Upcoming catalysts with details (filtered: active statuses, not past-dated)
+        if clinical_catalysts:
             f.write("\n--- UPCOMING CATALYSTS ---\n")
-            for cat in catalysts[:30]:  # Cap at 30
+            for cat in clinical_catalysts[:30]:  # Cap at 30
                 priority_tag = " [WATCHLIST]" if cat.get('is_priority') else ""
                 days_str = f" ({cat['days_until']}d)" if cat.get('days_until') is not None else ""
-                f.write(f"- [{cat.get('source', 'PDUFA')}] {cat.get('title', cat.get('drug', 'Unknown'))}{priority_tag}{days_str}\n")
+                f.write(f"- [{cat.get('nct_id', '?')}] {cat.get('title', 'Unknown')}{priority_tag}{days_str}\n")
                 if cat.get('sponsor'):
-                    f.write(f"  Sponsor: {cat['sponsor']} | Status: {cat.get('status', '?')} | Phase: {cat.get('phase', '?')}\n")
+                    f.write(f"  Sponsor: {cat['sponsor']} | Status: {cat.get('status', '?')} | Phase: {cat.get('phase') or '?'}\n")
         else:
-            f.write("- No upcoming PDUFA catalysts found\n")
+            f.write("- No upcoming clinical catalysts found\n")
+
+        # Undated FDA/biotech news items (routed out of the catalyst list)
+        if biotech_news:
+            f.write("\n--- BIOTECH NEWS (FDA/PDUFA headlines) ---\n")
+            for item in biotech_news[:15]:
+                priority_tag = " [WATCHLIST]" if item.get('is_priority') else ""
+                f.write(f"- {item.get('title', 'Unknown')}{priority_tag}\n")
         f.write("\n")
         
         f.write("## CEO.CA / URANIUM INTELLIGENCE (Source: CEO.ca via Google News)\n")
@@ -772,15 +783,6 @@ def generate_daily_brief():
             f.write(f"  Link: {s['link']}\n")
         f.write("\n")
         
-        f.write("## CLINICALTRIALS.GOV / CRISPR & GENE THERAPY (Source: ClinicalTrials.gov API)\n")
-        f.write("Focus: Vertex, CRISPR Therapeutics, Gene Editing\n")
-        f.write("-" * 40 + "\n")
-        for t in clinical_trials:
-            f.write(f"- [{t['nct_id']}] {t['title']}\n")
-            f.write(f"  Status: {t['status']} | Phase: {t['phase']} | Sponsor: {t['sponsor']}\n")
-            f.write(f"  Link: {t['link']}\n")
-        f.write("\n")
-
         # Technical context indicators
         f.write("## TECHNICAL CONTEXT INDICATORS\n")
         f.write("-" * 40 + "\n")
@@ -834,6 +836,28 @@ def generate_daily_brief():
                 f.write(f"  📊 20-day trend confirms: {leader} {'+' if spread_20d > 0 else ''}{round(spread_20d, 1)}% vs {'growth' if spread_20d > 0 else 'defensives'} (sustained {'risk-off' if spread_20d > 0 else 'risk-on'})\n")
         f.write("\n")
 
+        # VIX Term Structure (regime flag)
+        f.write("\n--- VIX TERM STRUCTURE (Regime) ---\n")
+        if vix_term.get('vix_vix3m_ratio') is not None:
+            f.write(
+                f"- VIX {vix_term['vix']} / VIX3M {vix_term['vix3m']} = "
+                f"{vix_term['vix_vix3m_ratio']} ({vix_term['structure']} — {vix_term['regime'].replace('_', '-').lower()})\n"
+            )
+        else:
+            f.write(f"- VIX term structure unavailable: {vix_term.get('error', 'no data')}\n")
+
+        # Baseline-relative signal alerts
+        f.write("\n--- BASELINE Z-SCORE ALERTS (vs own 20-run history) ---\n")
+        if baseline_alerts:
+            for alert in baseline_alerts:
+                f.write(
+                    f"- {alert['ticker']}: {alert['metric']}={alert['value']} "
+                    f"(z={alert['z_score']:+.1f}) — {alert['signal']}\n"
+                )
+        else:
+            f.write("- No baseline deviations >= 2 sigma (or insufficient history yet)\n")
+        f.write("\n")
+
         # Earnings Calendar
         if earnings_cal:
             f.write("## UPCOMING EARNINGS\n")
@@ -862,105 +886,106 @@ def generate_daily_brief():
             f.write(f"  Link: {tw['link']}\n")
         f.write("\n")
         
-        # ===== ROKU DEEP DIVE =====
+        # ===== FOCUS TICKER DEEP DIVE =====
+        focus = FOCUS_TICKER.upper()
         f.write("=" * 70 + "\n")
-        f.write("## ROKU DEEP DIVE\n")
+        f.write(f"## {focus} DEEP DIVE\n")
         f.write("=" * 70 + "\n\n")
-        
-        roku_price = prices.get("ROKU", "N/A")
+
+        focus_price = watcher_agent.render_price(prices.get(focus)) or "N/A"
         f.write(f"--- PRICE ---\n")
-        f.write(f"- ROKU: {roku_price}\n\n")
-        
-        roku_tech = technicals.get("ROKU", {})
+        f.write(f"- {focus}: {focus_price}\n\n")
+
+        focus_tech = technicals.get(focus, {})
         f.write(f"--- TECHNICALS ---\n")
-        if roku_tech:
-            f.write(f"- RSI: {roku_tech.get('rsi', '?')}\n")
-            f.write(f"- Trend: {roku_tech.get('trend', '?')}\n")
-            f.write(f"- Volume Ratio: {roku_tech.get('volume_ratio', '?')}\n")
-            if roku_tech.get('rsi_divergence'):
-                f.write(f"- RSI Divergence: {roku_tech['rsi_divergence'].upper()}\n")
-            if roku_tech.get('alerts'):
-                f.write(f"- Notes: {', '.join(roku_tech['alerts'])}\n")
-            if roku_tech.get('sma_50'):
-                f.write(f"- SMA-50: {roku_tech.get('sma_50', '?')} | SMA-200: {roku_tech.get('sma_200', '?')}\n")
+        if focus_tech:
+            f.write(f"- RSI: {focus_tech.get('rsi', '?')}\n")
+            f.write(f"- Trend: {focus_tech.get('trend', '?')}\n")
+            f.write(f"- Volume Ratio: {focus_tech.get('volume_ratio', '?')}\n")
+            if focus_tech.get('rsi_divergence'):
+                f.write(f"- RSI Divergence: {focus_tech['rsi_divergence'].upper()}\n")
+            if focus_tech.get('alerts'):
+                f.write(f"- Notes: {', '.join(focus_tech['alerts'])}\n")
+            if focus_tech.get('sma_50'):
+                f.write(f"- SMA-50: {focus_tech.get('sma_50', '?')} | SMA-200: {focus_tech.get('sma_200', '?')}\n")
         else:
             f.write("- No technical data available\n")
         f.write("\n")
         
-        roku_options = options_flow.get("ROKU", {})
+        focus_options = options_flow.get(focus, {})
         f.write(f"--- OPTIONS FLOW ---\n")
-        if roku_options and (roku_options.get('put_call_vol_ratio') or roku_options.get('alerts')):
-            f.write(f"- P/C Volume Ratio: {roku_options.get('put_call_vol_ratio', '?')}\n")
-            f.write(f"- P/C OI Ratio: {roku_options.get('put_call_oi_ratio', '?')}\n")
-            f.write(f"- Total Put Volume: {roku_options.get('total_put_volume', '?')}\n")
-            f.write(f"- Total Call Volume: {roku_options.get('total_call_volume', '?')}\n")
-            if roku_options.get('gamma_sweeps'):
+        if focus_options and (focus_options.get('put_call_vol_ratio') or focus_options.get('alerts')):
+            f.write(f"- P/C Volume Ratio: {focus_options.get('put_call_vol_ratio', '?')}\n")
+            f.write(f"- P/C OI Ratio: {focus_options.get('put_call_oi_ratio', '?')}\n")
+            f.write(f"- Total Put Volume: {focus_options.get('total_put_volume', '?')}\n")
+            f.write(f"- Total Call Volume: {focus_options.get('total_call_volume', '?')}\n")
+            if focus_options.get('gamma_sweeps'):
                 f.write("- Short-dated options activity:\n")
-                for sweep in roku_options['gamma_sweeps']:
+                for sweep in focus_options['gamma_sweeps']:
                     f.write(f"  ${sweep['strike']}{sweep['type'][0]} DTE={sweep['dte']} Vol/OI={sweep['vol_oi_ratio']}x Premium={sweep['premium_fmt']}\n")
-            if roku_options.get('alerts'):
-                for alert in roku_options['alerts']:
+            if focus_options.get('alerts'):
+                for alert in focus_options['alerts']:
                     f.write(f"  Note: {alert}\n")
         else:
             f.write("- No significant options flow data\n")
         f.write("\n")
         
-        roku_filings = [fi for fi in sec_filings if fi.get('ticker', '').upper() == 'ROKU']
+        focus_filings = [fi for fi in sec_filings if fi.get('ticker', '').upper() == focus]
         f.write(f"--- SEC FILINGS ---\n")
-        if roku_filings:
-            for fi in roku_filings:
+        if focus_filings:
+            for fi in focus_filings:
                 f.write(f"- [{fi['form_type']}] {fi['description']}\n")
                 f.write(f"  Filed: {fi['date']} | Link: {fi['link']}\n")
         else:
-            f.write("- No recent ROKU filings\n")
+            f.write(f"- No recent {focus} filings\n")
         f.write("\n")
-        
-        roku_insiders = [c for c in insider_clusters if c.get('ticker', '').upper() == 'ROKU']
+
+        focus_insiders = [c for c in insider_clusters if c.get('ticker', '').upper() == focus]
         f.write(f"--- INSIDER ACTIVITY ---\n")
-        if roku_insiders:
-            for c in roku_insiders:
+        if focus_insiders:
+            for c in focus_insiders:
                 f.write(f"- [{c.get('alert_level', 'MEDIUM')}] {c['insider_count']} Form 4 filings in {c.get('period_days', 30)}d\n")
         else:
             f.write("- No insider selling clusters detected\n")
         f.write("\n")
         
-        roku_earnings = [e for e in earnings_cal if e.get('ticker', '').upper() == 'ROKU']
+        focus_earnings = [e for e in earnings_cal if e.get('ticker', '').upper() == focus]
         f.write(f"--- EARNINGS ---\n")
-        if roku_earnings:
-            for e in roku_earnings:
+        if focus_earnings:
+            for e in focus_earnings:
                 timing = e.get('timing') or '?'
                 days = e.get('days_until', '?')
                 f.write(f"- Date: {e.get('earnings_date', '?')} ({timing}, D+{days})\n")
         else:
-            f.write("- No upcoming ROKU earnings in window\n")
+            f.write(f"- No upcoming {focus} earnings in window\n")
         f.write("\n")
-        
-        roku_whispers = [w for w in whispers if 'ROKU' in w.upper() or 'roku' in w.lower()]
+
+        focus_whispers = [w for w in whispers if focus in w.upper()]
         f.write(f"--- SOCIAL MENTIONS ---\n")
-        if roku_whispers:
-            for w in roku_whispers:
+        if focus_whispers:
+            for w in focus_whispers:
                 f.write(f"- {w}\n")
         else:
-            f.write("- No ROKU mentions in social whispers\n")
+            f.write(f"- No {focus} mentions in social whispers\n")
         f.write("\n")
-        
-        roku_headlines = [h for h in headlines if 'ROKU' in h.upper() or 'roku' in h.lower()]
+
+        focus_headlines = [h for h in headlines if focus in h.upper()]
         f.write(f"--- NEWS HEADLINES ---\n")
-        if roku_headlines:
-            for h in roku_headlines:
+        if focus_headlines:
+            for h in focus_headlines:
                 f.write(f"- {h}\n")
         else:
-            f.write("- No ROKU-specific headlines\n")
+            f.write(f"- No {focus}-specific headlines\n")
         f.write("\n")
-        
-        roku_twitter = [tw for tw in twitter_data if 'ROKU' in tw.get('title', '').upper() or 'roku' in tw.get('query', '').lower()]
+
+        focus_twitter = [tw for tw in twitter_data if focus in tw.get('title', '').upper() or focus in tw.get('query', '').upper()]
         f.write(f"--- X/TWITTER ---\n")
-        if roku_twitter:
-            for tw in roku_twitter:
+        if focus_twitter:
+            for tw in focus_twitter:
                 f.write(f"- [{tw.get('account', tw.get('query', 'X'))}] {tw['title']}\n")
                 f.write(f"  Link: {tw['link']}\n")
         else:
-            f.write("- No ROKU-specific Twitter indicators\n")
+            f.write(f"- No {focus}-specific Twitter indicators\n")
         f.write("\n")
         
         f.write("=" * 70 + "\n")
@@ -970,23 +995,48 @@ def generate_daily_brief():
     # ========== Write JSON file (structured for LLM) ==========
     filename_json = "gemini_daily_brief.json"
     
+    financials_map = pdufa_data.get('financials', {})
+
     json_data = {
+        "schema_version": SCHEMA_VERSION,
         "generated_at": iso_timestamp,
         "pipeline_time_seconds": round(elapsed, 1),
+        "universe": {
+            "name": UNIVERSE_NAME,
+            "version": hashlib.sha256(",".join(ALL_TICKERS).encode("utf-8")).hexdigest()[:8],
+            "tickers": ALL_TICKERS,
+            "focus_ticker": FOCUS_TICKER,
+        },
+        "conventions": {
+            "units": "*_musd fields are millions of USD",
+            "burn_musd": "positive = cash consumed per quarter; negative = cash generated",
+            "runway_quarters": "null when company is cash-flow positive (see cash_flow_positive) or unknown",
+            "nan_policy": "NaN/inf values are emitted as null and listed in data_quality.nan_fields_nulled",
+            "record_id": "sha256[:16] of section + key fields; stable across days for the same underlying record",
+            "as_of": "when the underlying data was true; falls back to generated_at when the source has no event time",
+            "universe.version": "sha256[:8] of the ticker list; changes whenever the watchlist changes",
+            "relevance": "whisper ticker-anchor confidence: 1.0 cashtag, 0.8 bare symbol, 0.6 company-name alias",
+            "z_scores": "vs the ticker's own trailing 20-run baseline; null until 5 prior runs exist",
+        },
         "health": health,
         "summary": {
             "total_headlines": len(headlines),
             "total_whispers": len(whispers),
+            "total_whispers_linked": len(linked_whispers),
+            "total_whispers_unanchored": len(unanchored_whispers),
+            "total_baseline_alerts": len(baseline_alerts),
+            "vix_regime": vix_term.get("regime"),
             "total_tickers": len(prices),
             "total_ceo_signals": len(ceo_signals),
-            "total_clinical_trials": len(clinical_trials),
+            "total_clinical_catalysts": len(clinical_catalysts),
+            "total_biotech_news": len(biotech_news),
             "total_twitter_signals": len(twitter_data),
             "total_sec_filings": len(sec_filings),
             "total_technical_alerts": sum(1 for t in technicals.values() if t.get("alerts")),
-            "total_pdufa_catalysts": len(pdufa_data.get('catalysts', [])),
             "total_cash_runway_alerts": len(pdufa_data.get('alerts', [])),
             "total_insider_clusters": len(insider_clusters),
             "total_options_flow_alerts": len({t: d for t, d in options_flow.items() if d.get('alerts')}),
+            "total_options_tickers": len(options_flow),
             "total_earnings_tracked": len(earnings_cal),
             "sector_rotation_signal": sector_rotation.get('signal', 'N/A'),
             "rsi_divergences": len({t: d for t, d in technicals.items() if d.get('rsi_divergence')}),
@@ -1000,8 +1050,13 @@ def generate_daily_brief():
                 {"text": h, "source": "Google News"} for h in headlines
             ],
             "prices": [
-                {"ticker": ticker, "price": str(price), "source": "yfinance"} 
-                for ticker, price in prices.items()
+                {
+                    "ticker": ticker,
+                    "price": (data or {}).get("price"),
+                    "change_pct": (data or {}).get("change_pct"),
+                    "source": "yfinance",
+                }
+                for ticker, data in prices.items()
             ],
             "technicals": [
                 {
@@ -1010,13 +1065,21 @@ def generate_daily_brief():
                     "trend": tech.get("trend"),
                     "volume_ratio": tech.get("volume_ratio"),
                     "rsi_divergence": tech.get("rsi_divergence"),
+                    "sma_50": tech.get("sma_50"),
+                    "sma_200": tech.get("sma_200"),
+                    "pct_from_52w_high": tech.get("pct_from_52w_high"),
+                    "pct_from_52w_low": tech.get("pct_from_52w_low"),
+                    "daily_change_pct": tech.get("daily_change_pct"),
+                    "volume_ratio_z": baseline_z.get(ticker, {}).get("volume_ratio_z"),
+                    "vulture": tech.get("vulture", False),
                     "alerts": tech.get("alerts", []),
+                    "error": tech.get("error"),
                     "source": "yfinance/computed"
                 }
                 for ticker, tech in technicals.items()
             ],
             # === MARKET STRUCTURE INDICATORS ===
-            "gamma_sweeps": all_gamma_sweeps,
+            # gamma sweeps live inside options_flow[ticker].gamma_sweeps (single home)
             "backwardation": backwardation,
             "retail_contrarian": contrarian,
             # === END MARKET STRUCTURE INDICATORS ===
@@ -1026,12 +1089,29 @@ def generate_daily_brief():
                     "form_type": f["form_type"],
                     "description": f["description"],
                     "date": f["date"],
+                    "filed_at": f.get("filed_at"),
+                    "accession_number": f.get("accession_number"),
+                    "primary_doc_url": f.get("primary_doc_url"),
                     "link": f["link"],
                     "source": "SEC EDGAR"
                 } for f in sec_filings
             ],
-            "pdufa_catalysts": pdufa_data.get('catalysts', []),
-            "cash_runway_alerts": pdufa_data.get('alerts', []),
+            "clinical_catalysts": clinical_catalysts,
+            "biotech_news": biotech_news,
+            "cash_runway": [
+                build_cash_runway_record(fin)
+                for _, fin in sorted(financials_map.items())
+            ],
+            "cash_runway_alerts": [
+                build_cash_runway_record(
+                    financials_map.get(
+                        a["ticker"],
+                        {"ticker": a["ticker"], "risk_level": a.get("risk_level")},
+                    )
+                )
+                for a in pdufa_data.get('alerts', [])
+                if isinstance(a, dict)
+            ],
             "insider_clusters": [
                 {
                     "ticker": c["ticker"],
@@ -1043,15 +1123,17 @@ def generate_daily_brief():
             "options_flow": {
                 ticker: {
                     "put_call_vol_ratio": d.get("put_call_vol_ratio"),
+                    "put_call_vol_z": baseline_z.get(ticker, {}).get("put_call_vol_z"),
                     "put_call_oi_ratio": d.get("put_call_oi_ratio"),
                     "total_put_volume": d.get("total_put_volume"),
                     "total_call_volume": d.get("total_call_volume"),
-                    "gamma_sweeps": d.get("gamma_sweeps", []),
+                    "gamma_sweeps": [strip_render_fields(s) for s in d.get("gamma_sweeps", [])],
                     "alerts": d.get("alerts", [])
                 }
                 for ticker, d in options_flow.items()
             },
             "sector_rotation": sector_rotation,
+            "regime": vix_term,
             "earnings_calendar": earnings_cal,
             "ceo_ca_signals": [
                 {
@@ -1063,20 +1145,9 @@ def generate_daily_brief():
                 }
                 for s in ceo_signals
             ],
-            "clinical_trials": [
-                {
-                    "nct_id": t['nct_id'],
-                    "title": t['title'],
-                    "status": t['status'],
-                    "phase": t['phase'],
-                    "sponsor": t['sponsor'],
-                    "link": t['link'],
-                    "source": "ClinicalTrials.gov"
-                } for t in clinical_trials
-            ],
-            "social_whispers": [
-                {"text": w, "source": parse_source_from_string(w)} for w in whispers
-            ],
+            "social_whispers": linked_whispers,
+            "social_whispers_unanchored": unanchored_whispers,
+            "baseline_alerts": baseline_alerts,
             "twitter_signals": [
                 {
                     "account": tw.get('account', tw.get('query', 'X')),
@@ -1086,37 +1157,57 @@ def generate_daily_brief():
                 }
                 for tw in twitter_data
             ],
-            "roku_deep_dive": {
-                "price": str(prices.get("ROKU", "N/A")),
-                "technicals": technicals.get("ROKU", {}),
-                "options_flow": options_flow.get("ROKU", {}),
-                "sec_filings": [fi for fi in sec_filings if fi.get("ticker", "").upper() == "ROKU"],
-                "insider_clusters": [c for c in insider_clusters if c.get("ticker", "").upper() == "ROKU"],
-                "earnings": [e for e in earnings_cal if e.get("ticker", "").upper() == "ROKU"],
-                "social_mentions": [w for w in whispers if "roku" in w.lower()],
-                "news_headlines": [h for h in headlines if "roku" in h.lower()],
-                "twitter_signals": [tw for tw in twitter_data if "roku" in tw.get("title", "").lower() or "roku" in tw.get("query", "").lower()]
+            "deep_dive": {
+                "ticker": FOCUS_TICKER,
+                "note": "Numeric data for this ticker lives in the main sections keyed by ticker "
+                        "(prices, technicals, options_flow, insider_clusters, earnings_calendar); "
+                        "this section holds only filing references and ticker-filtered text.",
+                "sec_filing_accessions": [
+                    fi.get("accession_number") for fi in sec_filings
+                    if fi.get("ticker", "").upper() == FOCUS_TICKER
+                ],
+                "has_insider_cluster": any(
+                    c.get("ticker", "").upper() == FOCUS_TICKER for c in insider_clusters
+                ),
+                "social_mentions": [w for w in whispers if FOCUS_TICKER.lower() in w.lower()],
+                "news_headlines": [h for h in headlines if FOCUS_TICKER.lower() in h.lower()],
+                "twitter_signals": [
+                    tw for tw in twitter_data
+                    if FOCUS_TICKER.lower() in tw.get("title", "").lower()
+                    or FOCUS_TICKER.lower() in tw.get("query", "").lower()
+                ]
             }
         }
     }
     
+    add_record_metadata(json_data["sections"], iso_timestamp)
+
+    nan_fields_nulled = []
+    json_data = sanitize_nans(json_data, "$", nan_fields_nulled)
+    json_data["data_quality"] = {"nan_fields_nulled": nan_fields_nulled}
+    if nan_fields_nulled:
+        print(f"  [data_quality] {len(nan_fields_nulled)} NaN/inf fields nulled in JSON export")
+
     with open(filename_json, "w", encoding="utf-8") as f:
-        json.dump(json_data, f, indent=2, ensure_ascii=False, cls=NumpySafeEncoder)
+        json.dump(json_data, f, indent=2, ensure_ascii=False, cls=NumpySafeEncoder, allow_nan=False)
+
+    snapshot_path = write_snapshot(json_data, datetime.now())
     
     print(f"\nDone! Exported to:")
     print(f"  - {filename_txt} (human readable)")
     print(f"  - {filename_json} (structured JSON)")
+    print(f"  - {snapshot_path} (point-in-time snapshot)")
     print(f"\nStats:")
     print(f"  Pipeline time:          {elapsed:.1f}s")
     print(f"  Total whispers:         {len(whispers)}")
     print(f"  Total headlines:        {len(headlines)}")
     print(f"  Total tickers:          {len(prices)}")
     print(f"  Total CEO.ca indicators: {len(ceo_signals)}")
-    print(f"  Total clinical trials:  {len(clinical_trials)}")
+    print(f"  Clinical catalysts:     {len(clinical_catalysts)}")
+    print(f"  Biotech news items:     {len(biotech_news)}")
     print(f"  Total Twitter indicators: {len(twitter_data)}")
     print(f"  Total SEC filings:      {len(sec_filings)}")
     print(f"  Total technical notes:  {sum(1 for t in technicals.values() if t.get('alerts'))}")
-    print(f"  Total PDUFA catalysts:  {len(pdufa_data.get('catalysts', []))}")
     print(f"  Total cash runway notes: {len(pdufa_data.get('alerts', []))}")
     print(f"  Total insider clusters: {len(insider_clusters)}")
     print(f"  Total options flow:     {len({t: d for t, d in options_flow.items() if d.get('alerts')})}")

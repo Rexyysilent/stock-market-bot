@@ -361,7 +361,7 @@ async def pdufa_scan(ctx):
     # Risk Alerts embed
     if pdufa_data.get('alerts'):
         embed_risk = discord.Embed(
-            title="🚨 BANKRUPTCY RISK ALERTS",
+            title="⚠️ CASH RUNWAY RISK NOTES",
             description="Companies with upcoming catalysts but low cash runway",
             color=0xe74c3c
         )
@@ -491,7 +491,7 @@ async def dip_scanner(ctx):
         )
         for ticker, data in divergences.items():
             div_type = data['rsi_divergence']
-            emoji = "🚨" if div_type == "BEARISH" else "🟢"
+            emoji = "🚨" if div_type in ("DOWNSIDE", "BEARISH") else "🟢"
             embed_div.add_field(
                 name=f"{emoji} {ticker} — {div_type} DIVERGENCE",
                 value=f"RSI: {data.get('rsi', '?')} | Trend: {data.get('trend', '?')}",

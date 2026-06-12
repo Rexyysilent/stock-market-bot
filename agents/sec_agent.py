@@ -1,11 +1,11 @@
 """
 SEC EDGAR Agent — Fetches SEC filings for watchlist tickers.
-Uses the free EDGAR full-text search API (no API key needed).
+Uses the free EDGAR submissions API (no API key needed).
 - 8-K filings (material events)
 - Form 4 (insider buys/sells)
 - 13F (institutional holdings)
 
-Docs: https://efts.sec.gov/LATEST/search-index?q=...
+Docs: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
 """
 import requests
 import logging
@@ -21,15 +21,15 @@ logger = logging.getLogger("SECAgent")
 
 class SECAgent:
     def __init__(self):
-        self.base_url = "https://efts.sec.gov/LATEST/search-index"
-        self.full_text_url = "https://efts.sec.gov/LATEST/search-index"
-        self.edgar_search_url = "https://efts.sec.gov/LATEST/search-index"
         self.headers = {
             "User-Agent": SEC_USER_AGENT,
             "Accept": "application/json"
         }
-        # Company ticker -> CIK mapping cache
+        # Company ticker -> {"cik", "title"} mapping cache
         self._cik_cache = {}
+        # CIK -> trimmed submissions JSON (shared by watchlist scan + insider fallback)
+        self._submissions_cache = {}
+        self._cache_lock = Lock()
         self.openinsider = OpenInsiderAgent()
         self._health_lock = Lock()
         self.health = self._empty_health()
@@ -44,6 +44,7 @@ class SECAgent:
             "status_counts": {},
             "failed_requests": [],
             "failed_requests_omitted": 0,
+            "no_cik_tickers": [],
             "insider_cluster_source": "unknown",
             "insider_cluster_fallback_used": None,
             "openinsider_cluster_count": None,
@@ -77,6 +78,19 @@ class SECAgent:
                 self.health["failed_requests_omitted"] = (
                     self.health.get("failed_requests_omitted", 0) + 1
                 )
+
+    def _record_no_cik(self, ticker):
+        """Track tickers with no SEC registrant (ETFs, indexes, futures, foreign OTC).
+
+        Kept separate from failed_requests: these are expected non-filers,
+        not EDGAR errors. Returns True the first time a ticker is recorded.
+        """
+        with self._health_lock:
+            no_cik = self.health.setdefault("no_cik_tickers", [])
+            if ticker in no_cik:
+                return False
+            no_cik.append(ticker)
+            return True
 
     def _set_health_value(self, key, value):
         with self._health_lock:
@@ -124,44 +138,62 @@ class SECAgent:
 
         return last_response
 
+    def _load_cik_map(self):
+        """Load the SEC's full ticker -> CIK mapping (one request covers all tickers)."""
+        with self._cache_lock:
+            if self._cik_cache:
+                return self._cik_cache
+        resp = self._get_with_retries("https://www.sec.gov/files/company_tickers.json", timeout=15)
+        if resp and resp.status_code == 200:
+            try:
+                mapping = {}
+                for entry in resp.json().values():
+                    ticker = str(entry.get("ticker", "")).upper()
+                    if ticker:
+                        mapping[ticker] = {
+                            "cik": int(entry["cik_str"]),
+                            "title": entry.get("title", ticker),
+                        }
+                with self._cache_lock:
+                    if not self._cik_cache:
+                        self._cik_cache = mapping
+            except Exception as e:
+                logger.error(f"Failed to parse company_tickers.json: {e}")
+        return self._cik_cache
+
     def _get_cik(self, ticker):
-        """Lookup CIK number for a ticker via SEC EDGAR."""
-        if ticker in self._cik_cache:
-            return self._cik_cache[ticker]
-        try:
-            url = "https://www.sec.gov/cgi-bin/browse-edgar"
-            params = {
-                "action": "getcompany",
-                "company": ticker,
-                "type": "",
-                "dateb": "",
-                "owner": "include",
-                "count": "1",
-                "search_text": "",
-                "action": "getcompany",
-                "output": "atom"
-            }
-            resp = self._get_with_retries(url, params=params, timeout=10)
-            if resp and resp.status_code == 200:
-                # Parse atom feed for CIK
-                import xml.etree.ElementTree as ET
-                root = ET.fromstring(resp.content)
-                ns = {"atom": "http://www.w3.org/2005/Atom"}
-                entry = root.find(".//atom:entry", ns)
-                if entry is not None:
-                    cik_elem = entry.find(".//atom:content", ns)
-                    if cik_elem is not None and cik_elem.text:
-                        cik = cik_elem.text.strip()
-                        self._cik_cache[ticker] = cik
-                        return cik
-        except Exception as e:
-            logger.error(f"CIK lookup failed for {ticker}: {e}")
+        """Lookup CIK for a ticker. Returns {"cik": int, "title": str} or None."""
+        return self._load_cik_map().get(ticker.upper())
+
+    def _get_submissions(self, cik):
+        """Fetch (and cache) the EDGAR submissions JSON for a CIK."""
+        with self._cache_lock:
+            cached = self._submissions_cache.get(cik)
+        if cached is not None:
+            return cached
+        url = f"https://data.sec.gov/submissions/CIK{cik:010d}.json"
+        resp = self._get_with_retries(url, timeout=15)
+        if resp and resp.status_code == 200:
+            try:
+                data = resp.json()
+                trimmed = {
+                    "name": data.get("name", ""),
+                    "recent": data.get("filings", {}).get("recent", {}),
+                }
+                with self._cache_lock:
+                    self._submissions_cache[cik] = trimmed
+                return trimmed
+            except Exception as e:
+                logger.error(f"Failed to parse submissions JSON for CIK {cik}: {e}")
         return None
 
     def get_recent_filings(self, ticker, form_types=None, days_back=7, limit=5):
         """
-        Fetch recent SEC filings for a ticker using EDGAR full-text search.
-        
+        Fetch recent SEC filings for a ticker via the EDGAR submissions API.
+
+        Each record carries its accession number, acceptance datetime and a
+        direct link to the primary filing document (not the company search page).
+
         Args:
             ticker: Stock ticker (e.g., "TSLA")
             form_types: List of form types to filter (e.g., ["8-K", "4"])
@@ -171,52 +203,59 @@ class SECAgent:
         if form_types is None:
             form_types = ["8-K", "4", "10-Q", "10-K"]
 
-        filings = []
+        company = self._get_cik(ticker)
+        if not company:
+            if self._record_no_cik(ticker):
+                logger.info(f"No CIK found for {ticker}; not an SEC registrant, skipping EDGAR scan")
+            return []
+
+        cik = company["cik"]
+        submissions = self._get_submissions(cik)
+        if not submissions:
+            logger.warning(f"SEC EDGAR returned no submissions for {ticker} (CIK {cik}); continuing")
+            self._record_failed_request(ticker, ",".join(form_types), "no_response")
+            return []
+
+        recent = submissions["recent"]
+        forms = recent.get("form", [])
+        accessions = recent.get("accessionNumber", [])
+        filing_dates = recent.get("filingDate", [])
+        acceptance_times = recent.get("acceptanceDateTime", [])
+        primary_docs = recent.get("primaryDocument", [])
+        primary_descs = recent.get("primaryDocDescription", [])
+
         start_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
-        end_date = datetime.now().strftime("%Y-%m-%d")
+        per_form_counts = {ft: 0 for ft in form_types}
+        filings = []
 
-        for form_type in form_types:
-            try:
-                url = "https://efts.sec.gov/LATEST/search-index"
-                params = {
-                    "q": f'"{ticker}"',
-                    "dateRange": "custom",
-                    "startdt": start_date,
-                    "enddt": end_date,
-                    "forms": form_type,
-                }
-                resp = self._get_with_retries(url, params=params, timeout=15)
+        for i, form in enumerate(forms):
+            if form not in per_form_counts or per_form_counts[form] >= limit:
+                continue
+            filing_date = filing_dates[i] if i < len(filing_dates) else ""
+            if not filing_date or filing_date < start_date:
+                continue
 
-                if resp and resp.status_code == 200:
-                    data = resp.json()
-                    hits = data.get("hits", {}).get("hits", [])
+            accession = accessions[i] if i < len(accessions) else ""
+            accession_nodash = accession.replace("-", "")
+            primary_doc = primary_docs[i] if i < len(primary_docs) else ""
+            if primary_doc:
+                doc_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession_nodash}/{primary_doc}"
+            else:
+                doc_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession_nodash}/{accession}-index.htm"
+            description = (primary_descs[i] if i < len(primary_descs) else "") or form
 
-                    for hit in hits[:limit]:
-                        source = hit.get("_source", {})
-                        filings.append({
-                            "ticker": ticker,
-                            "form_type": form_type,
-                            "title": source.get("display_names", [ticker])[0] if source.get("display_names") else ticker,
-                            "description": source.get("file_description", "No description"),
-                            "date": source.get("file_date", "Unknown"),
-                            "link": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company={ticker}&type={form_type}&dateb=&owner=include&count=10&search_text=&action=getcompany",
-                        })
-                elif resp and resp.status_code == 429:
-                    logger.warning(f"SEC rate limited after retries for {ticker}/{form_type}; continuing")
-                    self._record_failed_request(ticker, form_type, resp.status_code, "rate limited")
-                    continue
-                elif resp:
-                    logger.warning(f"SEC EDGAR returned {resp.status_code} for {ticker}/{form_type}; continuing")
-                    self._record_failed_request(ticker, form_type, resp.status_code)
-                    continue
-                else:
-                    logger.warning(f"SEC EDGAR returned no response for {ticker}/{form_type}; continuing")
-                    self._record_failed_request(ticker, form_type, "no_response")
-                    continue
-
-            except Exception as e:
-                logger.error(f"Error fetching SEC filings for {ticker}/{form_type}: {e}")
-                self._record_failed_request(ticker, form_type, "exception", e)
+            per_form_counts[form] += 1
+            filings.append({
+                "ticker": ticker,
+                "form_type": form,
+                "title": submissions.get("name") or ticker,
+                "description": description,
+                "date": filing_date,
+                "filed_at": (acceptance_times[i] if i < len(acceptance_times) else None) or None,
+                "accession_number": accession,
+                "primary_doc_url": doc_url,
+                "link": doc_url,
+            })
 
         return filings
 
@@ -229,8 +268,9 @@ class SECAgent:
         return self.get_recent_filings(ticker, form_types=["8-K"], days_back=days_back, limit=5)
 
     def scan_all_watchlist(self, days_back=7):
-        """Scan all watchlist tickers for recent important filings."""
+        """Scan all watchlist tickers for recent important filings (deduped on accession number)."""
         all_filings = []
+        seen_accessions = set()
         for ticker in ALL_TICKERS:
             filings = self.get_recent_filings(
                 ticker,
@@ -238,8 +278,14 @@ class SECAgent:
                 days_back=days_back,
                 limit=3
             )
-            all_filings.extend(filings)
-        
+            for filing in filings:
+                accession = filing.get("accession_number")
+                if accession and accession in seen_accessions:
+                    continue
+                if accession:
+                    seen_accessions.add(accession)
+                all_filings.append(filing)
+
         logger.info(f"Scanned {len(ALL_TICKERS)} tickers, found {len(all_filings)} filings")
         return all_filings
 

@@ -1,5 +1,5 @@
 /**
- * WARLORD DASHBOARD — App Logic
+ * MARKET BRIEF DASHBOARD — App Logic
  * Fetches /api/brief (JSON) and /api/txt (raw) from serve_dump.py
  * Populates DOM with cards, alerts, and lists.
  */
@@ -87,17 +87,23 @@ function renderPrices() {
     grid.innerHTML = '';
 
     prices.forEach(p => {
-        const priceMatch = p.price.match(/\$([0-9.]+)\s*\(([^)]+)\)/);
-        const priceVal = priceMatch ? priceMatch[1] : p.price;
-        const changeStr = priceMatch ? priceMatch[2] : '';
+        // Schema 2.0: price and change_pct are numeric (or null); older dumps used a formatted string
+        let priceVal, changePct = null;
+        if (typeof p.price === 'number') {
+            priceVal = p.price.toFixed(2);
+            changePct = typeof p.change_pct === 'number' ? p.change_pct : null;
+        } else {
+            const priceMatch = String(p.price || '').match(/\$([0-9.]+)\s*\(([^)]+)\)/);
+            priceVal = priceMatch ? priceMatch[1] : (p.price || 'N/A');
+            const changeStr = priceMatch ? priceMatch[2].replace(/[🟢🔴⚪]/g, '').trim() : '';
+            changePct = changeStr ? parseFloat(changeStr) : null;
+        }
 
-        const isUp = changeStr.includes('🟢') || changeStr.includes('+');
-        const isDown = changeStr.includes('🔴') || changeStr.includes('-');
+        const isUp = changePct !== null && changePct > 0;
+        const isDown = changePct !== null && changePct < 0;
         const cls = isUp ? 'positive' : isDown ? 'negative' : 'neutral';
         const changeCls = isUp ? 'up' : isDown ? 'down' : 'flat';
-
-        // Clean change display
-        const cleanChange = changeStr.replace(/[🟢🔴⚪]/g, '').trim();
+        const cleanChange = changePct !== null ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(2)}%` : '';
 
         const tech = techs[p.ticker] || {};
         const rsi = tech.rsi || 50;
@@ -132,9 +138,10 @@ function renderTechAlerts() {
 
     alertTechs.forEach(t => {
         t.alerts.forEach(alert => {
-            const type = alert.includes('🚨') || alert.includes('DEATH') || alert.includes('DROPPING') ? 'danger'
-                : alert.includes('⚠️') || alert.includes('OVERBOUGHT') ? 'warning'
-                : alert.includes('🟢') || alert.includes('GOLDEN') || alert.includes('BULLISH') ? 'success' : 'info';
+            const upper = alert.toUpperCase();
+            const type = alert.includes('🚨') || upper.includes('DEATH CROSS') || upper.includes('FALLING') || upper.includes('DOWNSIDE') ? 'danger'
+                : alert.includes('⚠️') || upper.includes('OVERBOUGHT') || upper.includes('PULLBACK') ? 'warning'
+                : alert.includes('🟢') || upper.includes('GOLDEN CROSS') || upper.includes('UPSIDE') || upper.includes('OVERSOLD') ? 'success' : 'info';
             const item = document.createElement('div');
             item.className = `alert-item ${type}`;
             item.innerHTML = `<div class="alert-title">${t.ticker}</div><div class="alert-meta">${alert}</div>`;
@@ -160,24 +167,32 @@ function renderSectorRotation() {
     `;
 }
 
-// ═══ GAMMA SWEEPS ═══
+// ═══ SHORT-DATED OPTIONS ACTIVITY ═══
 function renderGammaSweeps() {
     const container = document.getElementById('gamma-list');
-    const sweeps = DATA.sections?.gamma_sweeps || [];
+    // Schema 2.0: sweeps live per-ticker under options_flow; older dumps had a top-level section
+    let sweeps = DATA.sections?.gamma_sweeps || [];
+    if (sweeps.length === 0) {
+        const flow = DATA.sections?.options_flow || {};
+        sweeps = Object.entries(flow).flatMap(([ticker, d]) =>
+            (d.gamma_sweeps || []).map(s => ({ ticker, ...s }))
+        );
+    }
     document.getElementById('gamma-count').textContent = sweeps.length;
     container.innerHTML = '';
 
     if (sweeps.length === 0) {
-        container.innerHTML = '<div class="empty-state">No gamma squeeze attempts detected</div>';
+        container.innerHTML = '<div class="empty-state">No short-dated high Vol/OI options activity detected</div>';
         return;
     }
 
     sweeps.forEach(s => {
+        const premium = s.premium_fmt || (typeof s.premium === 'number' ? `$${(s.premium / 1e6).toFixed(2)}M` : '?');
         const item = document.createElement('div');
         item.className = 'alert-item danger';
         item.innerHTML = `
-            <div class="alert-title">🎯 ${s.ticker} $${s.strike}${s.type[0]}</div>
-            <div class="alert-meta">DTE=${s.dte} · Vol/OI=${s.vol_oi_ratio}x · Premium=${s.premium_fmt} · Exp: ${s.expiration}</div>
+            <div class="alert-title">🎯 ${s.ticker} $${s.strike}${(s.type || '?')[0]}</div>
+            <div class="alert-meta">DTE=${s.dte} · Vol/OI=${s.vol_oi_ratio}x · Premium=${premium} · Exp: ${s.expiration}</div>
         `;
         container.appendChild(item);
     });
@@ -222,7 +237,7 @@ function renderContrarian() {
 
     subs.forEach(s => {
         const type = s.is_topped ? 'danger' : 'success';
-        const status = s.is_topped ? '🚨 TOPPED' : '🟢 NORMAL';
+        const status = s.is_topped ? '🚨 ELEVATED' : '🟢 BASELINE';
         const item = document.createElement('div');
         item.className = `alert-item ${type}`;
         item.innerHTML = `
@@ -261,9 +276,10 @@ function renderOptionsFlow() {
 
     entries.forEach(([ticker, d]) => {
         d.alerts.forEach(alert => {
-            const type = alert.includes('🚨') || alert.includes('GAMMA') ? 'danger'
-                : alert.includes('⚠️') ? 'warning'
-                : alert.includes('🟢') ? 'success' : 'info';
+            const upper = alert.toUpperCase();
+            const type = alert.includes('🚨') || upper.includes('STRONGLY PUT-SKEWED') || upper.includes('HEAVY PUT') ? 'danger'
+                : alert.includes('⚠️') || upper.includes('PUT-SKEWED') || upper.includes('SHORT-DATED') ? 'warning'
+                : alert.includes('🟢') || upper.includes('CALL-SKEWED') ? 'success' : 'info';
             const item = document.createElement('div');
             item.className = `alert-item ${type}`;
             item.innerHTML = `<div class="alert-title">${ticker}</div><div class="alert-meta">${alert}</div>`;
@@ -300,14 +316,15 @@ function renderSECFilings() {
     });
 }
 
-// ═══ PDUFA ═══
+// ═══ CLINICAL CATALYSTS ═══
 function renderPDUFA() {
     const container = document.getElementById('pdufa-list');
-    const cats = DATA.sections?.pdufa_catalysts || [];
+    // Schema 2.0 renamed pdufa_catalysts to clinical_catalysts
+    const cats = DATA.sections?.clinical_catalysts || DATA.sections?.pdufa_catalysts || [];
     container.innerHTML = '';
 
     if (cats.length === 0) {
-        container.innerHTML = '<div class="empty-state">No upcoming PDUFA catalysts</div>';
+        container.innerHTML = '<div class="empty-state">No upcoming clinical catalysts</div>';
         return;
     }
 
@@ -316,9 +333,9 @@ function renderPDUFA() {
         item.className = 'text-item';
         const priorityTag = c.is_priority ? '<span class="verified-tag">WATCHLIST</span>' : '';
         item.innerHTML = `
-            <span class="source-tag">${c.source || 'PDUFA'}</span>
+            <span class="source-tag">${c.nct_id || c.source || 'PDUFA'}</span>
             ${c.title} ${priorityTag}
-            ${c.sponsor ? `<br><span style="color:var(--text-muted);font-size:11px">Sponsor: ${c.sponsor} · ${c.status} · ${c.phase}</span>` : ''}
+            ${c.sponsor ? `<br><span style="color:var(--text-muted);font-size:11px">Sponsor: ${c.sponsor} · ${c.status} · ${c.phase || '?'}</span>` : ''}
         `;
         container.appendChild(item);
     });

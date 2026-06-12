@@ -15,6 +15,8 @@ __pycache__/
 # Generated exports and local data
 gemini_daily_brief.json
 gemini_daily_brief.txt
+briefs/
+state/
 deep_dive_*.json
 deep_dive_*.txt
 market_intel_dump.txt

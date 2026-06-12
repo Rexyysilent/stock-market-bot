@@ -23,43 +23,67 @@ class WatcherAgent:
         self.vulture_list = WATCHLIST_VULTURE
         self.gauges = WATCHLIST_GAUGES
 
-    def get_stock_price(self, ticker):
+    def get_price_data(self, ticker):
+        """Pure data layer: returns {"price": float, "change_pct": float} or None."""
         try:
             stock = yf.Ticker(ticker)
             data = stock.history(period="1d")
             if not data.empty:
-                current_price = data['Close'].iloc[-1]
-                open_price = data['Open'].iloc[-1]
+                current_price = float(data['Close'].iloc[-1])
+                open_price = float(data['Open'].iloc[-1])
 
                 change = current_price - open_price
                 pct_change = (change / open_price) * 100
 
-                emoji = "⚪"
-                if pct_change > 0:
-                    emoji = "🟢"
-                elif pct_change < 0:
-                    emoji = "🔴"
-
-                return f"${current_price:.2f} ({emoji} {pct_change:+.2f}%)"
+                return {
+                    "price": round(current_price, 2),
+                    "change_pct": round(pct_change, 2),
+                }
             return None
         except Exception as e:
             logger.error(f"Error fetching {ticker}: {e}")
             return None
 
-    def get_full_report(self):
+    @staticmethod
+    def render_price(price_data):
+        """Render layer: format price data for human display."""
+        if not price_data or price_data.get("price") is None:
+            return None
+        pct_change = price_data.get("change_pct")
+        if pct_change is None:
+            return f"${price_data['price']:.2f}"
+
+        emoji = "⚪"
+        if pct_change > 0:
+            emoji = "🟢"
+        elif pct_change < 0:
+            emoji = "🔴"
+
+        return f"${price_data['price']:.2f} ({emoji} {pct_change:+.2f}%)"
+
+    def get_stock_price(self, ticker):
+        return self.render_price(self.get_price_data(ticker))
+
+    def get_full_report_data(self):
+        """Pure data layer: {ticker: {"price", "change_pct"} | None} for the full watchlist."""
         report = {}
         all_tickers = self.watchlist + self.gauges
         with ThreadPoolExecutor(max_workers=8) as pool:
-            futures = {pool.submit(self.get_stock_price, t): t for t in all_tickers}
+            futures = {pool.submit(self.get_price_data, t): t for t in all_tickers}
             for future in as_completed(futures):
                 ticker = futures[future]
                 try:
-                    price_str = future.result()
-                    report[ticker] = price_str if price_str else "N/A"
+                    report[ticker] = future.result()
                 except Exception as e:
                     logger.error(f"Price fetch failed for {ticker}: {e}")
-                    report[ticker] = "N/A"
+                    report[ticker] = None
         return report
+
+    def get_full_report(self):
+        return {
+            ticker: self.render_price(data) or "N/A"
+            for ticker, data in self.get_full_report_data().items()
+        }
 
     # ═══════════════════════════════════════════════════════════════════
     # TECHNICAL INDICATORS
@@ -703,6 +727,35 @@ class WatcherAgent:
     # ---------------------------------------------------------------
     # MARKET REGIME CONTEXT - SECTOR ROTATION
     # ---------------------------------------------------------------
+
+    def get_vix_term_structure(self):
+        """VIX term structure regime flag: spot ^VIX vs 3-month ^VIX3M.
+
+        ratio > 1 (spot above 3-month) = backwardation = stress/risk-off;
+        ratio < 1 = contango = normal/risk-on.
+        """
+        result = {"vix": None, "vix3m": None, "vix_vix3m_ratio": None,
+                  "structure": None, "regime": None}
+        try:
+            vix = yf.Ticker("^VIX").history(period="5d")['Close']
+            vix3m = yf.Ticker("^VIX3M").history(period="5d")['Close']
+            if vix.empty or vix3m.empty:
+                result["error"] = "No VIX/VIX3M data"
+                return result
+            spot = float(vix.iloc[-1])
+            three_month = float(vix3m.iloc[-1])
+            ratio = spot / three_month
+            result.update({
+                "vix": round(spot, 2),
+                "vix3m": round(three_month, 2),
+                "vix_vix3m_ratio": round(ratio, 3),
+                "structure": "BACKWARDATION" if ratio > 1.0 else "CONTANGO",
+                "regime": "RISK_OFF" if ratio > 1.0 else "RISK_ON",
+            })
+        except Exception as e:
+            logger.error(f"VIX term structure error: {e}")
+            result["error"] = str(e)
+        return result
 
     def get_sector_rotation(self):
         """

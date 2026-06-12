@@ -559,7 +559,7 @@ class ResearchAgent:
             
             # Format large numbers
             def fmt_money(val):
-                if val is None:
+                if val is None or val != val:  # None or NaN
                     return "N/A"
                 if abs(val) >= 1e9:
                     return f"${val/1e9:.1f}B"

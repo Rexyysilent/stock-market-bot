@@ -1,5 +1,5 @@
 """
-MarketBot Warlord Dashboard Server
+MarketBot Daily Brief Dashboard Server
 Serves the premium mobile dashboard + JSON/TXT API endpoints.
 
 Routes:
@@ -40,7 +40,7 @@ def get_lan_ip():
         return "localhost"
 
 
-class WarlordHandler(http.server.BaseHTTPRequestHandler):
+class DashboardHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/" or self.path == "/index.html":
             self.serve_file(os.path.join(DASHBOARD_DIR, "index.html"), "text/html")
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     ip = get_lan_ip()
 
     print("=" * 56)
-    print("  ⚔️  WARLORD DASHBOARD SERVER")
+    print("  📡  MARKETBOT DASHBOARD SERVER")
     print("=" * 56)
     print(f"\n  📱 Phone:     http://{ip}:{PORT}")
     print(f"  💻 PC:        http://localhost:{PORT}")
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     print(f"  Data:         {DUMP_FILE_JSON}")
     print(f"\n  Press Ctrl+C to stop\n")
 
-    server = http.server.HTTPServer(("0.0.0.0", PORT), WarlordHandler)
+    server = http.server.HTTPServer(("0.0.0.0", PORT), DashboardHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
