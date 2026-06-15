@@ -67,6 +67,8 @@ function renderAll() {
     renderHeadlines();
     renderSECFilings();
     renderPDUFA();
+    renderCashRunway();
+    renderCashMonitor();
     renderCEO();
     renderWhispers();
     renderTwitter();
@@ -336,6 +338,84 @@ function renderPDUFA() {
             <span class="source-tag">${c.nct_id || c.source || 'PDUFA'}</span>
             ${c.title} ${priorityTag}
             ${c.sponsor ? `<br><span style="color:var(--text-muted);font-size:11px">Sponsor: ${c.sponsor} · ${c.status} · ${c.phase || '?'}</span>` : ''}
+        `;
+        container.appendChild(item);
+    });
+}
+
+// ═══ CASH RUNWAY RISK ═══
+function renderCashRunway() {
+    // Schema 2.0: `cash_runway_alerts` — flagged biotech burn/runway (RED/YELLOW)
+    const container = document.getElementById('cash-runway-list');
+    const alerts = DATA.sections?.cash_runway_alerts || [];
+    const countEl = document.getElementById('cash-runway-count');
+    if (countEl) countEl.textContent = alerts.length;
+    container.innerHTML = '';
+
+    if (alerts.length === 0) {
+        container.innerHTML = '<div class="empty-state">No cash runway risks flagged</div>';
+        return;
+    }
+
+    // RED first, then shortest runway
+    const rank = r => (r === 'RED' ? 0 : r === 'YELLOW' ? 1 : 2);
+    const sorted = [...alerts].sort((a, b) => {
+        const d = rank(a.risk_level) - rank(b.risk_level);
+        return d !== 0 ? d : (a.runway_quarters ?? 1e9) - (b.runway_quarters ?? 1e9);
+    });
+
+    const fmt = v => (typeof v === 'number' ? `$${v.toFixed(1)}M` : '—');
+    sorted.forEach(a => {
+        const cls = a.risk_level === 'RED' ? 'danger' : a.risk_level === 'YELLOW' ? 'warning' : 'info';
+        const runway = Number.isFinite(a.runway_quarters) ? `${a.runway_quarters}Q runway` : 'runway n/a';
+        const cfp = a.cash_flow_positive ? 'CF+' : 'CF−';
+        const item = document.createElement('div');
+        item.className = `alert-item ${cls}`;
+        item.innerHTML = `
+            <div class="alert-title">💸 ${a.ticker} · ${a.risk_level} · ${runway}</div>
+            <div class="alert-meta">Cash ${fmt(a.cash_musd)} · Burn ${fmt(a.burn_musd)}/q · Debt ${fmt(a.debt_musd)} · MCap ${fmt(a.market_cap_musd)} · ${cfp}</div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+// ═══ CASH RUNWAY MONITOR ═══
+function renderCashMonitor() {
+    // Schema 2.0: `cash_runway` — full per-ticker burn/runway detail (incl. healthy GREEN)
+    const container = document.getElementById('cash-monitor-list');
+    const rows = DATA.sections?.cash_runway || [];
+    const countEl = document.getElementById('cash-monitor-count');
+    if (countEl) countEl.textContent = rows.length;
+    container.innerHTML = '';
+
+    if (rows.length === 0) {
+        container.innerHTML = '<div class="empty-state">No cash runway data</div>';
+        return;
+    }
+
+    // RED → YELLOW → GREEN, then shortest runway (nulls last)
+    const rank = r => (r === 'RED' ? 0 : r === 'YELLOW' ? 1 : r === 'GREEN' ? 2 : 3);
+    const sorted = [...rows].sort((a, b) => {
+        const d = rank(a.risk_level) - rank(b.risk_level);
+        return d !== 0 ? d : (a.runway_quarters ?? 1e9) - (b.runway_quarters ?? 1e9);
+    });
+
+    const fmt = v => (typeof v === 'number' ? `$${v.toFixed(1)}M` : '—');
+    sorted.forEach(r => {
+        const cls = r.risk_level === 'RED' ? 'danger'
+                  : r.risk_level === 'YELLOW' ? 'warning'
+                  : r.risk_level === 'GREEN' ? 'success' : 'info';
+        // null runway + positive cash flow = self-funding; negative burn = generating cash
+        const runway = Number.isFinite(r.runway_quarters) ? `${r.runway_quarters}Q runway`
+                     : (r.cash_flow_positive ? '∞ (cash-generative)' : 'runway n/a');
+        const burnStr = (typeof r.burn_musd === 'number')
+            ? (r.burn_musd < 0 ? `+${fmt(-r.burn_musd)}/q (cash-gen)` : `${fmt(r.burn_musd)}/q burn`)
+            : '—';
+        const item = document.createElement('div');
+        item.className = `alert-item ${cls}`;
+        item.innerHTML = `
+            <div class="alert-title">🧬 ${r.ticker} · ${r.risk_level} · ${runway}</div>
+            <div class="alert-meta">Cash ${fmt(r.cash_musd)} · ${burnStr} · Debt ${fmt(r.debt_musd)} · MCap ${fmt(r.market_cap_musd)}</div>
         `;
         container.appendChild(item);
     });
