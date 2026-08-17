@@ -9,24 +9,34 @@ that never ran (CAPTCHA blocked, use_headless=False by default).
 import requests
 import xml.etree.ElementTree as ET
 import logging
-from config import NITTER_INSTANCES, TWITTER_ACCOUNTS
+from datetime import datetime, timezone
+from config import NITTER_INSTANCES, TWITTER_ACCOUNTS, TWITTER_MAX_AGE_DAYS
+from timeutil import split_fresh_records
 
 logger = logging.getLogger("TwitterAgent")
 
 
 class TwitterAgent:
-    def __init__(self):
+    def __init__(self, now=None):
+        now = now or datetime.now(timezone.utc)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        self.now_utc = now.astimezone(timezone.utc)
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
+        self._dropped_twitter_signals = []
 
-        # Topic-based fallback queries (Google News RSS)
+        # Topic-based fallback queries (Google News RSS).
+        # site:x.com, NOT site:twitter.com — Google News stopped indexing the
+        # old domain after the X migration (checked 2026-07-06: twitter.com
+        # queries return HTTP 200 with zero items; x.com returns 70-100).
         self.search_queries = [
-            "site:twitter.com TSLA Tesla stock",
-            "site:twitter.com uranium UUUU CCJ",
-            "site:twitter.com CRISPR Vertex",
-            "site:twitter.com silver gold squeeze",
-            "site:twitter.com PLTR Palantir",
+            "site:x.com TSLA Tesla stock",
+            "site:x.com uranium UUUU CCJ",
+            "site:x.com CRISPR Vertex",
+            "site:x.com silver gold squeeze",
+            "site:x.com PLTR Palantir",
         ]
 
         # Track which Nitter instance is working
@@ -44,6 +54,10 @@ class TwitterAgent:
             "signals": 0,
             "status_counts": {},
             "errors": [],
+            "nitter_accounts_expected": 0,
+            "nitter_accounts_http_ok": 0,
+            "nitter_accounts_with_items": 0,
+            "nitter_account_failures": [],
         }
 
     def _record_status(self, source, status_code):
@@ -113,16 +127,27 @@ class TwitterAgent:
             return []
 
         tweets = []
-        for account in TWITTER_ACCOUNTS[:max_accounts]:
+        accounts = TWITTER_ACCOUNTS[:max_accounts]
+        self.health["nitter_accounts_expected"] = len(accounts)
+        for account in accounts:
             try:
                 url = f"{instance}/{account}/rss"
                 resp = requests.get(url, headers=self.headers, timeout=10)
                 self._record_status(f"nitter_{account}", resp.status_code)
 
                 if resp.status_code == 200:
+                    self.health["nitter_accounts_http_ok"] += 1
                     root = ET.fromstring(resp.content)
+                    items = root.findall('.//item')[:3]
+                    if items:
+                        self.health["nitter_accounts_with_items"] += 1
+                    else:
+                        self.health["nitter_account_failures"].append({
+                            "account": account,
+                            "reason": "empty_feed",
+                        })
 
-                    for item in root.findall('.//item')[:3]:  # Top 3 per account
+                    for item in items:  # Top 3 per account
                         title = item.find('title')
                         link = item.find('link')
                         pub_date = item.find('pubDate')
@@ -133,15 +158,24 @@ class TwitterAgent:
                                 'account': f"@{account}",
                                 'title': title.text[:150],
                                 'link': link.text if link is not None else "",
-                                'date': pub_date.text[:25] if pub_date is not None else "",
+                                # full RFC 2822 pubDate — truncating loses the tz
+                                'date': pub_date.text if pub_date is not None else "",
                                 'query': account
                             })
                 else:
                     logger.warning(f"Nitter returned {resp.status_code} for @{account}")
+                    self.health["nitter_account_failures"].append({
+                        "account": account,
+                        "reason": f"http_{resp.status_code}",
+                    })
 
             except Exception as exc:
                 logger.error(f"Error fetching @{account} via Nitter: {exc}")
                 self._record_error(f"nitter_{account}", exc)
+                self.health["nitter_account_failures"].append({
+                    "account": account,
+                    "reason": f"{type(exc).__name__}: {str(exc)[:120]}",
+                })
                 continue
 
         return tweets
@@ -168,15 +202,16 @@ class TwitterAgent:
                     for item in root.findall('.//item')[:3]:
                         title = item.find('title').text
                         link = item.find('link').text
+                        pub_date = item.find('pubDate')
 
-                        topic = query.split("site:twitter.com ")[-1].split()[0] if "site:twitter.com" in query else "X"
+                        topic = query.split("site:x.com ")[-1].split()[0] if "site:x.com" in query else "X"
 
                         tweets.append({
                             'source': 'X/Twitter',
                             'account': 'GoogleNews',
                             'title': title[:120] if title else "Twitter post",
                             'link': link,
-                            'date': '',
+                            'date': pub_date.text if pub_date is not None else "",
                             'query': topic
                         })
             except Exception as exc:
@@ -211,17 +246,30 @@ class TwitterAgent:
                 seen.add(key)
                 unique_tweets.append(t)
 
+        unique_tweets, self._dropped_twitter_signals = split_fresh_records(
+            unique_tweets, "date", TWITTER_MAX_AGE_DAYS, now=self.now_utc
+        )
         self.health["signals"] = len(unique_tweets)
         if not unique_tweets:
             self.health["status"] = "WARN"
             self.health["source"] = self.health.get("source") or "none"
         elif self.health.get("fallback_used"):
             self.health["status"] = "WARN"
+        elif (
+            self.health.get("nitter_accounts_expected", 0)
+            and self.health.get("nitter_accounts_with_items", 0)
+            < self.health.get("nitter_accounts_expected", 0)
+        ):
+            self.health["status"] = "WARN"
         else:
             self.health["status"] = "OK"
 
         logger.info(f"Gathered {len(unique_tweets)} X/Twitter indicators")
         return unique_tweets
+
+    def get_dropped_twitter_signals(self):
+        """Stale/undated rows removed by the seven-day freshness gate."""
+        return [dict(row) for row in self._dropped_twitter_signals]
 
     def format_for_context(self, tweets):
         """Formats tweets for LLM context injection."""

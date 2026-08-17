@@ -6,8 +6,9 @@ bot should treat OpenInsider as an HTML table source directly. The primary
 parser is pandas.read_html, with a BeautifulSoup fallback for parser issues.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from io import StringIO
+from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
@@ -18,9 +19,14 @@ logger = logging.getLogger("OpenInsiderAgent")
 
 class OpenInsiderAgent:
     """Fetch OpenInsider's screener table with a browser-like user agent."""
+    TRUSTED_HOSTS = frozenset({"openinsider.com", "www.openinsider.com"})
 
-    def __init__(self):
-        self.base_url = "http://openinsider.com/screener"
+    def __init__(self, now=None):
+        now = now or datetime.now(timezone.utc)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        self.now_naive_utc = now.astimezone(timezone.utc).replace(tzinfo=None)
+        self.base_url = "https://openinsider.com/screener"
         self.headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -33,6 +39,14 @@ class OpenInsiderAgent:
             "Connection": "keep-alive",
         }
         self.health = self._empty_health()
+
+    @classmethod
+    def _trusted_response_url(cls, value):
+        try:
+            parsed = urlsplit(str(value))
+        except (TypeError, ValueError):
+            return False
+        return parsed.scheme == "https" and parsed.hostname in cls.TRUSTED_HOSTS
 
     def _empty_health(self):
         return {
@@ -106,6 +120,13 @@ class OpenInsiderAgent:
                 headers=self.headers,
                 timeout=15,
             )
+            final_url = getattr(response, "url", "")
+            if not self._trusted_response_url(final_url):
+                logger.warning("OpenInsider rejected untrusted response URL: %r", final_url)
+                health["status"] = "ERROR"
+                health["error"] = "Untrusted OpenInsider response URL"
+                self.health = health
+                return []
             health["request_status"] = response.status_code
             if response.status_code != 200:
                 label = ticker.upper() if ticker else "recent trades"
@@ -125,7 +146,7 @@ class OpenInsiderAgent:
                 health["fallback_used"] = True
                 health["raw_rows"] = len(trades)
 
-            cutoff = datetime.now() - timedelta(days=days_back)
+            cutoff = self.now_naive_utc - timedelta(days=days_back)
             filtered = []
             for trade in trades:
                 filing_date = self._parse_date(trade.get("filing_date"))
@@ -135,7 +156,7 @@ class OpenInsiderAgent:
 
             latest = self._latest_filing_date(filtered)
             if latest:
-                age_days = (datetime.now() - latest).total_seconds() / 86400
+                age_days = (self.now_naive_utc - latest).total_seconds() / 86400
                 health["latest_filing_date"] = latest.strftime("%Y-%m-%d %H:%M:%S")
                 health["latest_filing_age_days"] = round(age_days, 1)
             health["filtered_rows"] = len(filtered)
@@ -261,7 +282,7 @@ class OpenInsiderAgent:
             })
             return f"[OpenInsider/WARN] {warning}"
 
-        age_days = (datetime.now() - latest).total_seconds() / 86400
+        age_days = (self.now_naive_utc - latest).total_seconds() / 86400
         latest_text = latest.strftime("%Y-%m-%d %H:%M:%S")
         self.health.update({
             "latest_filing_date": latest_text,

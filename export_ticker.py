@@ -129,7 +129,7 @@ def export_ticker_deep_dive(ticker):
             if tech_data.get('rsi_divergence'):
                 f.write(f"- RSI Divergence: {tech_data['rsi_divergence'].upper()}\n")
             if tech_data.get('alerts'):
-                f.write(f"- ALERTS: {', '.join(tech_data['alerts'])}\n")
+                f.write(f"- Notes: {', '.join(tech_data['alerts'])}\n")
             if tech_data.get('sma_50'):
                 f.write(f"- SMA-50: {tech_data.get('sma_50', '?')}\n")
             if tech_data.get('sma_200'):
@@ -184,9 +184,10 @@ def export_ticker_deep_dive(ticker):
         f.write("-" * 40 + "\n")
         if ticker_insiders:
             for c in ticker_insiders:
-                f.write(f"- [{c.get('alert_level', 'MEDIUM')}] {c['insider_count']} Form 4 filings in {c.get('period_days', 60)}d\n")
+                direction = c.get('cluster_direction') or 'non-directional'
+                f.write(f"- [{c.get('alert_level', 'MEDIUM')}] {c['insider_count']} distinct filers ({c.get('filing_count', '?')} filings) in {c.get('period_days', 60)}d | direction={direction}\n")
         else:
-            f.write("- No insider selling clusters detected\n")
+            f.write("- No insider clusters detected\n")
         f.write("\n")
         
         # Earnings
@@ -233,7 +234,7 @@ def export_ticker_deep_dive(ticker):
                 f.write(f"- [{tw.get('account', tw.get('query', 'X'))}] {tw['title']}\n")
                 f.write(f"  Link: {tw['link']}\n")
         else:
-            f.write(f"- No {ticker}-specific Twitter signals\n")
+            f.write(f"- No {ticker}-specific Twitter indicators\n")
         f.write("\n")
         
         f.write("=" * 70 + "\n")
@@ -269,10 +270,10 @@ def export_ticker_deep_dive(ticker):
     print(f"  Trend: {tech_data.get('trend', 'N/A') if tech_data else 'N/A'}")
     print(f"  SEC filings: {len(ticker_filings)}")
     print(f"  Insider clusters: {len(ticker_insiders)}")
-    print(f"  Options alerts: {len(options_data.get('alerts', [])) if options_data else 0}")
+    print(f"  Options threshold notes: {len(options_data.get('alerts', [])) if options_data else 0}")
     print(f"  News articles: {len(ticker_news_extra)}")
     print(f"  Social mentions: {len(ticker_whispers)}")
-    print(f"  Twitter signals: {len(ticker_twitter)}")
+    print(f"  Twitter indicators: {len(ticker_twitter)}")
     
     return filename_txt, filename_json
 

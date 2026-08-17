@@ -9,18 +9,34 @@ Docs: https://www.sec.gov/search-filings/edgar-application-programming-interface
 """
 import requests
 import logging
+import re
 import time
+from collections import Counter
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from threading import Lock
 from config import SEC_USER_AGENT, ALL_TICKERS
 from openinsider_agent import OpenInsiderAgent
+from timeutil import to_utc_z, newest
 
 logger = logging.getLogger("SECAgent")
 
+# Form 4 "Code" column, verbatim from the filing: P open-market purchase,
+# S open-market sale, A award/grant, M option exercise, F tax withholding,
+# G gift. code_counts records whatever codes appear — no interpretation.
+FORM4_CODE_RE = re.compile(r"<transactionCode>\s*([A-Za-z0-9])\s*</transactionCode>")
+# Reporting owner identity — a cluster is distinct filers, not distinct documents
+FORM4_OWNER_RE = re.compile(r"<rptOwnerCik>\s*0*(\d+)\s*</rptOwnerCik>")
+# OpenInsider's Trade Type column prefixes the same code: "P - Purchase", "S - Sale+OE"
+OPENINSIDER_CODE_RE = re.compile(r"^\s*([A-Za-z])\s*[-–]")
+
 
 class SECAgent:
-    def __init__(self):
+    def __init__(self, now=None):
+        now = now or datetime.now(timezone.utc)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        self.now_utc = now.astimezone(timezone.utc)
         self.headers = {
             "User-Agent": SEC_USER_AGENT,
             "Accept": "application/json"
@@ -30,7 +46,7 @@ class SECAgent:
         # CIK -> trimmed submissions JSON (shared by watchlist scan + insider fallback)
         self._submissions_cache = {}
         self._cache_lock = Lock()
-        self.openinsider = OpenInsiderAgent()
+        self.openinsider = OpenInsiderAgent(now=self.now_utc)
         self._health_lock = Lock()
         self.health = self._empty_health()
 
@@ -49,6 +65,7 @@ class SECAgent:
             "insider_cluster_fallback_used": None,
             "openinsider_cluster_count": None,
             "insider_cluster_count": None,
+            "form4_code_fetch_failures": 0,
         }
 
     def _bump_health(self, key, amount=1):
@@ -224,7 +241,9 @@ class SECAgent:
         primary_docs = recent.get("primaryDocument", [])
         primary_descs = recent.get("primaryDocDescription", [])
 
-        start_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        start_date = (
+            self.now_utc - timedelta(days=days_back)
+        ).strftime("%Y-%m-%d")
         per_form_counts = {ft: 0 for ft in form_types}
         filings = []
 
@@ -300,24 +319,37 @@ class SECAgent:
 
     def detect_insider_clusters(self, days_back=30):
         """
-        Detect insider selling clusters when multiple insiders sell
-        within a 14-day window. Treat as a risk indicator for review.
+        Detect insider clusters — >=2 DISTINCT filers transacting the same
+        open-market direction (P or S) on one ticker inside the window.
+        One insider filing many tranches is not a cluster. Identity comes from
+        rptOwnerCik (EDGAR Form 4 XML) or the insider name (OpenInsider).
+
+        PURCHASE clusters are the headline signal (Cohen-Malloy-Pomorski):
+        multiple insiders buying open-market together is a strong positive
+        configured predictor. SALE clusters are kept
+        as LOW-level context only: sales are contaminated by diversification,
+        liquidity needs, and scheduled 10b5-1 plans, and carry weak predictive
+        content. Results are ordered buy > mixed > sell.
+
+        insider_count = distinct filers in the cluster direction; filing_count
+        = documents; code_counts = transaction codes as filed.
         Tries OpenInsider's parsed trade table first, then falls back to SEC EDGAR.
-        Returns list of {ticker, insider_count, filings, alert_level}
+        Returns list of {ticker, insider_count, buyers, sellers, filing_count,
+        code_counts, cluster_direction, source, filings, alert_level}
         """
         openinsider_clusters = self._detect_openinsider_clusters(days_back=days_back)
         if openinsider_clusters:
             logger.info(
                 f"Insider cluster scan: {len(openinsider_clusters)} tickers via OpenInsider"
             )
-            self._set_health_value("insider_cluster_source", "OpenInsider")
+            self._set_health_value("insider_cluster_source", "openinsider")
             self._set_health_value("insider_cluster_fallback_used", False)
             self._set_health_value("openinsider_cluster_count", len(openinsider_clusters))
             self._set_health_value("insider_cluster_count", len(openinsider_clusters))
             return openinsider_clusters
 
         logger.warning("OpenInsider produced no clusters; falling back to SEC EDGAR Form 4 scan")
-        self._set_health_value("insider_cluster_source", "SEC EDGAR fallback")
+        self._set_health_value("insider_cluster_source", "edgar_fallback")
         self._set_health_value("insider_cluster_fallback_used", True)
         self._set_health_value("openinsider_cluster_count", 0)
         clusters = []
@@ -334,38 +366,46 @@ class SECAgent:
                 
                 if len(filings) < 2:
                     continue
-                
-                # Count unique filing dates as proxy for unique insiders
-                # (each Form 4 = one insider transaction)
+
                 filing_dates = [f["date"] for f in filings if f.get("date")]
                 unique_dates = set(filing_dates)
-                
-                # Multiple Form 4s in a short window = cluster selling
-                insider_count = len(filings)
-                
-                if insider_count >= 3:
-                    alert_level = "HIGH"
-                elif insider_count >= 2:
-                    alert_level = "MEDIUM"
-                else:
+
+                # A cluster needs distinct filers, not filing volume: one CFO
+                # exercising options in ten tranches is ten documents, one human.
+                code_counts = Counter()
+                owner_codes = {}
+                for filing in filings:
+                    details = self._fetch_form4_details(filing)
+                    if details is None:
+                        self._bump_health("form4_code_fetch_failures")
+                        continue
+                    codes = [code.upper() for code in details["codes"]]
+                    code_counts.update(codes)
+                    for owner in details["owners"]:
+                        owner_codes.setdefault(owner, set()).update(codes)
+
+                buyers = sum(1 for codes in owner_codes.values() if "P" in codes)
+                sellers = sum(1 for codes in owner_codes.values() if "S" in codes)
+                cluster = self._build_cluster(
+                    ticker, buyers, sellers, len(filings), owner_codes,
+                    code_counts, days_back, "edgar_fallback",
+                )
+                if not cluster:
                     continue
-                
-                clusters.append({
-                    "ticker": ticker,
-                    "insider_count": insider_count,
-                    "unique_dates": len(unique_dates),
-                    "alert_level": alert_level,
-                    "filings": filings[:5],  # Top 5 for display
-                    "period_days": days_back,
-                })
+                cluster["unique_dates"] = len(unique_dates)
+                cluster["filings"] = filings[:5]  # Top 5 for display
+                # the cluster became true when its newest filing landed
+                cluster["as_of"] = newest(
+                    to_utc_z(f.get("filed_at") or f.get("date")) for f in filings
+                )
+                clusters.append(cluster)
                 
             except Exception as e:
                 logger.error(f"Error detecting insider clusters for {ticker}: {e}")
                 continue
         
-        # Sort by insider count descending
-        clusters.sort(key=lambda x: x["insider_count"], reverse=True)
-        logger.info(f"Insider cluster scan: {len(clusters)} tickers with cluster selling")
+        self._sort_clusters(clusters)
+        logger.info(f"Insider cluster scan: {len(clusters)} tickers with filer clusters")
         self._set_health_value("insider_cluster_count", len(clusters))
         return clusters
 
@@ -377,10 +417,7 @@ class SECAgent:
 
         for trade in trades:
             ticker = trade.get("ticker", "").upper()
-            trade_type = trade.get("trade_type", "").lower()
             if ticker not in watchlist:
-                continue
-            if not self._is_openinsider_sale(trade_type):
                 continue
             by_ticker.setdefault(ticker, []).append(trade)
 
@@ -393,31 +430,112 @@ class SECAgent:
                 f.get("filing_date") for f in filings
                 if f.get("filing_date")
             }
-            insider_names = {
-                f.get("insider_name") for f in filings
-                if f.get("insider_name")
-            }
 
-            clusters.append({
-                "ticker": ticker,
-                "insider_count": len(filings),
-                "unique_dates": len(filing_dates),
-                "unique_insiders": len(insider_names),
-                "alert_level": "HIGH" if len(filings) >= 3 else "MEDIUM",
-                "filings": filings[:5],
-                "period_days": days_back,
-                "source": "OpenInsider",
-            })
+            code_counts = Counter()
+            owner_codes = {}
+            for f in filings:
+                code = self._openinsider_code(f.get("trade_type"))
+                if code:
+                    code_counts[code] += 1
+                name = (f.get("insider_name") or "").strip().lower()
+                # unnamed rows can't prove a distinct filer
+                if name and code:
+                    owner_codes.setdefault(name, set()).add(code)
 
-        clusters.sort(key=lambda x: x["insider_count"], reverse=True)
+            buyers = sum(1 for codes in owner_codes.values() if "P" in codes)
+            sellers = sum(1 for codes in owner_codes.values() if "S" in codes)
+            cluster = self._build_cluster(
+                ticker, buyers, sellers, len(filings), owner_codes,
+                code_counts, days_back, "openinsider",
+            )
+            if not cluster:
+                continue
+            cluster["unique_dates"] = len(filing_dates)
+            cluster["filings"] = filings[:5]
+            cluster["as_of"] = newest(
+                to_utc_z(f.get("filing_date")) for f in filings
+            )
+            clusters.append(cluster)
+
+        return self._sort_clusters(clusters)
+
+    @staticmethod
+    def _build_cluster(ticker, buyers, sellers, filing_count, owner_codes,
+                       code_counts, period_days, source):
+        """Cluster gate + record. >=2 distinct filers must share an open-market
+        direction. Buy clusters alert HIGH at >=3 buyers, MEDIUM at 2; mixed
+        (equal buyers and sellers) is a contested buy cluster, MEDIUM; sell
+        clusters are context only and never rise above LOW.
+        Returns None when no direction qualifies."""
+        qualifying = max(buyers, sellers)
+        if qualifying < 2:
+            return None
+        direction = SECAgent._cluster_direction(buyers, sellers)
+        if direction == "buy":
+            alert_level = "HIGH" if buyers >= 3 else "MEDIUM"
+        elif direction == "mixed":
+            alert_level = "MEDIUM"
+        else:
+            alert_level = "LOW"
+        return {
+            "ticker": ticker,
+            "insider_count": qualifying,
+            "buyers": buyers,
+            "sellers": sellers,
+            "filing_count": filing_count,
+            "unique_insiders": len(owner_codes),
+            "code_counts": dict(code_counts),
+            "cluster_direction": direction,
+            "alert_level": alert_level,
+            "period_days": period_days,
+            "source": source,
+        }
+
+    @staticmethod
+    def _sort_clusters(clusters):
+        """Headline signal first: buy > mixed > sell, then by filer count."""
+        priority = {"buy": 0, "mixed": 1, "sell": 2}
+        clusters.sort(key=lambda c: (priority.get(c.get("cluster_direction"), 3),
+                                     -c["insider_count"]))
         return clusters
 
-    def _is_openinsider_sale(self, trade_type):
-        return (
-            trade_type.startswith("s")
-            or "sale" in trade_type
-            or "sell" in trade_type
-        )
+    @staticmethod
+    def _openinsider_code(trade_type):
+        match = OPENINSIDER_CODE_RE.match(str(trade_type or ""))
+        return match.group(1).upper() if match else None
+
+    @staticmethod
+    def _cluster_direction(buyers, sellers):
+        """buy/sell by distinct-filer majority; tie = mixed; null when no
+        filer transacted open-market at all (grants/exercises carry no direction)."""
+        if buyers == 0 and sellers == 0:
+            return None
+        if buyers > sellers:
+            return "buy"
+        if sellers > buyers:
+            return "sell"
+        return "mixed"
+
+    def _fetch_form4_details(self, filing):
+        """Pull transaction codes and reporting-owner CIKs out of a Form 4's raw XML.
+
+        Returns {"codes": [...], "owners": [...]}, or None when the document
+        could not be fetched or is not the ownership XML."""
+        url = filing.get("primary_doc_url") or ""
+        if not url:
+            return None
+        # submissions API points at the XSL-rendered view; the raw XML is the
+        # same filename one path segment up
+        url = re.sub(r"/xslF345X\d+/", "/", url)
+        if not url.lower().endswith(".xml"):
+            return None
+        resp = self._get_with_retries(url, timeout=10, max_attempts=2)
+        if not resp or resp.status_code != 200:
+            return None
+        return {
+            "codes": FORM4_CODE_RE.findall(resp.text),
+            "owners": FORM4_OWNER_RE.findall(resp.text),
+        }
 
     def get_full_sec_dump(self):
         """Returns all SEC data as formatted strings for the daily dump."""

@@ -9,10 +9,13 @@ from copy import deepcopy
 from threading import Lock
 
 from openinsider_agent import OpenInsiderAgent
+from timeutil import utc_now_z
 
 from config import (
-    SUBREDDITS_CORE, SUBREDDITS_SKIM, SUBREDDITS_VOLATILE,
-    CONTRARIAN_SUBREDDITS, CONTRARIAN_EUPHORIA_KEYWORDS, CONTRARIAN_EUPHORIA_THRESHOLD
+    SUBREDDITS_NARRATIVE, ALL_TICKERS,
+    CONTRARIAN_SUBREDDITS, CONTRARIAN_EUPHORIA_KEYWORDS, CONTRARIAN_EUPHORIA_THRESHOLD,
+    APEWISDOM_ENABLED, APEWISDOM_FILTERS, APEWISDOM_LOW_VOLUME_MENTIONS,
+    APEWISDOM_NO_UPVOTE_FILTERS, APEWISDOM_UNIVERSE_PAGES
 )
 
 logger = logging.getLogger("SocialAgent")
@@ -23,23 +26,23 @@ try:
     PRAW_AVAILABLE = True
 except ImportError:
     PRAW_AVAILABLE = False
-    logger.warning("PRAW not installed â€” using public JSON API (rate limited). pip install praw")
+    logger.warning("PRAW not installed — using public JSON API (rate limited). pip install praw")
 
 
 class SocialAgent:
-    def __init__(self):
+    def __init__(self, now=None):
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.4472.124 Safari/537.36'
         }
-        
-        self.openinsider = OpenInsiderAgent()
+
+        self.openinsider = OpenInsiderAgent(now=now)
         self._health_lock = Lock()
         self.health = self._empty_health()
         # Initialize PRAW if credentials are available
         self.reddit = None
         client_id = os.getenv("REDDIT_CLIENT_ID", "")
         client_secret = os.getenv("REDDIT_CLIENT_SECRET", "")
-        
+
         if PRAW_AVAILABLE and client_id and client_id != "optional_reddit_id":
             try:
                 self.reddit = praw.Reddit(
@@ -49,7 +52,7 @@ class SocialAgent:
                 )
                 # Test the connection
                 self.reddit.read_only = True
-                logger.info("âœ… PRAW authenticated â€” using Reddit API (better rate limits + comment access)")
+                logger.info("PRAW authenticated — using Reddit API (better rate limits + comment access)")
             except Exception as e:
                 logger.error(f"PRAW auth failed, falling back to JSON API: {e}")
                 self.reddit = None
@@ -57,6 +60,8 @@ class SocialAgent:
             logger.info("Using Reddit RSS feeds (no API key needed — set REDDIT_CLIENT_ID/SECRET in .env for full PRAW access)")
 
         self._last_reddit_rss_time = 0
+        self._apewisdom_records = []
+        self._apewisdom_top200 = []
         self._set_health_value("reddit_mode", "praw" if self.reddit else "rss")
 
     def _empty_health(self):
@@ -70,6 +75,12 @@ class SocialAgent:
             "rss_status_counts": {},
             "rss_failures": [],
             "rss_failures_omitted": 0,
+            "apewisdom_enabled": APEWISDOM_ENABLED,
+            "apewisdom_requests": 0,
+            "apewisdom_status_counts": {},
+            "apewisdom_failures": [],
+            "apewisdom_failures_omitted": 0,
+            "apewisdom_items": 0,
         }
 
     def _set_health_value(self, key, value):
@@ -109,26 +120,28 @@ class SocialAgent:
     def get_whisper(self, limit_per_source=5):
         whispers = []
 
-        # 1. CORE: Deep dive (Rising + Hot)
-        for sub in SUBREDDITS_CORE:
+        # 1. NARRATIVE: niche thesis subs only (rising + hot). Broad ticker
+        #    heat comes from ApeWisdom; the old 24-sub sweep just 429'd.
+        for sub in SUBREDDITS_NARRATIVE:
             whispers.extend(self._fetch_reddit(sub, "rising", limit=3))
             whispers.extend(self._fetch_reddit(sub, "hot", limit=3))
 
-        # 2. SKIM: Top headlines only
-        for sub in SUBREDDITS_SKIM:
-            whispers.extend(self._fetch_reddit(sub, "hot", limit=3))
+        # 2. ApeWisdom ticker heat (fills Reddit RSS score/comment metadata gap).
+        # Structured records are the data layer (get_apewisdom_attention);
+        # whispers only ever carry the rendered string — market-color rows only,
+        # so renders don't explode to one line per universe ticker.
+        if APEWISDOM_ENABLED:
+            _, render_records = self._build_social_attention()
+            whispers.extend(self._render_apewisdom_whisper(r) for r in render_records)
+        else:
+            with self._health_lock:
+                self._apewisdom_records = []
+                self._apewisdom_top200 = []
 
-        # 3. VOLATILE: High Volume/Traffic Filter
-        for sub in SUBREDDITS_VOLATILE:
-            vol_whispers = self._fetch_reddit(sub, "hot", limit=10, min_score=300, min_comments=100)
-            if vol_whispers:
-                whispers.append(f"--- HIGH TRAFFIC NOTE in r/{sub} ---")
-                whispers.extend(vol_whispers)
-
-        # 4. Scrape Hacker News
+        # 3. Scrape Hacker News
         whispers.extend(self._fetch_hacker_news(limit=10))
 
-        # 5. Direct RSS Feeds (ZeroHedge / OpenInsider / Biotech / Layoffs)
+        # 4. Direct RSS Feeds (ZeroHedge / OpenInsider / Biotech / Layoffs)
         from config import RSS_FEEDS
         for feed in RSS_FEEDS:
             whispers.extend(self._fetch_rss(feed, limit=5))
@@ -145,6 +158,232 @@ class SocialAgent:
         logger.info(f"Gathered {len(whispers)} whispers from all sources")
         return whispers
 
+    # Universe tickers ApeWisdom can never track: futures ("=") and indices ("^")
+    SOCIAL_UNIVERSE = [t for t in ALL_TICKERS if "^" not in t and "=" not in t]
+
+    def _build_social_attention(self):
+        """Universe-first social_attention assembly.
+
+        Returns (attention_records, render_records):
+        - attention_records: one row per universe ticker (wherever it ranks in
+          the paginated all-stocks leaderboard, or mentions=0 /
+          in_leaderboard=false if absent), plus the configured top-N
+          market-color rows flagged universe_member=false.
+        - render_records: the market-color subset only (what the whisper
+          strings have always shown).
+
+        Also stores the rank<=200 all-stocks rows for leaderboard-entrance
+        detection (get_apewisdom_top200).
+        """
+        observed_at = utc_now_z()
+        all_rows = self._fetch_apewisdom(
+            "all-stocks", limit=None, pages=APEWISDOM_UNIVERSE_PAGES
+        )
+        by_ticker = {row["ticker"]: row for row in all_rows}
+
+        attention_records = []
+        emitted_all_stocks = set()
+        for ticker in self.SOCIAL_UNIVERSE:
+            row = by_ticker.get(ticker)
+            if row is not None:
+                rec = dict(
+                    row,
+                    universe_member=True,
+                    in_leaderboard=True,
+                    observed_at=observed_at,
+                )
+            else:
+                # Not in the scanned leaderboard depth: mentions=0 by spec
+                # (velocity/rank unknowable, attention_score unmeasured).
+                rec = {
+                    "source": "ApeWisdom",
+                    "filter": "all-stocks",
+                    "ticker": ticker,
+                    "name": None,
+                    "rank": None,
+                    "mentions": 0,
+                    "upvotes": 0,
+                    "mentions_24h_ago": None,
+                    "rank_24h_ago": None,
+                    "mention_velocity_24h": None,
+                    "rank_delta_24h": None,
+                    "attention_score": None,
+                    "is_low_volume": True,
+                    "universe_member": True,
+                    "in_leaderboard": False,
+                    "observed_at": observed_at,
+                }
+            attention_records.append(rec)
+            emitted_all_stocks.add(ticker)
+
+        render_records = []
+        for filter_name, limit in APEWISDOM_FILTERS:
+            if filter_name == "all-stocks":
+                rows = all_rows[:limit]  # reuse the paginated fetch
+            else:
+                rows = self._fetch_apewisdom(filter_name, limit=limit)
+            for row in rows:
+                render_records.append(row)
+                if filter_name == "all-stocks" and row["ticker"] in emitted_all_stocks:
+                    continue  # universe row already carries this data
+                attention_records.append(
+                    dict(row,
+                         universe_member=row["ticker"] in self.SOCIAL_UNIVERSE,
+                         in_leaderboard=True,
+                         observed_at=observed_at)
+                )
+
+        top200 = [
+            {
+                "ticker": r["ticker"],
+                "rank": r["rank"],
+                "mentions": r["mentions"],
+                "observed_at": observed_at,
+            }
+            for r in all_rows
+            if r.get("rank") is not None and r["rank"] <= 200
+        ]
+        with self._health_lock:
+            self._apewisdom_records = deepcopy(attention_records)
+            self._apewisdom_top200 = deepcopy(top200)
+        return attention_records, render_records
+
+    def _fetch_apewisdom(self, filter_name="all-stocks", limit=15, pages=1):
+        """Fetch ApeWisdom aggregate ticker attention data.
+
+        Returns structured records (data layer). Strings for Telegram/Discord
+        come from _render_apewisdom_whisper — never store them here.
+
+        attention_score = upvotes / max(mentions, 1) — engagement quality,
+        separating "one viral post everyone upvotes" from broad low-effort
+        chatter. Null for filters whose source has no upvote mechanic
+        (APEWISDOM_NO_UPVOTE_FILTERS): there upvotes=0 means "not applicable",
+        not "measured zero". The data layer carries only measurements and
+        trivially interpretable ratios; blended/modeled scores belong
+        downstream in analysis code where they can be iterated.
+        """
+        base_url = f"https://apewisdom.io/api/v1.0/filter/{filter_name}"
+        records = []
+        seen_tickers = set()
+
+        try:
+            results = []
+            for page in range(1, pages + 1):
+                url = base_url if page == 1 else f"{base_url}/page/{page}"
+                self._bump_health("apewisdom_requests")
+                response = requests.get(url, headers=self.headers, timeout=10)
+                self._record_source_status(
+                    "apewisdom_status_counts", filter_name, response.status_code
+                )
+                if response.status_code != 200:
+                    logger.warning(f"ApeWisdom returned {response.status_code} for {filter_name}")
+                    self._record_source_failure(
+                        "apewisdom_failures", filter_name, response.status_code, url
+                    )
+                    break  # keep rows already fetched; failure is in health
+
+                page_results = response.json().get("results", [])
+                if not page_results:
+                    break
+                results.extend(page_results)
+
+            if limit is not None:
+                results = results[:limit]
+            for row in results:
+                ticker = str(row.get("ticker", "")).upper().strip()
+                if not ticker or ticker in seen_tickers:
+                    continue  # leaderboard can shift between page fetches
+                seen_tickers.add(ticker)
+
+                name = str(row.get("name", "")).strip()
+                rank = self._safe_int(row.get("rank"))
+                mentions = self._safe_int(row.get("mentions"))
+                upvotes = self._safe_int(row.get("upvotes"))
+                prev_mentions = self._safe_int(row.get("mentions_24h_ago"))
+                prev_rank = self._safe_int(row.get("rank_24h_ago"))
+
+                mention_velocity = None
+                if mentions is not None and prev_mentions is not None:
+                    mention_velocity = mentions - prev_mentions
+
+                # positive = climbed the leaderboard over 24h
+                rank_delta = None
+                if rank is not None and prev_rank is not None:
+                    rank_delta = prev_rank - rank
+
+                attention_score = None
+                if (filter_name not in APEWISDOM_NO_UPVOTE_FILTERS
+                        and upvotes is not None and mentions is not None):
+                    attention_score = round(upvotes / max(mentions, 1), 3)
+
+                records.append({
+                    "source": "ApeWisdom",
+                    "filter": filter_name,
+                    "ticker": ticker,
+                    "name": name or None,
+                    "rank": rank,
+                    "mentions": mentions,
+                    "upvotes": upvotes,
+                    "mentions_24h_ago": prev_mentions,
+                    "rank_24h_ago": prev_rank,
+                    "mention_velocity_24h": mention_velocity,
+                    "rank_delta_24h": rank_delta,
+                    "attention_score": attention_score,
+                    "is_low_volume": (
+                        mentions is None or mentions < APEWISDOM_LOW_VOLUME_MENTIONS
+                    ),
+                })
+
+            self._bump_health("apewisdom_items", len(records))
+        except Exception as e:
+            logger.error(f"ApeWisdom fetch failed for {filter_name}: {e}")
+            self._record_source_failure("apewisdom_failures", filter_name, "exception", e)
+
+        return records
+
+    def _render_apewisdom_whisper(self, rec):
+        """Render layer: human-readable string for a structured ApeWisdom record."""
+        name_text = f" ({rec['name']})" if rec.get("name") else ""
+        rank_text = f"#{rec['rank']}" if rec.get("rank") is not None else "N/A"
+        mentions_text = rec["mentions"] if rec.get("mentions") is not None else "?"
+        upvotes_text = rec["upvotes"] if rec.get("upvotes") is not None else "?"
+
+        mention_delta = ""
+        if rec.get("mention_velocity_24h") is not None:
+            mention_delta = f" | Mentions 24h: {rec['mention_velocity_24h']:+d}"
+
+        rank_delta = ""
+        if rec.get("rank_delta_24h") is not None:
+            rank_delta = f" | Rank move: {rec['rank_delta_24h']:+d}"
+
+        return (
+            f"[ApeWisdom/{rec['filter']}] {rec['ticker']}{name_text}: "
+            f"rank {rank_text}, mentions {mentions_text}, upvotes {upvotes_text}"
+            f"{mention_delta}{rank_delta}"
+        )
+
+    def get_apewisdom_attention(self):
+        """Structured ApeWisdom records from the most recent get_whisper() run."""
+        with self._health_lock:
+            return deepcopy(self._apewisdom_records)
+
+    def get_apewisdom_top200(self):
+        """rank<=200 all-stocks rows from the most recent get_whisper() run.
+
+        Input for leaderboard-entrance detection (signals.py); not a JSON
+        section of its own.
+        """
+        with self._health_lock:
+            return deepcopy(self._apewisdom_top200)
+
+    def _safe_int(self, value):
+        try:
+            if value in (None, "", "N/A"):
+                return None
+            return int(str(value).replace(",", ""))
+        except (TypeError, ValueError):
+            return None
+
     def get_ticker_whispers(self, ticker):
         """
         Search for whispers specifically about a ticker.
@@ -154,7 +393,7 @@ class SocialAgent:
         search_subs = ["stocks", "investing", "wallstreetbets", "options"]
 
         if self.reddit:
-            # PRAW â€” better search, includes comment previews
+            # PRAW — better search, includes comment previews
             for sub_name in search_subs:
                 try:
                     sub = self.reddit.subreddit(sub_name)
@@ -212,7 +451,7 @@ class SocialAgent:
                 label = "ZeroHedge"
             else:
                 label = "RSS/External"
-            
+
             response = requests.get(url, headers=self.headers, timeout=8)
             self._record_source_status("rss_status_counts", label, response.status_code)
             if response.status_code == 200:
@@ -225,19 +464,19 @@ class SocialAgent:
                 logger.warning(f"RSS feed returned {response.status_code}: {url[:60]}")
                 self._record_source_failure("rss_failures", label, response.status_code, url[:120])
         except Exception as e:
-            logger.error(f"Error fetching RSS: {url[:60]}... â€” {e}")
+            logger.error(f"Error fetching RSS: {url[:60]}... — {e}")
             self._record_source_failure("rss_failures", "RSS/External", "exception", e)
         return items
 
     def _fetch_reddit(self, subreddit, category, limit, min_score=0, min_comments=0):
         """Fetch posts from a subreddit. Uses PRAW if available, else RSS feeds."""
-        
+
         if self.reddit:
             return self._fetch_reddit_praw(subreddit, category, limit, min_score, min_comments)
         return self._fetch_reddit_rss(subreddit, category, limit, min_score, min_comments)
 
     def _fetch_reddit_praw(self, subreddit, category, limit, min_score=0, min_comments=0):
-        """PRAW-based Reddit fetcher â€” authenticated, better rate limits."""
+        """PRAW-based Reddit fetcher — authenticated, better rate limits."""
         data_list = []
         try:
             sub = self.reddit.subreddit(subreddit)
@@ -336,10 +575,10 @@ class SocialAgent:
 
     def _fetch_hacker_news(self, limit):
         """
-        HN API â€” great for tech stocks (PLTR, TSLA, CRSP).
-        Structural layoff context.
-        Distinguishes efficiency restructuring from deeper operational stress.
-
+        HN API — great for tech stocks (PLTR, TSLA, CRSP).
+        Structural workforce-change context.
+        Distinguishes efficiency restructuring (cost cuts plus builder hiring)
+        from broader operational stress (core-team cuts or shutdowns).
         """
         hn_list = []
         layoff_keywords = [
@@ -347,13 +586,13 @@ class SocialAgent:
             "hiring freeze", "workforce reduction", "downsizing", "restructuring",
             "job cuts", "let go", "severance"
         ]
-        # Efficiency restructuring indicators - cost cuts paired with builder hiring
+        # Efficiency-restructuring indicators — cost cuts paired with builder hiring
         efficiency_keywords = [
             "ai engineer", "ai hiring", "machine learning", "compute",
             "middle management", "managers", "restructuring to", "efficiency",
             "streamlin", "automat", "cost cutting", "reorganiz"
         ]
-        # Operational stress indicators - cuts to core teams or shutdown language
+        # Operational-stress indicators — cuts to core teams or shutdown language
         liquidation_keywords = [
             "core team", "product engineer", "entire team", "division shut",
             "office clos", "wind down", "bankruptcy", "chapter 11",
@@ -376,21 +615,21 @@ class SocialAgent:
                         title_lower = title.lower()
 
                         if any(kw in title_lower for kw in layoff_keywords):
-                            # Classify restructuring context
+                            # Classify workforce-change context
                             is_efficiency = any(kw in title_lower for kw in efficiency_keywords)
                             is_liquidation = any(kw in title_lower for kw in liquidation_keywords)
 
                             if is_liquidation:
                                 hn_list.append(
-                                    f"[HackerNews] Operational stress indicator: {title} (Score: {score})"
+                                    f"[HackerNews] OPERATIONAL STRESS: {title} (Score: {score})"
                                 )
                             elif is_efficiency:
                                 hn_list.append(
-                                    f"[HackerNews] Efficiency restructuring indicator: {title} (Score: {score})"
+                                    f"[HackerNews] EFFICIENCY RESTRUCTURING: {title} (Score: {score})"
                                 )
                             else:
                                 hn_list.append(
-                                    f"[HackerNews] Layoff indicator: {title} (Score: {score})"
+                                    f"[HackerNews] WORKFORCE CHANGE NOTE: {title} (Score: {score})"
                                 )
                         else:
                             hn_list.append(
@@ -402,15 +641,15 @@ class SocialAgent:
             logger.error(f"Error fetching Hacker News: {e}")
         return hn_list
 
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    # RETAIL SENTIMENT INDEX - Elevated Sentiment Tracker
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # ===============================================================
+    # RETAIL LANGUAGE INTENSITY (compatibility method name retained)
+    # ===============================================================
 
     def get_retail_contrarian_index(self):
         """
         Measures retail euphoria in CONTRARIAN_SUBREDDITS.
-        When euphoria ratio exceeds threshold, treat it as an elevated sentiment indicator.
-        We measure the noise so the reviewer can add context.
+        The compatibility flag `is_topped` means only that the configured language
+        ratio threshold was crossed; it is not a forecast or trading rule.
 
         Also pulls 4chan /biz/ threads via the official JSON API.
         """
@@ -445,10 +684,10 @@ class SocialAgent:
 
                 if sub_result["is_topped"]:
                     results["alerts"].append(
-                        f"Elevated retail euphoria - r/{sub_name}: "
+                        f"RETAIL LANGUAGE THRESHOLD — r/{sub_name}: "
                         f"{sub_result['euphoria_ratio']:.0%} euphoria ratio "
                         f"({sub_result['euphoric_posts']}/{sub_result['total_posts']} posts). "
-                        f"Review with caution."
+                        f"Descriptive language measure only."
                     )
 
             except Exception as e:
@@ -469,20 +708,20 @@ class SocialAgent:
                 biz_ratio = biz_euphoric / len(biz_threads)
                 if biz_ratio >= CONTRARIAN_EUPHORIA_THRESHOLD:
                     results["alerts"].append(
-                        f"Elevated retail euphoria - /biz/: "
-                        f"{biz_ratio:.0%} euphoria ratio. Review with caution."
+                        f"RETAIL LANGUAGE THRESHOLD — /biz/: "
+                        f"{biz_ratio:.0%} euphoria ratio. matching-language ratio."
                     )
         except Exception as e:
             logger.error(f"4chan /biz/ fetch error: {e}")
 
-        print(f"[SocialAgent] Retail sentiment: {len(results['subreddits'])} subs scored, {len(results['alerts'])} notes")
+        print(f"[SocialAgent] Retail language intensity: {len(results['subreddits'])} communities scored, {len(results['alerts'])} thresholds")
         return results
 
     def _fetch_4chan_biz(self, limit=15):
         """
         Fetch threads from 4chan /biz/ using the official JSON API.
         https://a.4cdn.org/biz/catalog.json
-        
+
         Returns list of thread summaries (subject + comment preview).
         """
         threads = []

@@ -1,5 +1,5 @@
 /**
- * MARKET BRIEF DASHBOARD — App Logic
+ * MARKETBOT DASHBOARD — App Logic
  * Fetches /api/brief (JSON) and /api/txt (raw) from serve_dump.py
  * Populates DOM with cards, alerts, and lists.
  */
@@ -7,9 +7,55 @@
 let DATA = null;
 let RAW_TEXT = '';
 
+function appendText(parent, value) {
+    parent.appendChild(document.createTextNode(String(value ?? '')));
+}
+
+function appendTag(parent, className, value) {
+    const tag = document.createElement('span');
+    tag.className = className;
+    tag.textContent = String(value ?? '');
+    parent.appendChild(tag);
+    return tag;
+}
+
+function safeExternalUrl(value) {
+    if (!value) return null;
+    try {
+        const parsed = new URL(String(value), window.location.origin);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+            ? parsed.href : null;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function appendExternalLink(parent, value, label) {
+    parent.appendChild(document.createElement('br'));
+    const safeUrl = safeExternalUrl(value);
+    if (!safeUrl) {
+        appendText(parent, label);
+        return;
+    }
+    const link = document.createElement('a');
+    link.href = safeUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = String(label);
+    parent.appendChild(link);
+}
+
+function setupCopyButtons() {
+    ['copy-all-btn', 'fab-copy'].forEach(id => {
+        const button = document.getElementById(id);
+        if (button) button.addEventListener('click', copyRawDump);
+    });
+}
+
 // ═══ INIT ═══
 document.addEventListener('DOMContentLoaded', async () => {
     setupTabs();
+    setupCopyButtons();
     await loadData();
 });
 
@@ -57,16 +103,16 @@ function renderAll() {
     renderTechAlerts();
     renderSectorRotation();
 
-    // Arsenal tab
-    renderGammaSweeps();
-    renderBackwardation();
+    // Measurements tab
+    renderOptionAnomalies();
+    renderInstrumentSpreads();
     renderContrarian();
     renderOptionsFlow();
 
     // Intel tab
     renderHeadlines();
     renderSECFilings();
-    renderPDUFA();
+    renderClinical();
     renderCashRunway();
     renderCashMonitor();
     renderCEO();
@@ -89,23 +135,19 @@ function renderPrices() {
     grid.innerHTML = '';
 
     prices.forEach(p => {
-        // Schema 2.0: price and change_pct are numeric (or null); older dumps used a formatted string
-        let priceVal, changePct = null;
-        if (typeof p.price === 'number') {
-            priceVal = p.price.toFixed(2);
-            changePct = typeof p.change_pct === 'number' ? p.change_pct : null;
-        } else {
-            const priceMatch = String(p.price || '').match(/\$([0-9.]+)\s*\(([^)]+)\)/);
-            priceVal = priceMatch ? priceMatch[1] : (p.price || 'N/A');
-            const changeStr = priceMatch ? priceMatch[2].replace(/[🟢🔴⚪]/g, '').trim() : '';
-            changePct = changeStr ? parseFloat(changeStr) : null;
-        }
+        // Schema 2.0: price and change_pct are numeric (no longer a "$X (🟢 +Y%)" string)
+        const priceNum = typeof p.price === 'number' ? p.price : parseFloat(p.price);
+        const priceVal = Number.isFinite(priceNum) ? priceNum.toFixed(2) : '—';
+        const chg = typeof p.change_pct === 'number' ? p.change_pct : parseFloat(p.change_pct);
+        const hasChg = Number.isFinite(chg);
 
-        const isUp = changePct !== null && changePct > 0;
-        const isDown = changePct !== null && changePct < 0;
+        const isUp = hasChg && chg > 0;
+        const isDown = hasChg && chg < 0;
         const cls = isUp ? 'positive' : isDown ? 'negative' : 'neutral';
         const changeCls = isUp ? 'up' : isDown ? 'down' : 'flat';
-        const cleanChange = changePct !== null ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(2)}%` : '';
+
+        // Clean change display
+        const cleanChange = hasChg ? `${chg > 0 ? '+' : ''}${chg.toFixed(2)}%` : '';
 
         const tech = techs[p.ticker] || {};
         const rsi = tech.rsi || 50;
@@ -124,7 +166,7 @@ function renderPrices() {
     });
 }
 
-// ═══ TECH ALERTS ═══
+// ═══ TECHNICAL INDICATORS ═══
 function renderTechAlerts() {
     const container = document.getElementById('tech-alerts-list');
     const techs = DATA.sections?.technicals || [];
@@ -134,16 +176,15 @@ function renderTechAlerts() {
     container.innerHTML = '';
 
     if (alertTechs.length === 0) {
-        container.innerHTML = '<div class="empty-state">No technical alerts triggered</div>';
+        container.innerHTML = '<div class="empty-state">No technical thresholds crossed</div>';
         return;
     }
 
     alertTechs.forEach(t => {
         t.alerts.forEach(alert => {
-            const upper = alert.toUpperCase();
-            const type = alert.includes('🚨') || upper.includes('DEATH CROSS') || upper.includes('FALLING') || upper.includes('DOWNSIDE') ? 'danger'
-                : alert.includes('⚠️') || upper.includes('OVERBOUGHT') || upper.includes('PULLBACK') ? 'warning'
-                : alert.includes('🟢') || upper.includes('GOLDEN CROSS') || upper.includes('UPSIDE') || upper.includes('OVERSOLD') ? 'success' : 'info';
+            const type = alert.includes('🚨') || alert.includes('DEATH') || alert.includes('DROPPING') ? 'danger'
+                : alert.includes('⚠️') || alert.includes('OVERBOUGHT') ? 'warning'
+                : alert.includes('🟢') || alert.includes('GOLDEN') || alert.includes('BULLISH') ? 'success' : 'info';
             const item = document.createElement('div');
             item.className = `alert-item ${type}`;
             item.innerHTML = `<div class="alert-title">${t.ticker}</div><div class="alert-meta">${alert}</div>`;
@@ -162,59 +203,57 @@ function renderSectorRotation() {
         : signal === 'CAUTIOUS' ? 'var(--accent-yellow)' : 'var(--text-muted)';
 
     container.innerHTML = `
-        <div class="row"><span class="label">Signal</span><span class="value" style="color:${signalColor}">${signal}</span></div>
+        <div class="row"><span class="label">Regime label</span><span class="value" style="color:${signalColor}">${signal}</span></div>
         <div class="row"><span class="label">Growth 5d</span><span class="value">${sr.growth_5d ?? '—'}%</span></div>
         <div class="row"><span class="label">Defensive 5d</span><span class="value">${sr.defensive_5d ?? '—'}%</span></div>
         <div class="row"><span class="label">Spread</span><span class="value">${sr.spread_5d ?? '—'}%</span></div>
     `;
 }
 
-// ═══ SHORT-DATED OPTIONS ACTIVITY ═══
-function renderGammaSweeps() {
-    const container = document.getElementById('gamma-list');
-    // Schema 2.0: sweeps live per-ticker under options_flow; older dumps had a top-level section
-    let sweeps = DATA.sections?.gamma_sweeps || [];
-    if (sweeps.length === 0) {
-        const flow = DATA.sections?.options_flow || {};
-        sweeps = Object.entries(flow).flatMap(([ticker, d]) =>
-            (d.gamma_sweeps || []).map(s => ({ ticker, ...s }))
-        );
-    }
-    document.getElementById('gamma-count').textContent = sweeps.length;
+// ═══ OPTION CONTRACT VOLUME/OI ANOMALIES ═══
+function renderOptionAnomalies() {
+    const container = document.getElementById('option-anomaly-list');
+    const of = DATA.sections?.options_flow || {};
+    const anomalies = [];
+    Object.values(of).forEach(d => (d?.option_contract_volume_oi_anomaly || []).forEach(a => anomalies.push(a)));
+    document.getElementById('option-anomaly-count').textContent = anomalies.length;
     container.innerHTML = '';
 
-    if (sweeps.length === 0) {
-        container.innerHTML = '<div class="empty-state">No short-dated high Vol/OI options activity detected</div>';
+    if (anomalies.length === 0) {
+        container.innerHTML = '<div class="empty-state">No option contract volume/OI anomalies</div>';
         return;
     }
 
-    sweeps.forEach(s => {
-        const premium = s.premium_fmt || (typeof s.premium === 'number' ? `$${(s.premium / 1e6).toFixed(2)}M` : '?');
+    anomalies.forEach(s => {
+        // 2.6 names this honestly: last price × completed-session volume × 100.
+        const rawNotional = s.notional_estimate ?? s.premium;
+        const notional = s.premium_fmt || (typeof rawNotional === 'number'
+            ? '$' + (rawNotional / 1e6).toFixed(1) + 'M' : (rawNotional ?? '—'));
         const item = document.createElement('div');
         item.className = 'alert-item danger';
         item.innerHTML = `
-            <div class="alert-title">🎯 ${s.ticker} $${s.strike}${(s.type || '?')[0]}</div>
-            <div class="alert-meta">DTE=${s.dte} · Vol/OI=${s.vol_oi_ratio}x · Premium=${premium} · Exp: ${s.expiration}</div>
+            <div class="alert-title">🎯 ${s.ticker} $${s.strike}${s.type[0]}</div>
+            <div class="alert-meta">DTE=${s.dte} · Vol/OI=${s.vol_oi_ratio}x · Est. notional=${notional} · Exp: ${s.expiration}</div>
         `;
         container.appendChild(item);
     });
 }
 
-// ═══ BACKWARDATION ═══
-function renderBackwardation() {
-    const container = document.getElementById('backwardation-list');
-    const bwd = DATA.sections?.backwardation || {};
-    const pairs = bwd.pairs || [];
+// ═══ INSTRUMENT RELATIVE-RETURN SPREAD ═══
+function renderInstrumentSpreads() {
+    const container = document.getElementById('instrument-spread-list');
+    const spread = DATA.sections?.instrument_relative_return_spread || {};
+    const pairs = spread.pairs || [];
     container.innerHTML = '';
 
     if (pairs.length === 0) {
-        container.innerHTML = '<div class="empty-state">No backwardation data</div>';
+        container.innerHTML = '<div class="empty-state">No instrument spread data</div>';
         return;
     }
 
     pairs.forEach(p => {
-        const type = p.backwardation ? 'danger' : 'success';
-        const status = p.backwardation ? '🚨 BACKWARDATION' : '✅ NORMAL';
+        const type = p.threshold_crossed ? 'danger' : 'success';
+        const status = p.threshold_crossed ? '🚨 THRESHOLD CROSSED' : '✅ NORMAL';
         const item = document.createElement('div');
         item.className = `alert-item ${type}`;
         item.innerHTML = `
@@ -229,7 +268,7 @@ function renderBackwardation() {
     });
 }
 
-// ═══ RETAIL CONTRARIAN ═══
+// ═══ RETAIL LANGUAGE INTENSITY ═══
 function renderContrarian() {
     const container = document.getElementById('contrarian-list');
     const data = DATA.sections?.retail_contrarian || {};
@@ -239,7 +278,7 @@ function renderContrarian() {
 
     subs.forEach(s => {
         const type = s.is_topped ? 'danger' : 'success';
-        const status = s.is_topped ? '🚨 ELEVATED' : '🟢 BASELINE';
+        const status = s.is_topped ? 'ELEVATED' : 'BASELINE';
         const item = document.createElement('div');
         item.className = `alert-item ${type}`;
         item.innerHTML = `
@@ -252,15 +291,20 @@ function renderContrarian() {
     if (biz.length > 0) {
         const bizItem = document.createElement('div');
         bizItem.className = 'alert-item info';
-        bizItem.innerHTML = `
-            <div class="alert-title">/biz/ — ${biz.length} threads scanned</div>
-            <div class="alert-meta">${biz.slice(0, 3).map(b => b.subject || b.comment.slice(0, 60)).join(' · ')}</div>
-        `;
+        const title = document.createElement('div');
+        title.className = 'alert-title';
+        title.textContent = `/biz/ — ${biz.length} threads scanned`;
+        const meta = document.createElement('div');
+        meta.className = 'alert-meta';
+        meta.textContent = biz.slice(0, 3)
+            .map(b => b.subject || String(b.comment || '').slice(0, 60))
+            .join(' · ');
+        bizItem.append(title, meta);
         container.appendChild(bizItem);
     }
 
     if (subs.length === 0 && biz.length === 0) {
-        container.innerHTML = '<div class="empty-state">No contrarian data</div>';
+        container.innerHTML = '<div class="empty-state">No retail-language data</div>';
     }
 }
 
@@ -272,16 +316,15 @@ function renderOptionsFlow() {
 
     const entries = Object.entries(flow).filter(([_, d]) => d.alerts && d.alerts.length > 0);
     if (entries.length === 0) {
-        container.innerHTML = '<div class="empty-state">No significant options flow alerts</div>';
+        container.innerHTML = '<div class="empty-state">No options thresholds crossed</div>';
         return;
     }
 
     entries.forEach(([ticker, d]) => {
         d.alerts.forEach(alert => {
-            const upper = alert.toUpperCase();
-            const type = alert.includes('🚨') || upper.includes('STRONGLY PUT-SKEWED') || upper.includes('HEAVY PUT') ? 'danger'
-                : alert.includes('⚠️') || upper.includes('PUT-SKEWED') || upper.includes('SHORT-DATED') ? 'warning'
-                : alert.includes('🟢') || upper.includes('CALL-SKEWED') ? 'success' : 'info';
+            const type = alert.includes('🚨') || alert.includes('VOLUME/OI ANOMALY') ? 'danger'
+                : alert.includes('⚠️') ? 'warning'
+                : alert.includes('🟢') ? 'success' : 'info';
             const item = document.createElement('div');
             item.className = `alert-item ${type}`;
             item.innerHTML = `<div class="alert-title">${ticker}</div><div class="alert-meta">${alert}</div>`;
@@ -309,20 +352,20 @@ function renderSECFilings() {
     filings.forEach(f => {
         const item = document.createElement('div');
         item.className = 'text-item';
-        item.innerHTML = `
-            <span class="source-tag">${f.ticker}/${f.form_type}</span>
-            ${f.description}
-            <br><a href="${f.link}" target="_blank">${f.date} → View Filing</a>
-        `;
+        appendTag(item, 'source-tag', `${f.ticker ?? ''}/${f.form_type ?? ''}`);
+        appendText(item, ` ${f.description ?? ''}`);
+        appendExternalLink(item, f.link, `${f.date ?? ''} → View Filing`);
         container.appendChild(item);
     });
 }
 
-// ═══ CLINICAL CATALYSTS ═══
-function renderPDUFA() {
-    const container = document.getElementById('pdufa-list');
-    // Schema 2.0 renamed pdufa_catalysts to clinical_catalysts
-    const cats = DATA.sections?.clinical_catalysts || DATA.sections?.pdufa_catalysts || [];
+// ═══ PDUFA ═══
+function renderClinical() {
+    // Schema 2.0: section is `clinical_catalysts` (was the non-existent `pdufa_catalysts`)
+    const container = document.getElementById('clinical-list');
+    const cats = DATA.sections?.clinical_catalysts || [];
+    const countEl = document.getElementById('clinical-count');
+    if (countEl) countEl.textContent = cats.length;
     container.innerHTML = '';
 
     if (cats.length === 0) {
@@ -330,22 +373,50 @@ function renderPDUFA() {
         return;
     }
 
-    cats.slice(0, 15).forEach(c => {
+    // Priority pinned to top, then soonest target date first
+    const sorted = [...cats].sort((a, b) => {
+        if (!!b.is_priority !== !!a.is_priority) return (b.is_priority ? 1 : 0) - (a.is_priority ? 1 : 0);
+        return (a.days_until ?? 1e9) - (b.days_until ?? 1e9);
+    });
+
+    sorted.slice(0, 20).forEach(c => {
+        const eta = Number.isFinite(c.days_until)
+            ? `${c.days_until}d (${c.target_date})` : (c.target_date || '');
         const item = document.createElement('div');
         item.className = 'text-item';
-        const priorityTag = c.is_priority ? '<span class="verified-tag">WATCHLIST</span>' : '';
-        item.innerHTML = `
-            <span class="source-tag">${c.nct_id || c.source || 'PDUFA'}</span>
-            ${c.title} ${priorityTag}
-            ${c.sponsor ? `<br><span style="color:var(--text-muted);font-size:11px">Sponsor: ${c.sponsor} · ${c.status} · ${c.phase || '?'}</span>` : ''}
-        `;
+        appendTag(item, 'source-tag', c.source || 'ClinicalTrials.gov');
+        appendText(item, ' ');
+        const safeUrl = safeExternalUrl(c.link);
+        if (safeUrl) {
+            const link = document.createElement('a');
+            link.href = safeUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = String(c.title ?? '');
+            item.appendChild(link);
+        } else {
+            appendText(item, c.title);
+        }
+        if (c.is_priority) {
+            appendText(item, ' ');
+            appendTag(item, 'verified-tag', 'WATCHLIST');
+        }
+        if (c.sponsor) {
+            item.appendChild(document.createElement('br'));
+            const meta = appendTag(
+                item, '',
+                `${c.sponsor} · ${c.status || ''} · ${c.phase || ''}${eta ? ' · ETA ' + eta : ''}`
+            );
+            meta.style.color = 'var(--text-muted)';
+            meta.style.fontSize = '11px';
+        }
         container.appendChild(item);
     });
 }
 
-// ═══ CASH RUNWAY RISK ═══
+// ═══ CEO.CA ═══
 function renderCashRunway() {
-    // Schema 2.0: `cash_runway_alerts` — flagged biotech burn/runway (RED/YELLOW)
+    // Schema 2.0: `cash_runway_alerts` — biotech burn/runway risk (RED/YELLOW)
     const container = document.getElementById('cash-runway-list');
     const alerts = DATA.sections?.cash_runway_alerts || [];
     const countEl = document.getElementById('cash-runway-count');
@@ -364,7 +435,7 @@ function renderCashRunway() {
         return d !== 0 ? d : (a.runway_quarters ?? 1e9) - (b.runway_quarters ?? 1e9);
     });
 
-    const fmt = v => (typeof v === 'number' ? `$${v.toFixed(1)}M` : '—');
+    const fmt = v => (typeof v === 'number' ? '$' + v.toFixed(1) + 'M' : '—');
     sorted.forEach(a => {
         const cls = a.risk_level === 'RED' ? 'danger' : a.risk_level === 'YELLOW' ? 'warning' : 'info';
         const runway = Number.isFinite(a.runway_quarters) ? `${a.runway_quarters}Q runway` : 'runway n/a';
@@ -379,7 +450,6 @@ function renderCashRunway() {
     });
 }
 
-// ═══ CASH RUNWAY MONITOR ═══
 function renderCashMonitor() {
     // Schema 2.0: `cash_runway` — full per-ticker burn/runway detail (incl. healthy GREEN)
     const container = document.getElementById('cash-monitor-list');
@@ -400,7 +470,7 @@ function renderCashMonitor() {
         return d !== 0 ? d : (a.runway_quarters ?? 1e9) - (b.runway_quarters ?? 1e9);
     });
 
-    const fmt = v => (typeof v === 'number' ? `$${v.toFixed(1)}M` : '—');
+    const fmt = v => (typeof v === 'number' ? '$' + v.toFixed(1) + 'M' : '—');
     sorted.forEach(r => {
         const cls = r.risk_level === 'RED' ? 'danger'
                   : r.risk_level === 'YELLOW' ? 'warning'
@@ -421,7 +491,6 @@ function renderCashMonitor() {
     });
 }
 
-// ═══ CEO.CA ═══
 function renderCEO() {
     const container = document.getElementById('ceo-list');
     const signals = DATA.sections?.ceo_ca_signals || [];
@@ -435,13 +504,29 @@ function renderCEO() {
     signals.forEach(s => {
         const item = document.createElement('div');
         item.className = 'text-item';
-        const verifiedTag = s.verified ? '<span class="verified-tag">VERIFIED</span>' : '';
-        const gradeTag = s.grade_tag ? `<br><span style="color:var(--accent-green);font-size:11px;font-family:var(--font-mono)">${s.grade_tag}</span>` : '';
-        item.innerHTML = `
-            <span class="source-tag">${s.source}</span>
-            ${s.title} ${verifiedTag} ${gradeTag}
-            <br><a href="${s.link}" target="_blank">View →</a>
-        `;
+        const sourceRecordVerified = s.source_record_verified === true;
+        const thresholdQualified = s.threshold_qualified ?? s.verified ?? false;
+        appendTag(item, 'source-tag', s.source);
+        appendText(item, ` ${s.title ?? ''} `);
+        appendTag(
+            item,
+            sourceRecordVerified ? 'verified-tag' : 'source-tag',
+            sourceRecordVerified ? 'DIRECT API' : (s.provenance_status || 'UNKNOWN PROVENANCE')
+        );
+        appendText(item, ' ');
+        appendTag(
+            item,
+            thresholdQualified ? 'verified-tag' : 'source-tag',
+            thresholdQualified ? 'GEOLOGY THRESHOLD' : 'CONTEXT ONLY'
+        );
+        if (s.grade_tag) {
+            item.appendChild(document.createElement('br'));
+            const grade = appendTag(item, '', s.grade_tag);
+            grade.style.color = 'var(--accent-green)';
+            grade.style.fontSize = '11px';
+            grade.style.fontFamily = 'var(--font-mono)';
+        }
+        appendExternalLink(item, s.link, 'View →');
         container.appendChild(item);
     });
 }
@@ -465,11 +550,9 @@ function renderTwitter() {
     tweets.forEach(tw => {
         const item = document.createElement('div');
         item.className = 'text-item';
-        item.innerHTML = `
-            <span class="source-tag">@${tw.account}</span>
-            ${tw.title}
-            <br><a href="${tw.link}" target="_blank">View →</a>
-        `;
+        appendTag(item, 'source-tag', `@${tw.account ?? ''}`);
+        appendText(item, ` ${tw.title ?? ''}`);
+        appendExternalLink(item, tw.link, 'View →');
         container.appendChild(item);
     });
 }
@@ -489,10 +572,13 @@ function renderInsiders() {
         const type = c.alert_level === 'HIGH' ? 'danger' : 'warning';
         const item = document.createElement('div');
         item.className = `alert-item ${type}`;
-        item.innerHTML = `
-            <div class="alert-title">${c.ticker}</div>
-            <div class="alert-meta">[${c.alert_level}] ${c.insider_count} Form 4 filings in ${c.period_days}d</div>
-        `;
+        const title = document.createElement('div');
+        title.className = 'alert-title';
+        title.textContent = String(c.ticker ?? '');
+        const meta = document.createElement('div');
+        meta.className = 'alert-meta';
+        meta.textContent = `[${c.alert_level ?? ''}] ${c.insider_count ?? 0} Form 4 filings in ${c.period_days ?? 0}d`;
+        item.append(title, meta);
         container.appendChild(item);
     });
 }
@@ -511,8 +597,10 @@ function renderTextList(containerId, items, textFn, sourceFn) {
         const item = document.createElement('div');
         item.className = 'text-item';
         const source = sourceFn ? sourceFn(d) : '';
-        const sourceTag = source ? `<span class="source-tag">${source}</span>` : '';
-        item.innerHTML = `${sourceTag}${textFn(d)}`;
+        if (source) {
+            appendTag(item, 'source-tag', source);
+        }
+        appendText(item, textFn(d));
         container.appendChild(item);
     });
 }

@@ -1,31 +1,35 @@
 # Publishing Checklist
 
-Use this before making the repository public.
+Use this before publishing a release or sample artifact.
 
-## Must Do
+## Required
 
-- Confirm `.env` is not committed.
-- Use `.env.example` for all shareable configuration.
-- Review generated dumps and backups; they should stay ignored.
-- Choose and add a license before calling the project open source.
-- Run:
+- Confirm `.env`, credentials, cookies, tokens, and personal contact details are not committed.
+- Confirm generated briefs, archives, state, logs, databases, browser captures, and private notes remain ignored.
+- Confirm `.env.example` contains placeholders only and no machine-specific archive path.
+- Review the diff for private watchlists, holdings, sizing, broker data, account identifiers, and local absolute paths.
+- Confirm user-facing text describes measurements and source evidence, not buy/sell/hold instructions, return promises, or personalized recommendations.
+- Confirm the README retains the non-advisory/no-order-placement scope and the MIT license reference.
+
+## Verification
 
 ```powershell
-python -m compileall export_for_gemini.py openinsider_agent.py agents
-python test_earnings_calendar.py
-python test_pdufa.py
+python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger
+python test_pipeline_hygiene.py
+python test_temporal_integrity.py
+python test_headline_providers.py
+python test_headlines_relevance.py
+python test_headline_export_contract.py
+python test_signal_ledger.py
+python test_sniper_signals.py
+python test_timestamp_policy.py
 ```
 
-## Review Before Public Release
+Live network checks should be run manually with reviewed credentials. Do not commit their generated output.
 
-- Keep local reference dumps such as `Gemini Ref.txt` out of git unless they are sanitized examples.
-- Keep local `Modelfile.*` experiments out of git unless they are part of the public project story.
-- Confirm no personal account names, tokens, broker data, or private notes appear in tracked files.
-- Add screenshots only if they do not reveal private data.
+## Samples and screenshots
 
-## Nice To Have
-
-- Add a sanitized sample export under `examples/`.
-- Add CI for compile checks and the non-network regression tests.
-- Split local-only dashboard/demo assets from core pipeline code.
-- Add a license badge once the license is selected.
+- Prefer synthetic or delayed sample data.
+- Remove personal research context and identifiers.
+- Show `health`, timestamps, schema version, and source limitations.
+- Verify redistribution rights for any third-party data included.

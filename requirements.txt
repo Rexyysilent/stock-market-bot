@@ -8,6 +8,7 @@ python-dotenv
 pandas
 lxml
 numpy
+pandas_market_calendars
 newsapi-python
 playwright
 feedparser

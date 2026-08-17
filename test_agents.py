@@ -16,7 +16,7 @@ print("MARKET INTELLIGENCE COUNCIL - LIVE VERIFICATION")
 print("=" * 60)
 
 # 1. Test NewsAgent
-print("\n[1/6] Testing NewsAgent (Google News RSS)...")
+print("\n[1/6] Testing NewsAgent (multi-source headlines)...")
 try:
     from agents.news_agent import NewsAgent
     news = NewsAgent()
