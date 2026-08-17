@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-08-17T15:34:26Z",
+  "schema_version": "2.6",
+  "pipeline_version": "2.6.1",
+  "run_context": {
+    "started_at": "2026-08-17T15:32:36Z",
+    "utc_date": "2026-08-17",
+    "market_state": "open",
+    "latest_completed_session": "2026-08-14"
+  },
+  "pipeline_time_seconds": 1.25,
+  "health": {
+    "status": "OK",
+    "warnings": [],
+    "errors": [],
+    "sources": {}
+  },
+  "summary": {
+    "total_headlines": 1
+  },
+  "sections": {
+    "headlines": [
+      {
+        "text": "Federal Reserve holds rates (https://www.federalreserve.gov/example)",
+        "title": "Federal Reserve holds rates",
+        "link": "https://www.federalreserve.gov/example",
+        "canonical_url": "https://www.federalreserve.gov/example",
+        "published": "2026-08-17T14:00:00Z",
+        "as_of": "2026-08-17T14:00:00Z",
+        "observed_at": "2026-08-17T15:32:36Z",
+        "source_time_kind": "published",
+        "relevance": 1,
+        "lane": "macro",
+        "universe_tickers": [],
+        "score_components": {
+          "issuer_relevance": 0,
+          "macro_relevance": 1,
+          "vertical_relevance": 0,
+          "authority": 3,
+          "novelty": 0,
+          "impact": 0
+        },
+        "provider": "Official Feeds",
+        "publisher": "Federal Reserve",
+        "publisher_domain": "federalreserve.gov",
+        "source_class": "official_central_bank",
+        "source_record_id": "fixture:fed",
+        "source": "Official Feeds",
+        "record_id": "0123456789abcdef"
+      }
+    ]
+  },
+  "data_quality": {
+    "headlines_dropped": [],
+    "headline_pool": {
+      "fetched_count": 1,
+      "fresh_before_relevance": 1,
+      "selected_count": 1,
+      "accounted_candidate_count": 1,
+      "selected_lane_counts": {
+        "macro": 1
+      }
+    }
+  }
+}

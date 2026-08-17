@@ -64,10 +64,13 @@ recs = NewsAgent._select_relevant([
 ], top_n=5)
 assert [row["relevance"] for row in recs] == [3, 1], recs
 assert recs[0]["text"].endswith("(http://x/1)")
-assert all(
-    set(row) == {"text", "title", "link", "published", "relevance"}
-    for row in recs
-)
+for row in recs:
+    assert {"text", "title", "link", "published", "relevance"} <= set(row)
+    assert row["lane"] in {"universe", "macro", "discovery"}
+    assert set(row["score_components"]) == {
+        "issuer_relevance", "macro_relevance", "vertical_relevance",
+        "authority", "novelty", "impact",
+    }
 assert to_utc_z(recs[0]["published"]) == "2026-07-20T13:05:00Z"
 assert recs[1]["published"] is None
 assert not any("closed today" in row["text"] for row in recs)
@@ -267,7 +270,7 @@ primary_rows = [
     row("Fed market update one", "Reuters", "reuters.com", "FMP", 13, "https://reuters.com/1"),
     row("Nasdaq market update two", "AP", "apnews.com", "FMP", 12, "https://apnews.com/2"),
     row("Oil market update three", "Bloomberg", "bloomberg.com", "AV", 11, "https://bloomberg.com/3"),
-    row("Uranium market update four", "CNBC", "cnbc.com", "GDELT", 10, "https://cnbc.com/4"),
+    row("Uranium prices surge on supply disruption", "CNBC", "cnbc.com", "GDELT", 10, "https://cnbc.com/4"),
     row("Bitcoin market update five", "FT", "ft.com", "GDELT", 9, "https://ft.com/5"),
 ]
 

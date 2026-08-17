@@ -1,6 +1,7 @@
 """Regression checks for WatcherAgent earnings calendar parsing."""
 import sys
 from datetime import date, datetime, time, timedelta
+from types import SimpleNamespace
 
 import pandas as pd
 
@@ -8,6 +9,9 @@ sys.path.insert(0, ".")
 
 import agents.watcher_agent as watcher_module
 from agents.watcher_agent import WatcherAgent
+
+
+REFERENCE_DATE = date(2026, 8, 17)
 
 
 class FakeTicker:
@@ -19,7 +23,7 @@ class FakeTicker:
             return pd.DataFrame()
 
         earnings_dt = pd.Timestamp(
-            datetime.combine(date.today() + timedelta(days=3), time(13, 0)),
+            datetime.combine(REFERENCE_DATE + timedelta(days=3), time(13, 0)),
             tz="US/Eastern",
         )
         return pd.DataFrame(
@@ -33,7 +37,7 @@ class FakeTicker:
 
     def get_calendar(self):
         return {
-            "Earnings Date": [date.today() + timedelta(days=5)],
+            "Earnings Date": [REFERENCE_DATE + timedelta(days=5)],
             "Earnings Average": 0.56,
         }
 
@@ -51,7 +55,8 @@ try:
     watcher_module.WATCHLIST_STOCKS = ["TSLA", "ROKU"]
     watcher_module.WATCHLIST_VULTURE = []
 
-    earnings = WatcherAgent().get_earnings_calendar()
+    run_context = SimpleNamespace(utc_date=REFERENCE_DATE.isoformat())
+    earnings = WatcherAgent(run_context=run_context).get_earnings_calendar()
     by_ticker = {entry["ticker"]: entry for entry in earnings}
 
     assert set(by_ticker) == {"TSLA", "ROKU"}, earnings

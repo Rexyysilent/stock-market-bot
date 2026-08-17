@@ -15,15 +15,15 @@ Use this before publishing a release or sample artifact.
 
 ```powershell
 python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger
-python test_pipeline_hygiene.py
-python test_temporal_integrity.py
-python test_headline_providers.py
-python test_headlines_relevance.py
-python test_headline_export_contract.py
-python test_signal_ledger.py
-python test_sniper_signals.py
-python test_timestamp_policy.py
+python scripts/validate_export_schema.py
+python scripts/run_offline_checks.py
+pip-audit --strict --require-hashes -r requirements.lock
+python scripts/run_secret_scan.py
 ```
+
+The required CI matrix repeats compile, schema, and offline checks on Python
+3.11 and 3.12. Live network checks remain manual and must not be promoted into
+required deterministic CI.
 
 Live network checks should be run manually with reviewed credentials. Do not commit their generated output.
 

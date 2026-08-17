@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/stock-market-bot/daily_brief.schema.json",
+  "title": "Stock Market Intelligence Daily Brief",
+  "type": "object",
+  "required": [
+    "generated_at",
+    "schema_version",
+    "pipeline_version",
+    "run_context",
+    "pipeline_time_seconds",
+    "health",
+    "summary",
+    "sections",
+    "data_quality"
+  ],
+  "properties": {
+    "generated_at": {"type": "string", "format": "date-time"},
+    "schema_version": {"type": "string", "const": "2.6"},
+    "pipeline_version": {"type": "string", "const": "2.6.1"},
+    "run_context": {
+      "type": "object",
+      "required": [
+        "started_at",
+        "utc_date",
+        "market_state",
+        "latest_completed_session"
+      ],
+      "properties": {
+        "started_at": {"type": "string", "format": "date-time"},
+        "utc_date": {"type": "string", "format": "date"},
+        "market_state": {"type": "string", "minLength": 1},
+        "latest_completed_session": {"type": "string", "format": "date"}
+      },
+      "additionalProperties": true
+    },
+    "pipeline_time_seconds": {"type": "number", "minimum": 0},
+    "health": {
+      "type": "object",
+      "required": ["status", "warnings", "errors", "sources"],
+      "properties": {
+        "status": {"enum": ["OK", "WARN", "ERROR"]},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "errors": {"type": "array", "items": {"type": "string"}},
+        "sources": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "summary": {"type": "object"},
+    "sections": {
+      "type": "object",
+      "required": ["headlines"],
+      "properties": {
+        "headlines": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {"$ref": "#/$defs/headline"}
+        }
+      },
+      "additionalProperties": true
+    },
+    "data_quality": {
+      "type": "object",
+      "required": ["headlines_dropped", "headline_pool"],
+      "properties": {
+        "headlines_dropped": {"type": "array"},
+        "headline_pool": {
+          "type": "object",
+          "required": [
+            "fetched_count",
+            "fresh_before_relevance",
+            "selected_count",
+            "accounted_candidate_count",
+            "selected_lane_counts"
+          ],
+          "properties": {
+            "fetched_count": {"type": "integer", "minimum": 0},
+            "fresh_before_relevance": {"type": "integer", "minimum": 0},
+            "selected_count": {"type": "integer", "minimum": 0, "maximum": 5},
+            "accounted_candidate_count": {"type": "integer", "minimum": 0},
+            "selected_lane_counts": {
+              "$ref": "#/$defs/laneCounts"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "laneCounts": {
+      "type": "object",
+      "propertyNames": {
+        "enum": ["universe", "macro", "discovery"]
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "scoreComponents": {
+      "type": "object",
+      "required": [
+        "issuer_relevance",
+        "macro_relevance",
+        "vertical_relevance",
+        "authority",
+        "novelty",
+        "impact"
+      ],
+      "properties": {
+        "issuer_relevance": {"type": "integer", "minimum": 0},
+        "macro_relevance": {"type": "integer", "minimum": 0},
+        "vertical_relevance": {"type": "integer", "minimum": 0},
+        "authority": {"type": "integer", "minimum": 0},
+        "novelty": {"type": "integer", "minimum": 0},
+        "impact": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "headline": {
+      "type": "object",
+      "required": [
+        "text",
+        "title",
+        "link",
+        "as_of",
+        "relevance",
+        "lane",
+        "universe_tickers",
+        "score_components",
+        "provider",
+        "publisher",
+        "publisher_domain",
+        "source_class",
+        "source_record_id",
+        "record_id"
+      ],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "link": {"type": ["string", "null"], "format": "uri"},
+        "as_of": {"type": "string", "format": "date-time"},
+        "relevance": {"type": "integer", "minimum": 0},
+        "lane": {"enum": ["universe", "macro", "discovery"]},
+        "universe_tickers": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "score_components": {"$ref": "#/$defs/scoreComponents"},
+        "provider": {"type": ["string", "null"]},
+        "publisher": {"type": ["string", "null"]},
+        "publisher_domain": {"type": ["string", "null"]},
+        "source_class": {"type": ["string", "null"]},
+        "source_record_id": {"type": ["string", "null"]},
+        "record_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

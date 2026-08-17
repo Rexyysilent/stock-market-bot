@@ -91,6 +91,13 @@ Important section keys:
     remains null, so an index time is never claimed as publisher time
   - `duplicate_providers` / `duplicate_publishers` when one selected row
     collapsed syndicated copies
+  - `lane`: `universe`, `macro`, or `discovery`
+  - `universe_tickers`: configured tickers mapped by explicit ticker,
+    provider metadata, or issuer alias
+  - `score_components`: separate nonnegative `issuer_relevance`,
+    `macro_relevance`, `vertical_relevance`, `authority`, `novelty`, and
+    `impact` measurements. `novelty` remains zero until longitudinal event
+    history exists; it is not inferred from one fetched pool
   `source` remains a compatibility alias for `provider`.
   Headline `record_id` remains based on legacy `text`; additive provenance
   does not rewrite the identity contract for prior consumers.
@@ -228,3 +235,25 @@ Generated exports are ignored by git because they are time-sensitive and may con
   provider and publisher for stale, duplicate, and cap-excluded rows.
 - These are narrative-context and additive-provenance changes. Schema remains
   `2.6`; the Tier-1 Signal Ledger and statistical segment remain `2.6.1`.
+
+## Editorial headline lanes
+
+- Exchange listing metadata such as `(NASDAQ: DUOT)`, `NYSE: XYZ`, and
+  `AMEX: XYZ` is removed before macro scoring. An exchange name counts only
+  when it is the subject of genuine market-structure coverage.
+- The `universe` lane requires a configured issuer or instrument mapping.
+  The `macro` lane requires a true macro subject. The `discovery` lane is
+  reserved for explicit high-impact developments backed by a covered vertical
+  or official authority; a broad company word such as `earnings` is not enough.
+- Records that do not qualify are retained in
+  `data_quality.headlines_dropped` with `reason=no_approved_lane`, component
+  scores, mapping output, provider, and publisher. Pool diagnostics expose
+  lane counts and a candidate-accounting total.
+- Selection continues to apply source time, syndication dedupe, publisher and
+  press-release caps, and deterministic ordering. The frozen August 17 fixture
+  makes the NXE/DUOT regression reproducible without network or user state.
+- This is additive editorial ranking for narrative headlines. Headlines are
+  not Tier-1 Signal Ledger inputs, and no baseline, confluence population, or
+  signal identity changed. Therefore schema remains `2.6` and
+  `pipeline_version` remains `2.6.1`; changing those signal populations later
+  still requires a new pipeline era.

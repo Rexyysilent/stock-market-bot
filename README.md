@@ -19,9 +19,9 @@ The JSON includes source health, run context, timestamps, coverage gaps, retries
 
 ## Current pipeline
 
-The public twin tracks the current v2.6.2 collection pipeline (`schema_version=2.6`, `pipeline_version=2.6.1`):
+The public twin tracks the current v2.6 collection pipeline (`schema_version=2.6`, `pipeline_version=2.6.1`):
 
-- publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill
+- publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill; and explicit universe, macro, and impact-gated discovery lanes
 - watchlist prices and completed-session technical measurements via yfinance
 - SEC EDGAR 8-K and Form 4 collection with retry/failure metadata
 - OpenInsider enrichment with parser fallback and staleness checks
@@ -45,7 +45,7 @@ Requirements:
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\activate
-pip install -r requirements.txt
+python -m pip install --require-hashes -r requirements.lock
 copy .env.example .env
 ```
 
@@ -105,24 +105,20 @@ python -m ledger import-legacy
 
 ## Tests
 
-Offline regression scripts are plain Python entry points:
+Run the same deterministic, network-free suite used by CI:
 
 ```powershell
-python test_pipeline_hygiene.py
-python test_temporal_integrity.py
-python test_headline_providers.py
-python test_headlines_relevance.py
-python test_headline_export_contract.py
-python test_signal_ledger.py
-python test_sniper_signals.py
-python test_timestamp_policy.py
+python scripts/run_offline_checks.py
+python scripts/validate_export_schema.py
 ```
 
 Syntax check:
 
 ```powershell
-python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger
+python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger scripts
 ```
+
+CI repeats those checks on Python 3.11 and 3.12, installs only from hash-locked dependency files, audits runtime dependencies, and scans tracked files for secrets. `requirements.txt` and `requirements-ci.txt` remain the readable dependency inputs.
 
 ## Responsible use
 

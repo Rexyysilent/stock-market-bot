@@ -69,6 +69,55 @@ class NewsAgent:
         r"auctions|curve)\s+(?:on\s+)?treasur(?:y|ies)\b",
         r"\b(?:2|5|10|20|30)[- ]year\s+treasur(?:y|ies)\b",
     )
+    LANE_PRIORITY = {"universe": 0, "macro": 1, "discovery": 2}
+    EXCHANGE_LISTING_PATTERN = re.compile(
+        r"(?i)(?:\(\s*)?\b(?:NASDAQ|NYSE|AMEX)\s*:\s*"
+        r"([A-Z][A-Z0-9.=-]{0,11})(?:\s*\))?"
+    )
+    COMPANY_CONTEXT_ONLY_KEYWORDS = {
+        "earnings",
+        "layoff",
+        "fda",
+        "semiconductor",
+        "uranium",
+    }
+    VERTICAL_KEYWORDS = {
+        "uranium_nuclear": (
+            "uranium", "nuclear", "reactor", "fuel cycle", "enrichment",
+        ),
+        "semiconductors": (
+            "semiconductor", "chipmaker", "chip makers", "foundry",
+        ),
+        "biotechnology": (
+            "biotech", "pharmaceutical", "clinical trial", "drug", "fda",
+        ),
+        "defense_aerospace": (
+            "defense", "aerospace", "missile", "aircraft",
+        ),
+        "mining_metals": (
+            "copper", "mine", "miner", "mining", "critical mineral",
+        ),
+    }
+    AUTHORITY_SCORES = {
+        "official_central_bank": 3,
+        "official_exchange": 3,
+        "official_regulator": 3,
+        "official": 3,
+        "aggregator": 2,
+        "api_news_discovery": 1,
+        "global_discovery": 1,
+        "press_release": 1,
+    }
+    IMPACT_PATTERNS = (
+        (r"\b(?:bankrupt(?:cy)?|merger|takeover|acquisition)\b", 2),
+        (r"\b(?:financing|offering|strategic investor|project equity)\b", 2),
+        (r"\b(?:approval|approved|rejection|rejected|clinical hold)\b", 2),
+        (r"\b(?:trading halt|systems halt|market-wide halt|recall)\b", 2),
+        (r"\b(?:guidance cut|cuts guidance|raises guidance)\b", 2),
+        (r"\b(?:surges?|jumps?|rips?|plunges?|tumbles?)\b", 2),
+        (r"\b(?:downgrade|upgrade|insider sale|share sale)\b", 1),
+        (r"\b(?:strategic shift|earnings preview|quarterly results)\b", 1),
+    )
 
     def __init__(self, now=None, providers=None, google_provider=None):
         now = now or datetime.now(timezone.utc)
@@ -307,7 +356,8 @@ class NewsAgent:
                 results[-1].metadata["eligibility_fallback_used"] = True
         self._scored_headlines = processed["selected"]
         self._dropped_headlines = (
-            processed["stale_dropped"]
+            processed["relevance_dropped"]
+            + processed["stale_dropped"]
             + processed["duplicate_dropped"]
             + processed["cap_dropped"]
         )
@@ -376,6 +426,28 @@ class NewsAgent:
             "eligible_before_caps": len(processed["deduped"]),
             "cap_dropped_count": len(processed["cap_dropped"]),
             "selected_count": len(self._scored_headlines),
+            "no_approved_lane_count": len(
+                processed["relevance_dropped"]
+            ),
+            "accounted_candidate_count": sum(
+                len(processed[key])
+                for key in (
+                    "selected",
+                    "relevance_dropped",
+                    "stale_dropped",
+                    "duplicate_dropped",
+                    "cap_dropped",
+                )
+            ),
+            "relevant_lane_counts": dict(Counter(
+                row.get("lane") for row in processed["relevant"]
+            )),
+            "eligible_lane_counts": dict(Counter(
+                row.get("lane") for row in processed["deduped"]
+            )),
+            "selected_lane_counts": dict(Counter(
+                row.get("lane") for row in self._scored_headlines
+            )),
             "unique_selected_publishers": len({
                 self._publisher_key(row) for row in self._scored_headlines
             }),
@@ -472,6 +544,10 @@ class NewsAgent:
             "eligible_before_caps": 0,
             "cap_dropped_count": 0,
             "selected_count": 0,
+            "no_approved_lane_count": 0,
+            "relevant_lane_counts": {},
+            "eligible_lane_counts": {},
+            "selected_lane_counts": {},
             "unique_selected_publishers": 0,
             "selected_publisher_max_share": 0.0,
             "google_selected_count": 0,
@@ -500,12 +576,155 @@ class NewsAgent:
         return fresh, dropped
 
     @classmethod
+    def _listing_symbols(cls, title):
+        return [
+            match.group(1).upper()
+            for match in cls.EXCHANGE_LISTING_PATTERN.finditer(title or "")
+        ]
+
+    @classmethod
+    def _strip_exchange_listing_metadata(cls, title):
+        return re.sub(
+            r"\s+", " ", cls.EXCHANGE_LISTING_PATTERN.sub(" ", title or "")
+        ).strip()
+
+    @staticmethod
+    def _has_keyword(text, keyword):
+        return bool(re.search(
+            rf"\b{re.escape(keyword)}(?:e?s)?\b", text
+        ))
+
+    @classmethod
+    def _matched_universe_tickers(cls, item):
+        title = item.get("title") or ""
+        normalized = cls._strip_exchange_listing_metadata(title)
+        normalized_lower = normalized.casefold()
+        universe = set(ALL_TICKERS)
+        raw_tickers = item.get("tickers") or []
+        if isinstance(raw_tickers, str):
+            raw_tickers = re.split(r"[,\s]+", raw_tickers)
+        matched = {
+            str(ticker).upper()
+            for ticker in raw_tickers
+            if str(ticker).upper() in universe
+        }
+        matched.update(
+            symbol for symbol in cls._listing_symbols(title)
+            if symbol in universe
+        )
+        for ticker, aliases in TICKER_ALIASES.items():
+            if re.search(
+                rf"(?<![A-Za-z0-9]){re.escape(ticker)}(?![A-Za-z0-9])",
+                normalized,
+            ) or any(
+                re.search(rf"\b{re.escape(alias)}\b", normalized_lower)
+                for alias in aliases
+            ):
+                matched.add(ticker)
+        return sorted(matched)
+
+    @classmethod
+    def _score_components(cls, item):
+        title = item.get("title") or ""
+        normalized = cls._strip_exchange_listing_metadata(title)
+        normalized_lower = normalized.casefold()
+        universe_tickers = cls._matched_universe_tickers(item)
+        outside_listing = bool(
+            set(cls._listing_symbols(title)) - set(ALL_TICKERS)
+        ) and not universe_tickers
+
+        macro_hits = 0
+        for keyword in MACRO_KEYWORDS:
+            if (
+                keyword == "treasury"
+                or keyword in cls.COMPANY_CONTEXT_ONLY_KEYWORDS
+            ):
+                continue
+            if cls._has_keyword(normalized_lower, keyword):
+                macro_hits += 1
+        if any(
+            re.search(pattern, normalized_lower)
+            for pattern in cls.TREASURY_PATTERNS
+        ):
+            macro_hits += 1
+        # A listing label is metadata, not a macro subject. If the title is
+        # explicitly about an out-of-universe listing, broad words elsewhere
+        # cannot silently promote the issuer into the macro lane.
+        if outside_listing:
+            macro_hits = 0
+
+        vertical_hits = sum(
+            1
+            for terms in cls.VERTICAL_KEYWORDS.values()
+            if any(cls._has_keyword(normalized_lower, term) for term in terms)
+        )
+        impact = min(3, sum(
+            weight
+            for pattern, weight in cls.IMPACT_PATTERNS
+            if re.search(pattern, normalized_lower)
+        ))
+        return {
+            "issuer_relevance": 2 * len(universe_tickers),
+            "macro_relevance": macro_hits,
+            "vertical_relevance": vertical_hits,
+            "authority": cls.AUTHORITY_SCORES.get(
+                item.get("source_class") or "aggregator", 0
+            ),
+            # Longitudinal novelty needs event history. PR 2 intentionally
+            # reports zero instead of fabricating novelty from one raw pool.
+            "novelty": 0,
+            "impact": impact,
+        }
+
+    @classmethod
+    def _assign_lane(cls, item, components=None):
+        components = components or cls._score_components(item)
+        if components["issuer_relevance"] > 0:
+            return "universe"
+        if components["macro_relevance"] > 0:
+            return "macro"
+        if (
+            components["impact"] >= 2
+            and (
+                components["vertical_relevance"] > 0
+                or components["authority"] >= 3
+            )
+        ):
+            return "discovery"
+        return None
+
+    @staticmethod
+    def _compatibility_relevance(components):
+        return (
+            components["issuer_relevance"]
+            + components["macro_relevance"]
+            + components["vertical_relevance"]
+        )
+
+    @classmethod
+    def _selection_key(cls, row, stable_index=0):
+        components = row.get("score_components") or {}
+        return (
+            cls.LANE_PRIORITY.get(row.get("lane"), 9),
+            -components.get("issuer_relevance", 0),
+            -components.get("macro_relevance", 0),
+            -components.get("vertical_relevance", 0),
+            -components.get("impact", 0),
+            -components.get("authority", 0),
+            -components.get("novelty", 0),
+            -cls._sort_stamp(row),
+            row.get("source_record_id") or "",
+            stable_index,
+        )
+
+    @classmethod
     def _select_relevant(cls, items, top_n=5):
         scored = []
         for idx, item in enumerate(items):
             title = item.get("title") or ""
-            score = cls._score_title(title)
-            if score < cls.MIN_RELEVANCE_SCORE:
+            components = cls._score_components(item)
+            lane = cls._assign_lane(item, components)
+            if lane is None:
                 continue
             link = item.get("link")
             record = dict(item)
@@ -514,13 +733,16 @@ class NewsAgent:
                 "title": title,
                 "link": link,
                 "published": item.get("published"),
-                "relevance": score,
+                "relevance": cls._compatibility_relevance(components),
+                "lane": lane,
+                "universe_tickers": cls._matched_universe_tickers(item),
+                "score_components": components,
             })
-            scored.append((score, cls._sort_stamp(record), idx, record))
-        scored.sort(key=lambda row: (-row[0], -row[1], row[2]))
+            scored.append((cls._selection_key(record, idx), record))
+        scored.sort(key=lambda row: row[0])
         if top_n is not None:
             scored = scored[:top_n]
-        return [row[-1] for row in scored]
+        return [row[1] for row in scored]
 
     @staticmethod
     def _sort_stamp(record):
@@ -536,30 +758,9 @@ class NewsAgent:
 
     @classmethod
     def _score_title(cls, title):
-        title = title or ""
-        title_lower = title.lower()
-        score = 0
-        for ticker, aliases in TICKER_ALIASES.items():
-            if re.search(
-                rf"(?<![A-Za-z0-9]){re.escape(ticker)}(?![A-Za-z0-9])",
-                title,
-            ):
-                score += 2
-            elif any(
-                re.search(rf"\b{re.escape(alias)}\b", title_lower)
-                for alias in aliases
-            ):
-                score += 2
-        score += sum(
-            1
-            for keyword in MACRO_KEYWORDS
-            if keyword != "treasury" and re.search(
-                rf"\b{re.escape(keyword)}(?:e?s)?\b", title_lower
-            )
+        return cls._compatibility_relevance(
+            cls._score_components({"title": title})
         )
-        if any(re.search(pattern, title_lower) for pattern in cls.TREASURY_PATTERNS):
-            score += 1
-        return score
 
     @classmethod
     def _normalized_title(cls, row):
@@ -644,11 +845,7 @@ class NewsAgent:
                         "source_record_id"
                     ),
                 })
-        kept.sort(key=lambda row: (
-            -row.get("relevance", 0),
-            -cls._sort_stamp(row),
-            cls._representative_key(row),
-        ))
+        kept.sort(key=cls._selection_key)
         return kept, dropped
 
     @classmethod
@@ -728,32 +925,43 @@ class NewsAgent:
 
     def _process_pool(self, raw):
         relevant = self._select_relevant(raw, top_n=None)
-        fresh, stale_dropped = self._drop_stale(
-            relevant, now=self.now_utc
-        )
         cutoff = to_utc_z(
             self.now_utc - timedelta(days=self.HEADLINES_MAX_AGE_DAYS)
         )
+        relevance_dropped = []
         fresh_zero = []
         for item in raw:
             stamp = to_utc_z(self._record_time(item))
-            if (
-                stamp is not None
-                and stamp >= cutoff
-                and self._score_title(item.get("title") or "") == 0
-            ):
-                fresh_zero.append({
-                    "title": item.get("title"),
+            components = self._score_components(item)
+            if self._assign_lane(item, components) is None:
+                dropped = {
+                    **item,
                     "as_of": stamp,
-                    "provider": item.get("provider"),
-                    "publisher": item.get("publisher"),
-                })
+                    "relevance": self._compatibility_relevance(components),
+                    "lane": None,
+                    "universe_tickers": self._matched_universe_tickers(item),
+                    "score_components": components,
+                    "drop_reason": "no_approved_lane",
+                }
+                relevance_dropped.append(dropped)
+                if stamp is not None and stamp >= cutoff:
+                    fresh_zero.append({
+                        "title": item.get("title"),
+                        "as_of": stamp,
+                        "provider": item.get("provider"),
+                        "publisher": item.get("publisher"),
+                        "reason": dropped["drop_reason"],
+                    })
+        fresh, stale_dropped = self._drop_stale(
+            relevant, now=self.now_utc
+        )
         deduped, duplicate_dropped = self._deduplicate(fresh)
         selected, cap_dropped = self._select_diverse(deduped)
         return {
             "relevant": relevant,
             "fresh": fresh,
             "fresh_zero": fresh_zero,
+            "relevance_dropped": relevance_dropped,
             "stale_dropped": stale_dropped,
             "deduped": deduped,
             "duplicate_dropped": duplicate_dropped,

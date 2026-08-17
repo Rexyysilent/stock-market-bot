@@ -21,6 +21,16 @@ selected = [{
     "provider_seen_at": "2026-08-13T11:00:00Z",
     "source_time_kind": "provider_seen",
     "relevance": 1,
+    "lane": "macro",
+    "universe_tickers": [],
+    "score_components": {
+        "issuer_relevance": 0,
+        "macro_relevance": 1,
+        "vertical_relevance": 0,
+        "authority": 1,
+        "novelty": 0,
+        "impact": 0,
+    },
     "provider": "GDELT",
     "publisher": "Reuters",
     "publisher_domain": "reuters.com",
@@ -48,6 +58,9 @@ for provenance_key in (
     "source_class",
     "source_record_id",
     "duplicate_providers",
+    "lane",
+    "universe_tickers",
+    "score_components",
 ):
     assert provenance_key in record
 assert RECORD_ID_KEYS["headlines"] == ("text",)

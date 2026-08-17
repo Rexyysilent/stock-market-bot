@@ -8,6 +8,8 @@ This roadmap keeps the project centered on data tooling, provenance, reproducibi
 - Atomic current outputs, point-in-time snapshots, append-only archives, transactional state, and a process lock.
 - Source-time honesty: `as_of`, `observed_at`, scheduled event time, and effective session remain separate.
 - Publisher-diverse headline providers with provenance, capped aggregator fill, syndication dedupe, and provider health.
+- Explicit universe, macro, and impact-gated discovery headline lanes with component scores and a frozen editorial regression fixture.
+- Hash-locked Python 3.11/3.12 CI with export-schema, vulnerability, and secret checks.
 - Structured retail-attention measurements, clinical/FDA event extraction, registry diffs, options volume/OI anomalies, and cross-family confluence.
 - A separate version-segmented outcome ledger for retrospective measurement.
 - Dashboard support for schema 2.6 sections.
@@ -19,10 +21,10 @@ This roadmap keeps the project centered on data tooling, provenance, reproducibi
    - Keep a documented, neutral sample configuration.
    - Validate configuration without making network calls.
 
-2. Deterministic CI
-   - Run compile checks and offline regression scripts on supported Python versions.
+2. Deterministic CI follow-through
    - Keep live provider checks manual and clearly separated.
    - Add Windows scheduler validation without registering a task.
+   - Add restore drills and an SBOM while preserving the current hash-locked baseline.
 
 3. Source contracts
    - Standardize adapter metadata, timestamps, parser versions, and exclusion reasons.

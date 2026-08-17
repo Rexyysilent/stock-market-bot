@@ -1,6 +1,7 @@
 ﻿# Python environment and caches
 venv/
 .venv/
+.lock-venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -28,6 +29,7 @@ state/
 *.sqlite3
 backups/
 archive/
+briefs/
 ledger/ledger.db
 ledger/ledger.db-*
 ledger/stats.json
@@ -57,3 +59,8 @@ Thumbs.db
 
 # Research dump folders that are not runtime code
 groky/
+
+# Local continuity and generated research artifacts
+CURRENTSTATE.md
+PROJECTS.md
+analysis/
