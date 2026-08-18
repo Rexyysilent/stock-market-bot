@@ -1,5 +1,7 @@
 ﻿# Python environment and caches
 venv/
+.venv/
+.lock-venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -13,16 +15,26 @@ __pycache__/
 !.env.example
 
 # Generated exports and local data
+daily_brief.json
+daily_brief.txt
 gemini_daily_brief.json
 gemini_daily_brief.txt
 deep_dive_*.json
 deep_dive_*.txt
 market_intel_dump.txt
 market_memory.db
+state/
 *.db
 *.sqlite
 *.sqlite3
 backups/
+archive/
+briefs/
+ledger/ledger.db
+ledger/ledger.db-*
+ledger/stats.json
+ledger/stats.md
+logs/
 
 # Agent scratch/backup artifacts
 *.codex_bak
@@ -47,3 +59,8 @@ Thumbs.db
 
 # Research dump folders that are not runtime code
 groky/
+
+# Local continuity and generated research artifacts
+CURRENTSTATE.md
+PROJECTS.md
+analysis/

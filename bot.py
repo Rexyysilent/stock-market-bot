@@ -1,7 +1,16 @@
+import asyncio
 import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
+from config import (
+    DISCORD_HISTORY_ENTRIES_PER_CHANNEL,
+    DISCORD_MAX_HISTORY_CHANNELS,
+    DISCORD_MAX_TRACKED_USERS,
+    DISCORD_REQUEST_COOLDOWN_SECONDS,
+    GUILD_ID,
+)
+from discord_guard import BoundedChatHistory, RequestGate
 from agents.news_agent import NewsAgent
 from agents.social_agent import SocialAgent
 from agents.analyst_agent import AnalystAgent
@@ -9,6 +18,7 @@ from agents.watcher_agent import WatcherAgent
 from agents.research_agent import ResearchAgent
 from agents.twitter_agent import TwitterAgent
 from agents.sec_agent import SECAgent
+from openinsider_agent import OpenInsiderAgent
 from database import log_sentiment, export_for_notebooklm, init_db
 
 load_dotenv()
@@ -23,110 +33,145 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Initialize Agents
 news_agent = NewsAgent()
-social_agent = SocialAgent()
 analyst_agent = AnalystAgent()
 watcher_agent = WatcherAgent()
 research_agent = ResearchAgent()
 twitter_agent = TwitterAgent()
-sec_agent = SECAgent()
 
-# Memory Storage (Simple dict for now)
-# Structure: {channel_id: [{'role': 'user', 'content': '...'}]}
-chat_history = {}
+chat_history = BoundedChatHistory(
+    max_channels=DISCORD_MAX_HISTORY_CHANNELS,
+    max_entries_per_channel=DISCORD_HISTORY_ENTRIES_PER_CHANNEL,
+)
+request_gate = RequestGate(DISCORD_REQUEST_COOLDOWN_SECONDS, max_users=DISCORD_MAX_TRACKED_USERS)
+bot_work_lock = asyncio.Lock()
 
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord and the Council is ready.')
 
-@bot.event
-async def on_message(message):
-    # Don't let the bot reply to itself
-    if message.author == bot.user:
+
+def _collect_social_whispers():
+    """Collect one command-scoped social view and close its HTTP session."""
+    with OpenInsiderAgent() as openinsider:
+        return SocialAgent(openinsider=openinsider).get_whisper()
+
+
+def _collect_insider_clusters(days_back=30):
+    """Collect one command-scoped cluster view and close its HTTP session."""
+    with OpenInsiderAgent(run_days_back=days_back, run_limit=500) as openinsider:
+        return SECAgent(openinsider=openinsider).detect_insider_clusters(
+            days_back=days_back
+        )
+
+
+def _collect_live_context():
+    """Run blocking provider collection away from Discord's event loop."""
+    whispers = _collect_social_whispers()
+    whisper_context = "\n".join(whispers[:15]) if whispers else ""
+    ceo_signals = research_agent.get_ceo_ca_signals()
+    trials = research_agent.get_clinical_trials()
+
+    research_context = "\n--- URANIUM/CEO.CA INTEL ---\n"
+    for signal in ceo_signals[:8]:
+        research_context += f"[{signal['ticker']}] {signal['title'][:100]}\n"
+    research_context += "\n--- CLINICAL TRIALS (CRISPR/VERTEX) ---\n"
+    for trial in trials[:5]:
+        research_context += (
+            f"[{trial['nct_id']}] {trial['title'][:80]} - {trial['status']}\n"
+        )
+
+    twitter_data = twitter_agent.get_twitter_intel(max_queries=3)
+    research_context += "\n--- X/TWITTER NARRATIVE INDICATORS ---\n"
+    for item in twitter_data[:5]:
+        research_context += f"[X/{item['query']}] {item['title'][:80]}\n"
+    return (
+        whisper_context + "\n" + research_context
+        if whisper_context else research_context
+    )
+
+
+async def _handle_mention(message):
+    user_text = message.content.replace(f'<@{bot.user.id}>', '').strip()
+    if not user_text:
         return
 
-    # Check if the bot is mentioned
-    if bot.user.mentioned_in(message):
-        # Remove the mention from the text like "<@12345>"
-        user_text = message.content.replace(f'<@{bot.user.id}>', '').strip()
-        
-        if not user_text:
-            return # Ignore empty mentions
+    channel_id = message.channel.id
+    history = chat_history.recent(channel_id, 10)
+    async with message.channel.typing():
+        await message.channel.send(
+            "*Gathering market intelligence from all sources...*"
+        )
+        live_context = await asyncio.to_thread(_collect_live_context)
+        response = await asyncio.to_thread(
+            analyst_agent.chat_with_memory,
+            user_text,
+            history,
+            live_context,
+        )
 
-        # Get History
-        cid = message.channel.id
-        if cid not in chat_history:
-            chat_history[cid] = []
-        
-        # Keep history short (last 10 turns)
-        history = chat_history[cid][-10:]
+    chat_history.append(channel_id, 'user', user_text)
+    chat_history.append(channel_id, 'assistant', response)
+    await message.channel.send(response)
 
-        async with message.channel.typing():
-            # Fetch live context from ALL sub-agents
-            await message.channel.send("*Gathering market intelligence from all sources...*")
-            
-            # Social whispers (top 15)
-            whispers = social_agent.get_whisper()
-            whisper_context = "\n".join(whispers[:15]) if whispers else ""
-            
-            # Research data (CEO.ca + ClinicalTrials)
-            ceo_signals = research_agent.get_ceo_ca_signals()
-            trials = research_agent.get_clinical_trials()
-            
-            # Build research context
-            research_context = "\n--- URANIUM/CEO.CA INTEL ---\n"
-            for s in ceo_signals[:8]:
-                research_context += f"[{s['ticker']}] {s['title'][:100]}\n"
-            
-            research_context += "\n--- CLINICAL TRIALS (CRISPR/VERTEX) ---\n"
-            for t in trials[:5]:
-                research_context += f"[{t['nct_id']}] {t['title'][:80]} - {t['status']}\n"
-            
-            # X/Twitter intel
-            twitter_data = twitter_agent.get_twitter_intel(max_queries=3)
-            research_context += "\n--- X/TWITTER SIGNALS ---\n"
-            for tw in twitter_data[:5]:
-                research_context += f"[X/{tw['query']}] {tw['title'][:80]}\n"
-            
-            # Combine all context
-            live_context = whisper_context + "\n" + research_context if whisper_context else research_context
-            
-            response = analyst_agent.chat_with_memory(user_text, history, live_context=live_context)
-        
-        # Update History
-        chat_history[cid].append({'role': 'user', 'content': user_text})
-        chat_history[cid].append({'role': 'assistant', 'content': response})
-        
-        await message.channel.send(response)
 
-    # IMPORTANT: We must process commands too!
-    await bot.process_commands(message)
+@bot.event
+async def on_message(message):
+    if message.author == bot.user or getattr(message.author, "bot", False):
+        return
+
+    is_mention = bot.user.mentioned_in(message)
+    is_command = message.content.startswith('!')
+    if not is_mention and not is_command:
+        return
+
+    if message.guild is None or GUILD_ID is None or message.guild.id != GUILD_ID:
+        return
+
+    allowed, retry_after = request_gate.allow(message.author.id)
+    if not allowed:
+        await message.channel.send(
+            f"Please wait {max(1, int(retry_after + 0.999))}s before another request."
+        )
+        return
+    if bot_work_lock.locked():
+        await message.channel.send("The bot is busy with another request. Try again shortly.")
+        return
+
+    async with bot_work_lock:
+        if is_mention:
+            await _handle_mention(message)
+        if is_command:
+            await bot.process_commands(message)
 
 @bot.command(name='report')
 async def daily_report(ctx):
     """Generates a FULL raw data market report - no summarization, all details."""
     await ctx.send("🔮 **FULL INTELLIGENCE DUMP** - Gathering ALL data from sub-agents...")
-    
+
     # 1. Gather ALL Data
-    headlines = news_agent.get_global_headlines()
-    whispers = social_agent.get_whisper() or []
-    prices = watcher_agent.get_full_report()
-    
+    headlines, whispers, prices = await asyncio.gather(
+        asyncio.to_thread(news_agent.get_global_headlines),
+        asyncio.to_thread(_collect_social_whispers),
+        asyncio.to_thread(watcher_agent.get_full_report),
+    )
+    whispers = whispers or []
+
     print(f"[Report] Headlines: {len(headlines)}, Whispers: {len(whispers)}, Prices: {len(prices)}")
-    
+
     # ═══════════════════════════════════════════════════════════════════
     # EMBED 1: STOCK PRICES (Individual stocks from watchlist)
     # ═══════════════════════════════════════════════════════════════════
     from config import WATCHLIST_STOCKS, WATCHLIST_COMMODITIES
-    
+
     stock_lines = []
     for ticker in WATCHLIST_STOCKS:
         if ticker in prices:
             stock_lines.append(f"**{ticker}**: {prices[ticker]}")
-    
+
     embed_stocks = discord.Embed(title="📈 STOCK WATCHLIST", color=0x2ecc71)
     embed_stocks.add_field(name="Individual Stocks", value="\n".join(stock_lines) or "N/A", inline=False)
     await ctx.send(embed=embed_stocks)
-    
+
     # ═══════════════════════════════════════════════════════════════════
     # EMBED 2: COMMODITIES / ETFs
     # ═══════════════════════════════════════════════════════════════════
@@ -134,11 +179,11 @@ async def daily_report(ctx):
     for ticker in WATCHLIST_COMMODITIES:
         if ticker in prices:
             commodity_lines.append(f"**{ticker}**: {prices[ticker]}")
-    
+
     embed_commodities = discord.Embed(title="🥇 COMMODITIES & ETFs", color=0xf39c12)
     embed_commodities.add_field(name="Precious Metals / Energy / Uranium", value="\n".join(commodity_lines) or "N/A", inline=False)
     await ctx.send(embed=embed_commodities)
-    
+
     # ═══════════════════════════════════════════════════════════════════
     # EMBED 3: NEWS HEADLINES (with full links)
     # ═══════════════════════════════════════════════════════════════════
@@ -152,7 +197,7 @@ async def daily_report(ctx):
         else:
             embed_news.add_field(name=f"{i}. Headline", value=h[:500], inline=False)
     await ctx.send(embed=embed_news)
-    
+
     # ═══════════════════════════════════════════════════════════════════
     # EMBEDS 4-6: TOP SOCIAL WHISPERS (ranked by engagement)
     # ═══════════════════════════════════════════════════════════════════
@@ -165,14 +210,14 @@ async def daily_report(ctx):
         except:
             pass
         return 0
-    
+
     sorted_whispers = sorted(whispers, key=get_score, reverse=True)
-    
+
     # Split into chunks for Discord (max 1024 chars per field)
     whisper_chunks = []
     current_chunk = []
     current_len = 0
-    
+
     for w in sorted_whispers[:30]:  # Top 30 by engagement
         line = f"• {w[:150]}"
         if current_len + len(line) + 1 > 1000:
@@ -182,36 +227,38 @@ async def daily_report(ctx):
         else:
             current_chunk.append(line)
             current_len += len(line) + 1
-    
+
     if current_chunk:
         whisper_chunks.append("\n".join(current_chunk))
-    
+
     # Send whisper embeds
     colors = [0xe74c3c, 0x9b59b6, 0x1abc9c]  # Red, Purple, Teal
     for i, chunk in enumerate(whisper_chunks[:3]):  # Max 3 embeds for whispers
         embed_whisper = discord.Embed(
-            title=f"👂 SOCIAL SIGNALS (Part {i+1}/{min(len(whisper_chunks), 3)})", 
+            title=f"👂 SOCIAL ITEMS (Part {i+1}/{min(len(whisper_chunks), 3)})",
             color=colors[i % len(colors)]
         )
         embed_whisper.add_field(name="Top Whispers by Engagement", value=chunk, inline=False)
         await ctx.send(embed=embed_whisper)
-    
+
     # ═══════════════════════════════════════════════════════════════════
     # SUMMARY STATS
     # ═══════════════════════════════════════════════════════════════════
     embed_summary = discord.Embed(title="📊 INTELLIGENCE SUMMARY", color=0x95a5a6)
-    embed_summary.add_field(name="Data Collected", value=f"• {len(headlines)} headlines\n• {len(whispers)} social signals\n• {len(prices)} price points", inline=True)
-    embed_summary.add_field(name="Commands", value="`!whisper` - More signals\n`!dump` - Export for Gemini\n`!analyze <ticker>` - Deep dive", inline=True)
+    embed_summary.add_field(name="Data Collected", value=f"• {len(headlines)} headlines\n• {len(whispers)} social items\n• {len(prices)} price points", inline=True)
+    embed_summary.add_field(name="Commands", value="`!whisper` - More items\n`!dump` - Export daily brief\n`!analyze <ticker>` - Deep dive", inline=True)
     embed_summary.set_footer(text="Raw data dump complete. Use !dump to export for deeper AI analysis.")
     await ctx.send(embed=embed_summary)
 
 @bot.command(name='analyze')
 async def analyze_ticker(ctx, query: str):
-    """Quick bull/bear analysis for a topic/ticker."""
-    await ctx.send(f"🐂 vs 🐻 Debating **{query}**...")
-    
-    sentiment = analyst_agent.analyze_sentiment(f"Quick take on {query}")
-    
+    """Quick constructive/cautionary evidence review for a topic or ticker."""
+    await ctx.send(f"Reviewing evidence for **{query}**...")
+
+    sentiment = await asyncio.to_thread(
+        analyst_agent.analyze_sentiment, f"Quick take on {query}"
+    )
+
     # Split into chunks if too long for Discord
     if len(sentiment) > 1900:
         parts = [sentiment[i:i+1900] for i in range(0, len(sentiment), 1900)]
@@ -222,20 +269,22 @@ async def analyze_ticker(ctx, query: str):
 
 @bot.command(name='debate')
 async def full_debate(ctx, ticker: str):
-    """Full bull vs bear debate with live market data."""
+    """Full constructive/cautionary review with live market data."""
     ticker = ticker.upper()
-    await ctx.send(f"⚖️ **BULL vs BEAR DEBATE: {ticker}** — Gathering live data...")
+    await ctx.send(f"⚖️ **EVIDENCE REVIEW: {ticker}** — Gathering live data...")
 
     # Gather live market context
     market_data_lines = []
-    
+
     # Price
-    price_str = watcher_agent.get_stock_price(ticker)
+    price_str = await asyncio.to_thread(watcher_agent.get_stock_price, ticker)
     if price_str:
         market_data_lines.append(f"Current Price: {price_str}")
-    
+
     # Technicals
-    tech = watcher_agent.check_technical_indicators(ticker)
+    tech = await asyncio.to_thread(
+        watcher_agent.check_technical_indicators, ticker
+    )
     if not tech.get("error"):
         market_data_lines.append(f"RSI: {tech.get('rsi', 'N/A')}")
         market_data_lines.append(f"Trend: {tech.get('trend', 'N/A')}")
@@ -246,42 +295,43 @@ async def full_debate(ctx, ticker: str):
         if tech.get('volume_ratio'):
             market_data_lines.append(f"Volume vs avg: {tech['volume_ratio']}x")
         if tech.get('alerts'):
-            market_data_lines.append("Alerts: " + " | ".join(tech['alerts']))
-    
+            market_data_lines.append("Notes: " + " | ".join(tech['alerts']))
+
     # Options flow
-    options = watcher_agent.get_options_flow(ticker)
+    options = await asyncio.to_thread(watcher_agent.get_options_flow, ticker)
     if not options.get("error"):
         market_data_lines.append(f"Options P/C Vol Ratio: {options.get('put_call_vol_ratio', 'N/A')}")
         market_data_lines.append(f"Options P/C OI Ratio: {options.get('put_call_oi_ratio', 'N/A')}")
         if options.get('alerts'):
-            market_data_lines.append("Options Alerts: " + " | ".join(options['alerts']))
-    
+            market_data_lines.append("Options notes: " + " | ".join(options['alerts']))
+
     market_data = "\n".join(market_data_lines) if market_data_lines else "No live data available."
-    
-    await ctx.send(f"📊 Data gathered. Sending to the debaters...")
 
-    # Run the debate
-    result = analyst_agent.debate(ticker, market_data)
+    await ctx.send(f"📊 Data gathered. Reviewing both perspectives...")
 
-    # Bull embed
+    # Run the evidence review
+    result = await asyncio.to_thread(analyst_agent.debate, ticker, market_data)
+
+    # Constructive-case embed
     embed_bull = discord.Embed(
-        title=f"🐂 THE BULL on {ticker}",
+        title=f"CONSTRUCTIVE CASE — {ticker}",
         description=result['bull_case'][:4000],
         color=0x27ae60  # Green
     )
     await ctx.send(embed=embed_bull)
 
-    # Bear embed
+    # Cautionary-case embed
     embed_bear = discord.Embed(
-        title=f"🐻 THE BEAR on {ticker}",
+        title=f"CAUTIONARY CASE — {ticker}",
         description=result['bear_case'][:4000],
         color=0xe74c3c  # Red
     )
     await ctx.send(embed=embed_bear)
 
-    # Verdict embed
+    # Neutral evidence-balance embed. The internal result key remains
+    # `verdict` for backward compatibility with the local agent API.
     embed_verdict = discord.Embed(
-        title=f"⚖️ THE VERDICT on {ticker}",
+        title=f"⚖️ EVIDENCE BALANCE — {ticker}",
         description=result['verdict'][:4000],
         color=0xf39c12  # Gold
     )
@@ -291,52 +341,50 @@ async def full_debate(ctx, ticker: str):
 @bot.command(name='whisper')
 async def show_whispers(ctx):
     """Shows raw social chatter."""
-    whispers = social_agent.get_whisper()
+    whispers = await asyncio.to_thread(_collect_social_whispers)
     await ctx.send("**Latest Whispers:**\n" + "\n".join(whispers[:5]))
 
 @bot.command(name='dump')
 async def dump_data(ctx):
-    """Exports all gathered intelligence to a file for Gemini/NotebookLM."""
-    await ctx.send("Dumping brain contents to file... 🧠 -> 📂")
-    filename = export_for_notebooklm()
+    """Exports gathered observations to a local data file."""
+    await ctx.send("Building the local data export...")
+    filename = await asyncio.to_thread(export_for_notebooklm)
     await ctx.send(file=discord.File(filename))
     await ctx.send(
-        f"Here is the raw data. **Upload this to Google NotebookLM** to analyze patterns we might have missed.\n\n"
-        f"💡 **REMINDER:** Also ask **Grok** (X app) for real-time Twitter/X intel!\n"
-        f"Example: *'What are the top tweets about $TSLA today?'*"
+        "Raw data export complete. Review source health and timestamps before analysis."
     )
 
 @bot.command(name='research')
 async def research_dump(ctx):
-    """Shows CEO.ca uranium signals and ClinicalTrials.gov CRISPR data."""
-    await ctx.send("🔬 **RESEARCH AGENT** - Fetching specialized intelligence...")
-    
+    """Shows CEO.ca uranium context and ClinicalTrials.gov data."""
+    await ctx.send("🔬 **SOURCE REVIEW** — Fetching specialized public data...")
+
     # CEO.ca / Uranium
-    await ctx.send("⛏️ Fetching CEO.ca / Uranium signals (UUUU, CCJ, NXE, DNN)...")
-    ceo_signals = research_agent.get_ceo_ca_signals()
-    
-    embed_ceo = discord.Embed(title="⛏️ CEO.CA / URANIUM INTELLIGENCE", color=0x2ecc71)
+    await ctx.send("⛏️ Fetching CEO.ca / Uranium context (UUUU, CCJ, NXE, DNN)...")
+    ceo_signals = await asyncio.to_thread(research_agent.get_ceo_ca_signals)
+
+    embed_ceo = discord.Embed(title="⛏️ CEO.CA / URANIUM SOURCE CONTEXT", color=0x2ecc71)
     embed_ceo.set_footer(text="Focus: Core samples, geology maps, permit delays")
-    
+
     if ceo_signals:
         ceo_text = ""
         for s in ceo_signals[:10]:
             line = f"**[{s['ticker']}]** {s['title'][:80]}...\n"
             if len(ceo_text) + len(line) < 1000:
                 ceo_text += line
-        embed_ceo.add_field(name="Latest Signals", value=ceo_text or "No signals found", inline=False)
+        embed_ceo.add_field(name="Latest Items", value=ceo_text or "No items found", inline=False)
     else:
-        embed_ceo.add_field(name="Status", value="No signals found", inline=False)
-    
+        embed_ceo.add_field(name="Status", value="No items found", inline=False)
+
     await ctx.send(embed=embed_ceo)
-    
+
     # Clinical Trials
     await ctx.send("💉 Fetching ClinicalTrials.gov (CRISPR, Vertex, Gene Editing)...")
-    trials = research_agent.get_clinical_trials()
-    
+    trials = await asyncio.to_thread(research_agent.get_clinical_trials)
+
     embed_trials = discord.Embed(title="💉 CLINICALTRIALS.GOV / CRISPR", color=0x9b59b6)
     embed_trials.set_footer(text="Focus: Vertex, CRISPR Therapeutics, Gene Editing")
-    
+
     if trials:
         for t in trials[:5]:  # Top 5 trials
             status_emoji = "🟢" if t['status'] == "RECRUITING" else "🟡" if "ACTIVE" in t['status'] else "⚪"
@@ -347,21 +395,23 @@ async def research_dump(ctx):
             )
     else:
         embed_trials.add_field(name="Status", value="No trials found", inline=False)
-    
+
     await ctx.send(embed=embed_trials)
     await ctx.send("✅ **Research dump complete.** Use `!dump` for full export.")
 
 @bot.command(name='pdufa')
 async def pdufa_scan(ctx):
     """Scans for upcoming PDUFA dates and cross-references with cash runway."""
-    await ctx.send("💊 **PDUFA CATALYST SCANNER** - Scanning FDA catalysts + checking cash runway...")
-    
-    pdufa_data = research_agent.get_pdufa_with_financials(days_ahead=60)
-    
-    # Risk Alerts embed
+    await ctx.send("💊 **FDA / TRIAL EVENT SCANNER** — Collecting dated events and cash-runway measurements...")
+
+    pdufa_data = await asyncio.to_thread(
+        research_agent.get_pdufa_with_financials, days_ahead=60
+    )
+
+    # Cash-runway flags embed
     if pdufa_data.get('alerts'):
         embed_risk = discord.Embed(
-            title="🚨 BANKRUPTCY RISK ALERTS",
+            title="⚠️ CASH RUNWAY RISK NOTES",
             description="Companies with upcoming catalysts but low cash runway",
             color=0xe74c3c
         )
@@ -372,7 +422,7 @@ async def pdufa_scan(ctx):
                 inline=False
             )
         await ctx.send(embed=embed_risk)
-    
+
     # Cash Runway Summary
     if pdufa_data.get('financials'):
         embed_cash = discord.Embed(
@@ -389,7 +439,7 @@ async def pdufa_scan(ctx):
                 inline=True
             )
         await ctx.send(embed=embed_cash)
-    
+
     # Top Catalysts
     catalysts = pdufa_data.get('catalysts', [])
     if catalysts:
@@ -411,41 +461,44 @@ async def pdufa_scan(ctx):
                 detail += f" | {c['phase']}"
             embed_cat.add_field(name=title_text, value=detail, inline=False)
         await ctx.send(embed=embed_cat)
-    
+
     await ctx.send("✅ **PDUFA scan complete.** Use `!dump` for full export with financial data.")
 @bot.command(name='dips')
 async def dip_scanner(ctx):
-    """Dip anticipation dashboard — 5 signals combined."""
-    await ctx.send("📉 **DIP ANTICIPATION SCANNER** — Checking 5 bearish signals...")
+    """Market context dashboard — five measurements combined."""
+    await ctx.send("📊 **MARKET CONTEXT SCANNER** — Checking five measurement families...")
 
     # 1. Insider Selling Clusters
     await ctx.send("ℹ️ Scanning insider clusters...")
-    clusters = sec_agent.detect_insider_clusters(days_back=30)
+    clusters = await asyncio.to_thread(
+        _collect_insider_clusters, days_back=30
+    )
     if clusters:
         embed_ins = discord.Embed(
-            title="👤 INSIDER SELLING CLUSTERS",
-            description="Multiple Form 4 filings in 30 days = cluster selling",
+            title="👤 INSIDER CLUSTERS",
+            description="Distinct Form 4 filers grouped by transaction-code direction",
             color=0xe74c3c
         )
         for c in clusters[:8]:
-            emoji = "🚨" if c['alert_level'] == 'HIGH' else "⚠️"
+            emoji = {"HIGH": "🚨", "MEDIUM": "⚠️"}.get(c['alert_level'], "ℹ️")
+            direction = c.get('cluster_direction') or 'non-directional'
             embed_ins.add_field(
                 name=f"{emoji} {c['ticker']} — {c['alert_level']}",
-                value=f"{c['insider_count']} Form 4 filings | {c['unique_dates']} unique dates",
+                value=f"{c['insider_count']} filers ({c.get('filing_count', '?')} filings) | {direction}",
                 inline=True
             )
         await ctx.send(embed=embed_ins)
     else:
-        await ctx.send("✅ No insider selling clusters detected.")
+        await ctx.send("✅ No insider clusters detected.")
 
     # 2. Options Flow (Put/Call)
     await ctx.send("ℹ️ Scanning options flow...")
-    options_data = watcher_agent.get_all_options_flow()
+    options_data = await asyncio.to_thread(watcher_agent.get_all_options_flow)
     bearish_options = {t: d for t, d in options_data.items() if d.get('alerts')}
     if bearish_options:
         embed_opt = discord.Embed(
-            title="📈 OPTIONS FLOW ALERTS",
-            description="Put/Call ratio signals — high P/C = bearish hedging",
+            title="📈 OPTIONS ACTIVITY MEASUREMENTS",
+            description="Put/call ratios and completed-session contract activity",
             color=0xff9800
         )
         for ticker, data in bearish_options.items():
@@ -457,11 +510,11 @@ async def dip_scanner(ctx):
             )
         await ctx.send(embed=embed_opt)
     else:
-        await ctx.send("✅ No unusual options flow detected.")
+        await ctx.send("ℹ️ No threshold-qualified options activity detected.")
 
     # 3. Earnings Calendar
     await ctx.send("ℹ️ Scanning earnings calendar...")
-    earnings = watcher_agent.get_earnings_calendar()
+    earnings = await asyncio.to_thread(watcher_agent.get_earnings_calendar)
     if earnings:
         embed_earn = discord.Embed(
             title="📅 EARNINGS CALENDAR",
@@ -481,12 +534,12 @@ async def dip_scanner(ctx):
         await ctx.send("ℹ️ No earnings dates found for watchlist.")
 
     # 4. RSI Divergence (already in technicals, just surface them)
-    technicals = watcher_agent.get_all_technicals()
+    technicals = await asyncio.to_thread(watcher_agent.get_all_technicals)
     divergences = {t: d for t, d in technicals.items() if d.get('rsi_divergence')}
     if divergences:
         embed_div = discord.Embed(
-            title="📉 RSI DIVERGENCE SIGNALS",
-            description="Price vs momentum mismatch — potential reversal",
+            title="📉 RSI DIVERGENCE MEASUREMENTS",
+            description="Price/momentum divergence measurement; no future direction is inferred",
             color=0xf44336
         )
         for ticker, data in divergences.items():
@@ -502,10 +555,10 @@ async def dip_scanner(ctx):
         await ctx.send("✅ No RSI divergences detected.")
 
     # 5. Sector Rotation
-    rotation = watcher_agent.get_sector_rotation()
+    rotation = await asyncio.to_thread(watcher_agent.get_sector_rotation)
     embed_rot = discord.Embed(
         title="🔄 SECTOR ROTATION",
-        description=f"Signal: **{rotation.get('signal', 'N/A')}**",
+        description=f"Regime label: **{rotation.get('signal', 'N/A')}**",
         color=0x2196f3
     )
     embed_rot.add_field(
@@ -530,14 +583,16 @@ async def dip_scanner(ctx):
     )
     if rotation.get('alerts'):
         for alert in rotation['alerts']:
-            embed_rot.add_field(name="🚨 Alert", value=alert, inline=False)
+            embed_rot.add_field(name="Threshold note", value=alert, inline=False)
     await ctx.send(embed=embed_rot)
 
-    await ctx.send("✅ **Dip scan complete.** Use `!dump` for full export with all signals.")
+    await ctx.send("✅ **Context scan complete.** Use `!dump` for the full data export.")
 
 if __name__ == "__main__":
     TOKEN = os.getenv("DISCORD_TOKEN")
-    if TOKEN:
+    if TOKEN and GUILD_ID:
         bot.run(TOKEN)
+    elif TOKEN:
+        print("Error: DISCORD_GUILD_ID is required when DISCORD_TOKEN is set")
     else:
         print("Error: DISCORD_TOKEN not found in .env")

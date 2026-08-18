@@ -1,5 +1,12 @@
 """Quick smoke test for dip anticipation features."""
+import io
 import sys
+
+if hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace"
+    )
+
 sys.path.insert(0, '.')
 
 from agents.watcher_agent import WatcherAgent

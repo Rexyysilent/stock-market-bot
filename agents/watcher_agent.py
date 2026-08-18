@@ -4,62 +4,129 @@ import pandas as pd
 import logging
 from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from timeutil import build_run_context, newest, oldest, to_utc_z, utc_now_z
+from yfinance_util import configure_yfinance_cache
 from config import (
     WATCHLIST_STOCKS, WATCHLIST_COMMODITIES, WATCHLIST_URANIUM,
     WATCHLIST_GAUGES, WATCHLIST_VULTURE, WATCHLIST_DEFENSE,
     RSI_OVERBOUGHT, RSI_OVERSOLD,
-    PRICE_ALERT_PCT, VOLUME_ALERT_MULT, VULTURE_DROP_PCT,
-    GROWTH_BASKET, DEFENSIVE_BASKET, PUT_CALL_ALERT_THRESHOLD,
-    GAMMA_VOL_OI_THRESHOLD, GAMMA_MAX_DTE, GAMMA_MIN_PREMIUM,
-    BACKWARDATION_PAIRS, BACKWARDATION_THRESHOLD_PCT
+    PRICE_ALERT_PCT, VULTURE_DROP_PCT,
+    GROWTH_BASKET, DEFENSIVE_BASKET,
+    OPTION_CONTRACT_VOL_OI_THRESHOLD, OPTION_CONTRACT_MAX_DTE,
+    OPTION_CONTRACT_MIN_NOTIONAL, INSTRUMENT_RELATIVE_RETURN_PAIRS,
+    INSTRUMENT_RELATIVE_RETURN_THRESHOLD_PCT,
 )
 
 logger = logging.getLogger("WatcherAgent")
+configure_yfinance_cache(yf)
 
 
 class WatcherAgent:
-    def __init__(self):
+    def __init__(self, run_context=None):
         self.watchlist = WATCHLIST_STOCKS + WATCHLIST_COMMODITIES + WATCHLIST_URANIUM + WATCHLIST_DEFENSE + WATCHLIST_VULTURE
         self.vulture_list = WATCHLIST_VULTURE
         self.gauges = WATCHLIST_GAUGES
+        self.run_context = run_context or build_run_context()
+        self.reference_date = date.fromisoformat(self.run_context.utc_date)
 
-    def get_stock_price(self, ticker):
+    def _completed_daily_history(self, history):
+        """Return only bars from settled NYSE sessions.
+
+        yfinance may include a partial current daily bar. Technical and regime
+        signals must never consume it, even during a manual intraday export.
+        """
+        session = self.run_context.latest_completed_session
+        if history is None or history.empty or session is None:
+            return history.iloc[0:0] if history is not None else history
+        cutoff = date.fromisoformat(session)
+        mask = [pd.Timestamp(value).date() <= cutoff for value in history.index]
+        return history.loc[mask]
+
+    @staticmethod
+    def _exchange_session(value):
+        """Return the U.S. Eastern session date represented by a timestamp."""
+        if value is None:
+            return None
+        try:
+            timestamp = pd.Timestamp(value)
+            if pd.isna(timestamp):
+                return None
+            if timestamp.tzinfo is not None:
+                timestamp = timestamp.tz_convert("America/New_York")
+            return timestamp.date().isoformat()
+        except (TypeError, ValueError):
+            return None
+
+    def get_price_data(self, ticker):
+        """Pure data layer: returns {"price": float, "change_pct": float} or None."""
         try:
             stock = yf.Ticker(ticker)
             data = stock.history(period="1d")
             if not data.empty:
-                current_price = data['Close'].iloc[-1]
-                open_price = data['Open'].iloc[-1]
+                current_price = float(data['Close'].iloc[-1])
+                open_price = float(data['Open'].iloc[-1])
 
                 change = current_price - open_price
                 pct_change = (change / open_price) * 100
 
-                emoji = "⚪"
-                if pct_change > 0:
-                    emoji = "🟢"
-                elif pct_change < 0:
-                    emoji = "🔴"
-
-                return f"${current_price:.2f} ({emoji} {pct_change:+.2f}%)"
+                return {
+                    "price": round(current_price, 2),
+                    "change_pct": round(pct_change, 2),
+                    # the bar's own exchange time, not fetch time
+                    "as_of": to_utc_z(data.index[-1]),
+                    "observed_at": utc_now_z(),
+                    "source_session": pd.Timestamp(data.index[-1]).date().isoformat(),
+                    "session_complete": (
+                        self.run_context.latest_completed_session is not None
+                        and pd.Timestamp(data.index[-1]).date().isoformat()
+                        <= self.run_context.latest_completed_session
+                    ),
+                }
             return None
         except Exception as e:
             logger.error(f"Error fetching {ticker}: {e}")
             return None
 
-    def get_full_report(self):
+    @staticmethod
+    def render_price(price_data):
+        """Render layer: format price data for human display."""
+        if not price_data or price_data.get("price") is None:
+            return None
+        pct_change = price_data.get("change_pct")
+        if pct_change is None:
+            return f"${price_data['price']:.2f}"
+
+        emoji = "⚪"
+        if pct_change > 0:
+            emoji = "🟢"
+        elif pct_change < 0:
+            emoji = "🔴"
+
+        return f"${price_data['price']:.2f} ({emoji} {pct_change:+.2f}%)"
+
+    def get_stock_price(self, ticker):
+        return self.render_price(self.get_price_data(ticker))
+
+    def get_full_report_data(self):
+        """Pure data layer: {ticker: {"price", "change_pct"} | None} for the full watchlist."""
         report = {}
         all_tickers = self.watchlist + self.gauges
         with ThreadPoolExecutor(max_workers=8) as pool:
-            futures = {pool.submit(self.get_stock_price, t): t for t in all_tickers}
+            futures = {pool.submit(self.get_price_data, t): t for t in all_tickers}
             for future in as_completed(futures):
                 ticker = futures[future]
                 try:
-                    price_str = future.result()
-                    report[ticker] = price_str if price_str else "N/A"
+                    report[ticker] = future.result()
                 except Exception as e:
                     logger.error(f"Price fetch failed for {ticker}: {e}")
-                    report[ticker] = "N/A"
+                    report[ticker] = None
         return report
+
+    def get_full_report(self):
+        return {
+            ticker: self.render_price(data) or "N/A"
+            for ticker, data in self.get_full_report_data().items()
+        }
 
     # ═══════════════════════════════════════════════════════════════════
     # TECHNICAL INDICATORS
@@ -87,11 +154,19 @@ class WatcherAgent:
         signals = {"ticker": ticker, "alerts": []}
         try:
             stock = yf.Ticker(ticker)
-            hist = stock.history(period="1y")
+            hist = self._completed_daily_history(stock.history(period="1y"))
 
             if hist.empty or len(hist) < 50:
                 signals["error"] = "Insufficient data"
                 return signals
+
+            # derived record: inherits the last bar actually used
+            signals["as_of"] = to_utc_z(hist.index[-1])
+            signals["observed_at"] = utc_now_z()
+            signals["source_session"] = pd.Timestamp(
+                hist.index[-1]
+            ).date().isoformat()
+            signals["session_complete"] = True
 
             closes = hist['Close']
             volumes = hist['Volume']
@@ -104,7 +179,7 @@ class WatcherAgent:
             if rsi >= RSI_OVERBOUGHT:
                 signals["alerts"].append(f"⚠️ RSI {rsi:.0f} — OVERBOUGHT")
             elif rsi <= RSI_OVERSOLD:
-                signals["alerts"].append(f"🔥 RSI {rsi:.0f} — OVERSOLD (potential buy)")
+                signals["alerts"].append(f"🔥 RSI {rsi:.0f} — OVERSOLD")
 
             # --- RSI Divergence ---
             divergence = self._detect_rsi_divergence(closes, rsi_series)
@@ -115,16 +190,14 @@ class WatcherAgent:
                 elif divergence == "BULLISH":
                     signals["alerts"].append("🟢 BULLISH RSI DIVERGENCE — price down but momentum building")
 
-            # --- Volume spike ---
-            avg_vol_20 = volumes.tail(20).mean()
+            # Volume is a measurement here, never an alert. The versioned
+            # baseline layer owns HIGH_VOLUME_SURPRISE / LOW_PARTICIPATION so
+            # immature or mid-session readings cannot bypass its gates.
+            avg_vol_20 = volumes.iloc[:-1].tail(20).mean()
             current_vol = volumes.iloc[-1]
             if avg_vol_20 > 0:
                 vol_ratio = current_vol / avg_vol_20
                 signals["volume_ratio"] = round(vol_ratio, 2)
-                if vol_ratio >= VOLUME_ALERT_MULT:
-                    signals["alerts"].append(
-                        f"📊 Volume {vol_ratio:.1f}x above 20-day avg — UNUSUAL"
-                    )
 
             # --- 52-week high/low ---
             high_52w = closes.max()
@@ -178,10 +251,10 @@ class WatcherAgent:
                         f"{direction} {pct_change:+.1f}% intraday"
                     )
 
-                # --- Vulture alert (special drop threshold) ---
+                # --- Legacy drop-monitor threshold ---
                 if ticker in self.vulture_list and pct_change <= -VULTURE_DROP_PCT:
                     signals["alerts"].insert(0,
-                        f"🦅 VULTURE ALERT — {ticker} down {pct_change:.1f}%! Potential buy-the-dip"
+                        f"DROP THRESHOLD — {ticker} down {pct_change:.1f}%"
                     )
                     signals["vulture"] = True
 
@@ -239,13 +312,13 @@ class WatcherAgent:
         if "pct_from_52w_high" in s:
             lines.append(f"  52w High: {s['pct_from_52w_high']}%  |  52w Low: +{s.get('pct_from_52w_low', '?')}%")
         if s.get("vulture"):
-            lines.append("  🦅 VULTURE TARGET — watching for dip buy")
+            lines.append("  DROP MONITOR — configured decline threshold crossed")
         if s.get("alerts"):
             lines.append("  🚨 " + " | ".join(s["alerts"]))
         return "\n".join(lines)
 
     # ═══════════════════════════════════════════════════════════════════
-    # DIP ANTICIPATION — RSI DIVERGENCE
+    # MARKET CONTEXT — RSI DIVERGENCE
     # ═══════════════════════════════════════════════════════════════════
 
     def _detect_rsi_divergence(self, closes, rsi_series, lookback=30):
@@ -303,24 +376,37 @@ class WatcherAgent:
         return None
 
     # ═══════════════════════════════════════════════════════════════════
-    # DIP ANTICIPATION — OPTIONS FLOW (Put/Call Ratio)
+    # MARKET CONTEXT — OPTIONS FLOW (Put/Call Ratio)
     # ═══════════════════════════════════════════════════════════════════
 
     def get_options_flow(self, ticker):
         """
-        WARLORD OPTIONS FLOW — Per-contract Vol/OI Gamma Squeeze Detection.
-        
-        Scans ALL expirations within GAMMA_MAX_DTE (0-5 days).
-        For each individual contract:
-          - Computes vol_oi_ratio = volume / openInterest
-          - Computes premium = lastPrice * volume * 100
-          - Flags GAMMA SQUEEZE ATTEMPT when:
-            DTE <= 5 AND vol_oi_ratio > 5.0 AND premium > $500k
-        
-        Also preserves aggregate P/C ratio as secondary signal.
+        Completed-session option volume/open-interest measurements.
+
+        yfinance exposes a snapshot, not trade-side classification. Contract
+        rows qualify only when ``lastTradeDate`` maps to the run context's
+        latest settled NYSE session. ``lastPrice * session volume * 100`` is
+        retained as a notional estimate for schema compatibility; it is not
+        actual premium paid and CALL/PUT is not directional intent.
         """
-        result = {"ticker": ticker, "alerts": [], "gamma_sweeps": []}
-        today = datetime.now().date()
+        observed_at = utc_now_z()
+        source_session = self.run_context.latest_completed_session
+        result = {
+            "ticker": ticker,
+            "alerts": [],
+            "option_contract_volume_oi_anomaly": [],
+            "as_of": None,
+            "observed_at": observed_at,
+            "source_session": source_session,
+            "signal_eligible": False,
+            "eligible_volume_contracts": 0,
+            "excluded_stale_volume_contracts": 0,
+        }
+        if source_session is None:
+            result["error"] = "No settled NYSE session available"
+            return result
+        reference_date = date.fromisoformat(source_session)
+        source_times = []
         try:
             stock = yf.Ticker(ticker)
             expirations = stock.options
@@ -341,7 +427,7 @@ class WatcherAgent:
                     exp_date = datetime.strptime(exp_date_str, "%Y-%m-%d").date()
                 except ValueError:
                     continue
-                dte = (exp_date - today).days
+                dte = (exp_date - reference_date).days
                 if dte < 0:
                     continue
 
@@ -361,27 +447,46 @@ class WatcherAgent:
                         oi = row.get('openInterest', 0)
                         price = row.get('lastPrice', 0)
                         strike = row.get('strike', 0)
+                        last_trade_raw = row.get('lastTradeDate')
 
                         # Handle NaN
                         vol = 0 if pd.isna(vol) else int(vol)
                         oi = 0 if pd.isna(oi) else int(oi)
                         price = 0 if pd.isna(price) else float(price)
+                        last_trade_at = to_utc_z(last_trade_raw)
+                        last_trade_session = self._exchange_session(last_trade_raw)
 
-                        # Accumulate for aggregate P/C ratio
+                        # OI is a chain-snapshot field (normally prior-session
+                        # publication). Volume is counted only when the row's
+                        # actual last trade belongs to the completed session.
                         if side == "CALL":
-                            total_call_vol += vol
                             total_call_oi += oi
                         else:
-                            total_put_vol += vol
                             total_put_oi += oi
 
-                        # === GAMMA SQUEEZE FILTER (0-5 DTE only) ===
-                        if dte <= GAMMA_MAX_DTE and oi > 0 and vol > 0:
-                            vol_oi_ratio = vol / oi
-                            premium = price * vol * 100  # total premium flow
+                        volume_is_current = (
+                            vol > 0
+                            and last_trade_at is not None
+                            and last_trade_session == source_session
+                        )
+                        if vol > 0 and not volume_is_current:
+                            result["excluded_stale_volume_contracts"] += 1
+                        if not volume_is_current:
+                            continue
+                        result["eligible_volume_contracts"] += 1
+                        source_times.append(last_trade_at)
+                        if side == "CALL":
+                            total_call_vol += vol
+                        else:
+                            total_put_vol += vol
 
-                            if vol_oi_ratio >= GAMMA_VOL_OI_THRESHOLD and premium >= GAMMA_MIN_PREMIUM:
-                                sweep = {
+                        if dte <= OPTION_CONTRACT_MAX_DTE and oi > 0 and vol > 0:
+                            vol_oi_ratio = vol / oi
+                            notional_estimate = price * vol * 100
+
+                            if (vol_oi_ratio >= OPTION_CONTRACT_VOL_OI_THRESHOLD
+                                    and notional_estimate >= OPTION_CONTRACT_MIN_NOTIONAL):
+                                anomaly = {
                                     "ticker": ticker,
                                     "strike": strike,
                                     "type": side,
@@ -389,20 +494,42 @@ class WatcherAgent:
                                     "volume": vol,
                                     "open_interest": oi,
                                     "vol_oi_ratio": round(vol_oi_ratio, 1),
-                                    "premium": round(premium),
-                                    "premium_fmt": f"${premium/1e6:.1f}M" if premium >= 1e6 else f"${premium/1e3:.0f}K",
+                                    # Backward-compatible field name. This is an
+                                    # estimate, not classified transaction flow.
+                                    "premium": round(notional_estimate),
+                                    "notional_estimate": round(notional_estimate),
+                                    "notional_estimate_method": (
+                                        "last_price_x_completed_session_volume_x100"
+                                    ),
+                                    "premium_fmt": (
+                                        f"${notional_estimate/1e6:.1f}M"
+                                        if notional_estimate >= 1e6
+                                        else f"${notional_estimate/1e3:.0f}K"
+                                    ),
                                     "expiration": exp_date_str,
+                                    "last_trade_at": last_trade_at,
+                                    "as_of": last_trade_at,
+                                    "observed_at": observed_at,
+                                    "source_session": source_session,
+                                    "signal_eligible": True,
                                 }
-                                result["gamma_sweeps"].append(sweep)
+                                result["option_contract_volume_oi_anomaly"].append(anomaly)
                                 result["alerts"].append(
-                                    f"🎯 GAMMA SQUEEZE — {ticker} ${strike}{side[0]} "
+                                    f"🎯 OPTION CONTRACT VOLUME/OI ANOMALY — {ticker} ${strike}{side[0]} "
                                     f"DTE={dte} Vol/OI={vol_oi_ratio:.1f}x "
-                                    f"Premium={sweep['premium_fmt']}"
+                                    f"Est.Notional={anomaly['premium_fmt']}"
                                 )
 
-            # === Aggregate P/C Ratio (secondary signal) ===
-            pc_vol_ratio = round(total_put_vol / total_call_vol, 2) if total_call_vol > 0 else 0
-            pc_oi_ratio = round(total_put_oi / total_call_oi, 2) if total_call_oi > 0 else 0
+            # Aggregate measurements. Raw absolute P/C threshold alerts are
+            # intentionally absent: the versioned baseline layer owns them.
+            pc_vol_ratio = (
+                round(total_put_vol / total_call_vol, 2)
+                if total_call_vol > 0 else None
+            )
+            pc_oi_ratio = (
+                round(total_put_oi / total_call_oi, 2)
+                if total_call_oi > 0 else None
+            )
 
             result["put_call_vol_ratio"] = pc_vol_ratio
             result["put_call_oi_ratio"] = pc_oi_ratio
@@ -410,18 +537,17 @@ class WatcherAgent:
             result["total_call_volume"] = int(total_call_vol)
             result["total_put_oi"] = int(total_put_oi)
             result["total_call_oi"] = int(total_call_oi)
-
-            if pc_vol_ratio >= 2.0:
-                result["alerts"].append(f"🚨 P/C Vol {pc_vol_ratio:.1f} — HIGHLY BEARISH")
-            elif pc_vol_ratio >= PUT_CALL_ALERT_THRESHOLD:
-                result["alerts"].append(f"⚠️ P/C Vol {pc_vol_ratio:.1f} — BEARISH")
-            elif 0 < pc_vol_ratio <= 0.5:
-                result["alerts"].append(f"🟢 P/C Vol {pc_vol_ratio:.1f} — BULLISH (calls dominating)")
-
-            if pc_oi_ratio >= 2.0:
-                result["alerts"].append(f"🚨 P/C OI {pc_oi_ratio:.1f} — HEAVY PUT POSITIONING")
-            elif pc_oi_ratio >= PUT_CALL_ALERT_THRESHOLD:
-                result["alerts"].append(f"⚠️ P/C OI {pc_oi_ratio:.1f} — PUT HEAVY")
+            result["as_of"] = newest(source_times)
+            result["signal_eligible"] = bool(
+                source_times and pc_vol_ratio is not None
+            )
+            result["option_contract_volume_oi_anomaly"].sort(
+                key=lambda row: (
+                    -float(row.get("notional_estimate") or 0),
+                    str(row.get("type") or ""),
+                    float(row.get("strike") or 0),
+                )
+            )
 
         except Exception as e:
             logger.error(f"Options flow error for {ticker}: {e}")
@@ -447,14 +573,13 @@ class WatcherAgent:
         return results
 
     # ═══════════════════════════════════════════════════════════════════
-    # BACKWARDATION TRACKER — Physical vs Paper Divergence
+    # INSTRUMENT RELATIVE-RETURN SPREAD
     # ═══════════════════════════════════════════════════════════════════
 
-    def check_backwardation(self):
+    def check_instrument_relative_return_spread(self):
         """
         Compare physical commodity proxies vs paper ETF proxies.
-        When physical trades significantly above paper = backwardation.
-        Backwardation = buyers panicking for immediate delivery = System Reset.
+        Reports a threshold crossing without inferring buyer intent or cause.
         
         Pairs:
           - Uranium: SRUUF (Sprott Physical Trust) vs URA (ETF)
@@ -462,7 +587,7 @@ class WatcherAgent:
         """
         results = {"pairs": [], "alerts": []}
 
-        for pair in BACKWARDATION_PAIRS:
+        for pair in INSTRUMENT_RELATIVE_RETURN_PAIRS:
             phys_ticker = pair["physical"]
             paper_ticker = pair["paper"]
             commodity = pair["commodity"]
@@ -471,8 +596,12 @@ class WatcherAgent:
                 phys = yf.Ticker(phys_ticker)
                 paper = yf.Ticker(paper_ticker)
 
-                phys_hist = phys.history(period="5d")
-                paper_hist = paper.history(period="5d")
+                phys_hist = self._completed_daily_history(
+                    phys.history(period="10d")
+                )
+                paper_hist = self._completed_daily_history(
+                    paper.history(period="10d")
+                )
 
                 if phys_hist.empty or paper_hist.empty:
                     continue
@@ -500,25 +629,29 @@ class WatcherAgent:
                     "physical_5d_chg": round(phys_5d_chg, 2),
                     "paper_5d_chg": round(paper_5d_chg, 2),
                     "spread": round(spread, 2),
-                    "backwardation": spread > BACKWARDATION_THRESHOLD_PCT,
+                    "threshold_crossed": spread > INSTRUMENT_RELATIVE_RETURN_THRESHOLD_PCT,
+                    # a spread is only as fresh as its stalest leg
+                    "as_of": oldest(to_utc_z(phys_hist.index[-1]),
+                                    to_utc_z(paper_hist.index[-1])),
                 }
                 results["pairs"].append(entry)
 
-                if entry["backwardation"]:
+                if entry["threshold_crossed"]:
                     results["alerts"].append(
-                        f"🚨 BACKWARDATION — {commodity}: Physical ({phys_ticker}) outpacing "
-                        f"Paper ({paper_ticker}) by {spread:+.1f}% over 5d. "
-                        f"Buyers panicking for delivery."
+                        f"🚨 INSTRUMENT RELATIVE-RETURN SPREAD — {commodity}: "
+                        f"{phys_ticker} outpacing {paper_ticker} by {spread:+.1f}% over 5d."
                     )
 
             except Exception as e:
-                logger.error(f"Backwardation check failed for {commodity}: {e}")
+                logger.error(f"Instrument relative-return spread failed for {commodity}: {e}")
 
-        logger.info(f"Backwardation checked for {len(results['pairs'])} pairs, {len(results['alerts'])} alerts")
+        results["as_of"] = oldest(*(p["as_of"] for p in results["pairs"])) if results["pairs"] else None
+        logger.info(f"Instrument spreads checked for {len(results['pairs'])} pairs, "
+                    f"{len(results['alerts'])} threshold notes")
         return results
 
     # ═══════════════════════════════════════════════════════════════════
-    # DIP ANTICIPATION — EARNINGS CALENDAR
+    # MARKET CONTEXT — EARNINGS CALENDAR
     # ═══════════════════════════════════════════════════════════════════
 
     def _parse_earnings_datetime(self, value):
@@ -585,7 +718,7 @@ class WatcherAgent:
             return None
 
         earnings_day = earnings_dt.date()
-        days_until = (earnings_day - datetime.now().date()).days
+        days_until = (earnings_day - self.reference_date).days
         entry = {
             "ticker": ticker,
             "earnings_date": earnings_day.strftime("%Y-%m-%d"),
@@ -701,15 +834,52 @@ class WatcherAgent:
         return earnings
 
     # ---------------------------------------------------------------
-    # DIP ANTICIPATION - SECTOR ROTATION
+    # MARKET CONTEXT - SECTOR ROTATION
     # ---------------------------------------------------------------
+
+    def get_vix_term_structure(self):
+        """VIX term structure regime flag: spot ^VIX vs 3-month ^VIX3M.
+
+        ratio > 1 (spot above 3-month) = backwardation = stress/risk-off;
+        ratio < 1 = contango = normal/risk-on.
+        """
+        result = {"vix": None, "vix3m": None, "vix_vix3m_ratio": None,
+                  "structure": None, "regime": None}
+        try:
+            vix_history = self._completed_daily_history(
+                yf.Ticker("^VIX").history(period="10d")
+            )
+            vix3m_history = self._completed_daily_history(
+                yf.Ticker("^VIX3M").history(period="10d")
+            )
+            vix = vix_history['Close']
+            vix3m = vix3m_history['Close']
+            if vix.empty or vix3m.empty:
+                result["error"] = "No VIX/VIX3M data"
+                return result
+            spot = float(vix.iloc[-1])
+            three_month = float(vix3m.iloc[-1])
+            ratio = spot / three_month
+            result.update({
+                "vix": round(spot, 2),
+                "vix3m": round(three_month, 2),
+                "vix_vix3m_ratio": round(ratio, 3),
+                "structure": "BACKWARDATION" if ratio > 1.0 else "CONTANGO",
+                "regime": "RISK_OFF" if ratio > 1.0 else "RISK_ON",
+                "as_of": oldest(to_utc_z(vix.index[-1]), to_utc_z(vix3m.index[-1])),
+            })
+        except Exception as e:
+            logger.error(f"VIX term structure error: {e}")
+            result["error"] = str(e)
+        return result
 
     def get_sector_rotation(self):
         """
         Compare growth vs defensive basket performance.
-        When defensives outperform growth = risk-off = dip signal.
+        Produces a descriptive risk-regime label from relative basket returns.
         """
         result = {"alerts": []}
+        bar_times = []
 
         def _get_basket_perf(tickers, period_days):
             """Get average performance for a basket of tickers."""
@@ -717,12 +887,15 @@ class WatcherAgent:
             for ticker in tickers:
                 try:
                     stock = yf.Ticker(ticker)
-                    hist = stock.history(period=f"{period_days + 5}d")
+                    hist = self._completed_daily_history(
+                        stock.history(period=f"{period_days + 10}d")
+                    )
                     if len(hist) >= period_days:
                         start_price = hist['Close'].iloc[-period_days]
                         end_price = hist['Close'].iloc[-1]
                         pct = ((end_price - start_price) / start_price) * 100
                         perfs.append(pct)
+                        bar_times.append(to_utc_z(hist.index[-1]))
                 except Exception:
                     continue
             return round(sum(perfs) / len(perfs), 2) if perfs else 0
@@ -743,6 +916,7 @@ class WatcherAgent:
         result["growth_20d"] = growth_20d
         result["defensive_20d"] = defensive_20d
         result["spread_20d"] = spread_20d
+        result["as_of"] = oldest(*bar_times) if bar_times else None
 
         # Determine rotation signal
         if spread_5d > 3.0:

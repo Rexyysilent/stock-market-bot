@@ -1,108 +1,51 @@
-# Roadmap
+# Public Roadmap
 
-This roadmap summarizes the project's current state, known limitations, and practical next steps.
+This roadmap keeps the open-source project centered on data tooling, provenance, reproducibility, and operational safety. It does not include brokerage connectivity, order placement, portfolio allocation, paid signal tiers, target prices, or personalized recommendations.
 
-The project is a local-first market intelligence pipeline. Its job is to gather public market data, normalize it into structured exports, and make source quality visible so a human or LLM can analyze the daily brief without guessing which feeds failed.
+## Shipped in the current port
 
-## Current Strengths
+- Schema 2.6 with a shared UTC/NYSE run context and completed-session eligibility.
+- Atomic current outputs, point-in-time snapshots, append-only archives, transactional state, and a process lock.
+- Source-time honesty: `as_of`, `observed_at`, scheduled event time, and effective session remain separate.
+- Publisher-diverse headline providers with provenance, capped aggregator fill, syndication dedupe, and provider health.
+- Explicit universe, macro, and impact-gated discovery headline lanes with component scores and a frozen editorial regression fixture.
+- Hash-locked Python 3.11/3.12 CI with export-schema, vulnerability, and secret checks.
+- Structured retail-attention measurements, clinical/FDA event extraction, registry diffs, options volume/OI anomalies, and cross-family confluence.
+- A separate version-segmented outcome ledger for retrospective measurement.
+- Dashboard support for schema 2.6 sections.
 
-- Daily JSON and text exports for LLM-assisted analysis.
-- Source health metadata for SEC EDGAR, OpenInsider, Twitter/Nitter, Reddit/RSS, options, and earnings coverage.
-- Multi-agent collection across news, market data, SEC filings, social/RSS, biotech catalysts, options flow, and technicals.
-- OpenInsider table scraper with browser-like user agent, pandas parser, BeautifulSoup fallback, and stale-row warning.
-- SEC EDGAR retry/backoff handling with failed-call reporting.
-- Earnings calendar parsing through `yfinance.get_earnings_dates()` with calendar fallback.
-- Mobile dashboard and Discord bot surfaces for local use.
-- Generated dumps, local databases, secrets, and private artifacts are ignored by git.
+## Near term
 
-## Known Limitations
+1. Configuration files
+   - Move sample universes, aliases, and source lists into optional YAML or JSON.
+   - Keep a documented, neutral sample configuration.
+   - Validate configuration without making network calls.
 
-### Reddit Access
+2. Deterministic CI follow-through
+   - Keep live provider checks manual and clearly separated.
+   - Add Windows scheduler validation without registering a task.
+   - Add restore drills and an SBOM while preserving the current hash-locked baseline.
 
-Reddit public JSON can return `403` or `429` responses, especially without authenticated PRAW credentials. When this happens, the social whisper count drops sharply even though the rest of the export can still complete.
+3. Source contracts
+   - Standardize adapter metadata, timestamps, parser versions, and exclusion reasons.
+   - Add fixture coverage for provider schema changes and quota responses.
+   - Preserve raw checksums where source terms permit.
+   - Prefer official, public, and keyless sources for the default path; keep optional commercial adapters replaceable.
 
-Current mitigation:
+4. Data-quality surfaces
+   - Show run health, stale sections, null timestamps, and partial coverage first in the dashboard.
+   - Add machine-readable comparisons against the prior immutable brief.
+   - Distinguish quiet data from transport, parser, freshness, and relevance failures.
 
-- Reddit failures are recorded under `health.sources.social_agent`.
-- The export adds a warning when Reddit fetch failures degrade coverage.
-- RSS, Hacker News, OpenInsider, and Substack feeds continue to populate social context.
+5. Public examples
+   - Publish a synthetic or delayed sample export with no private watchlist or account context.
+   - Document consumer checks for health, timestamp eligibility, and schema version.
 
-Planned improvement:
+## Longer term
 
-- Make PRAW credentials the recommended default setup path.
-- Add a short source-quality score for the social section.
-- Add non-Reddit community fallbacks where useful.
+- Replace research-grade market-data fallbacks with pluggable licensed adapters where needed.
+- Add dataset manifests, dependency locks, SBOM generation, and restore verification.
+- Improve entity resolution and independence grouping without converting context into advice.
+- Add reproducible notebooks for descriptive diagnostics and bias checks.
 
-### X/Twitter And Nitter
-
-Nitter instances are unreliable. Some accounts may return `404`, `429`, empty XML, or disappear entirely. Google News RSS fallback is slower and less direct than native X/Twitter data.
-
-Current mitigation:
-
-- The Twitter agent records which Nitter instance worked.
-- The export warns when Twitter falls back to Google News or returns no signals.
-- The design treats X/Twitter as narrative velocity, not a hard dependency.
-
-Planned improvement:
-
-- Add a provider interface so users can plug in a paid or self-hosted Twitter/X source later.
-- Add manual intel slots for pasting external X/Grok findings into the daily context.
-- Add source freshness labels for narrative feeds.
-
-### Public Source Fragility
-
-Many sources are unofficial, rate-limited, or HTML/RSS based. They can change structure without notice.
-
-Examples:
-
-- OpenInsider's RSS endpoint can serve malformed or HTML-like responses.
-- yfinance can return missing price data for some tickers or futures symbols.
-- SEC EDGAR can return transient HTTP 500s.
-- RSS feeds can be temporarily unavailable or malformed.
-
-Current mitigation:
-
-- Health metadata reports retries, stale data, missing rows, parser path, and failed calls.
-- The export continues with partial data instead of failing the whole run.
-
-Planned improvement:
-
-- Add source adapters with consistent `data`, `health`, and `warnings` return shapes.
-- Add a daily comparison report against the previous export.
-- Add "degraded but usable" versus "insufficient" export status levels.
-
-## Near-Term Improvements
-
-1. **Authenticated Reddit setup**
-   - Document PRAW app setup.
-   - Add a startup warning when Reddit is running in public JSON mode.
-   - Show Reddit auth mode in README and export health.
-
-2. **Cleaner configuration**
-   - Move watchlists and thresholds from `config.py` into optional YAML or JSON files.
-   - Keep a sample config for public use.
-   - Allow local private watchlists without editing tracked files.
-
-3. **CI and deterministic tests**
-   - Add GitHub Actions for `compileall` and non-network regression tests.
-   - Keep live network smoke tests manual.
-   - Add parser tests for OpenInsider and export health.
-
-4. **Sample exports**
-   - Add a sanitized example JSON export under `examples/`.
-   - Use fake or delayed data to avoid leaking personal research context.
-   - Document how consumers should read `health` before trusting sections.
-
-5. **Dashboard polish**
-   - Show health status and warnings prominently.
-   - Add source freshness badges.
-   - Add previous-export comparison deltas.
-
-6. **Provider interfaces**
-   - Standardize source adapters for social, filings, market data, and narrative feeds.
-   - Make it easier to swap Nitter, Reddit, or market-data backends.
-   - Keep each adapter's failure mode visible in export health.
-
-## Longer-Term Direction
-
-- Treat the bot as an intelligence operating system, not an execution engine.
+Any future execution-oriented work belongs outside this public tooling repository and would require a separate scope, controls, review, and applicable regulatory analysis.

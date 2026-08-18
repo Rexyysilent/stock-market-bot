@@ -1,31 +1,42 @@
 # Publishing Checklist
 
-Use this before making the repository public.
+Use this before publishing a release or sample artifact.
 
-## Must Do
+## Required
 
-- Confirm `.env` is not committed.
-- Use `.env.example` for all shareable configuration.
-- Review generated dumps and backups; they should stay ignored.
-- Choose and add a license before calling the project open source.
-- Run:
+- Confirm `.env`, credentials, cookies, tokens, and personal contact details are not committed.
+- Confirm generated briefs, archives, state, logs, databases, browser captures, and private notes remain ignored.
+- Confirm `.env.example` contains placeholders only and no machine-specific archive path.
+- Review the diff for private watchlists, holdings, sizing, broker data, account identifiers, and local absolute paths.
+- Confirm user-facing text describes measurements and source evidence, not buy/sell/hold instructions, return promises, or personalized recommendations.
+- Confirm the release does not advertise paid or free signal tiers, target prices, security rankings, position sizing, execution access, guaranteed outcomes, or regulatory approval.
+- Confirm default operation and offline verification do not require a commercial market-data subscription; document optional provider adapters honestly.
+- Confirm the README retains the non-advisory/no-order-placement scope and the MIT license reference.
+- Confirm regulatory wording is presented as a scope limitation, not a claim of registration, exemption, or compliance.
+
+## Verification
 
 ```powershell
-python -m compileall export_for_gemini.py openinsider_agent.py agents
-python test_earnings_calendar.py
-python test_pdufa.py
+python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger
+python scripts/validate_export_schema.py
+python scripts/run_offline_checks.py
+pip-audit --strict --require-hashes -r requirements.lock
+python scripts/run_secret_scan.py
 ```
 
-## Review Before Public Release
+The secret-scan command first verifies that every `.secrets.baseline` finding
+has an explicit `is_secret: false` review decision, then scans the files listed
+by `git ls-files`. A real secret must be removed and rotated, not baselined.
 
-- Keep local reference dumps such as `Gemini Ref.txt` out of git unless they are sanitized examples.
-- Keep local `Modelfile.*` experiments out of git unless they are part of the public project story.
-- Confirm no personal account names, tokens, broker data, or private notes appear in tracked files.
-- Add screenshots only if they do not reveal private data.
+The required CI matrix repeats compile, schema, and offline checks on Python
+3.11 and 3.12. Live network checks remain manual and must not be promoted into
+required deterministic CI.
 
-## Nice To Have
+Live network checks should be run manually with reviewed credentials. Do not commit their generated output.
 
-- Add a sanitized sample export under `examples/`.
-- Add CI for compile checks and the non-network regression tests.
-- Split local-only dashboard/demo assets from core pipeline code.
-- Add a license badge once the license is selected.
+## Samples and screenshots
+
+- Prefer synthetic or delayed sample data.
+- Remove personal research context and identifiers.
+- Show `health`, timestamps, schema version, and source limitations.
+- Verify redistribution rights for any third-party data included.

@@ -1,0 +1,5 @@
+# CI-only validation and security tooling. Runtime dependencies remain in
+# requirements.txt; both readable inputs compile to hash-locked files.
+jsonschema
+pip-audit
+detect-secrets

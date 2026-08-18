@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-08-17T15:34:26Z",
+  "schema_version": "2.6",
+  "pipeline_version": "2.6.0",
+  "run_context": {
+    "started_at": "2026-08-17T15:32:36Z",
+    "utc_date": "2026-08-17",
+    "market_state": "open",
+    "latest_completed_session": "2026-08-14"
+  },
+  "pipeline_time_seconds": 1.25,
+  "health": {
+    "status": "OK",
+    "warnings": [],
+    "errors": [],
+    "sources": {}
+  },
+  "summary": {
+    "total_headlines": 1
+  },
+  "sections": {
+    "headlines": [
+      {
+        "text": "Federal Reserve holds rates (https://www.federalreserve.gov/example)",
+        "title": "Federal Reserve holds rates",
+        "link": "https://www.federalreserve.gov/example",
+        "published": "2026-08-17T14:00:00Z",
+        "as_of": "2026-08-17T14:00:00Z",
+        "relevance": 1,
+        "source": "Official Feeds",
+        "record_id": "0123456789abcdef"
+      }
+    ]
+  },
+  "data_quality": {
+    "headlines_dropped": [
+      {
+        "title": "Stale headline",
+        "as_of": "2026-08-10T14:00:00Z",
+        "relevance": 1,
+        "reason": "stale",
+        "provider": "FMP",
+        "publisher": "Example News"
+      }
+    ]
+  }
+}

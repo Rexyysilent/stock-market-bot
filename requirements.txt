@@ -7,7 +7,9 @@ beautifulsoup4
 python-dotenv
 pandas
 lxml
-numpy
+# NumPy 2.5+ requires Python 3.12; CI and supported operators include 3.11.
+numpy<2.5
+pandas_market_calendars
 newsapi-python
 playwright
 feedparser
