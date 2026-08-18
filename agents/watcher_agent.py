@@ -876,7 +876,7 @@ class WatcherAgent:
     def get_sector_rotation(self):
         """
         Compare growth vs defensive basket performance.
-        When defensives outperform growth = risk-off = dip signal.
+        Produces a descriptive risk-regime label from relative basket returns.
         """
         result = {"alerts": []}
         bar_times = []

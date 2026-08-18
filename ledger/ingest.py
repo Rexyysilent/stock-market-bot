@@ -102,6 +102,8 @@ def _iter_signals(data, run_id, pipeline_version):
 
     def insider():
         for row in records("insider_clusters"):
+            if row.get("signal_eligible") is False:
+                continue
             direction_name = str(row.get("cluster_direction") or "").lower()
             direction = "long" if direction_name == "buy" else "none"
             yield row, "insider_cluster", direction_name or None, direction, row.get("alert_level")

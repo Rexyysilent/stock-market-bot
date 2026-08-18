@@ -30,12 +30,16 @@ except ImportError:
 
 
 class SocialAgent:
-    def __init__(self, now=None):
+    def __init__(self, now=None, openinsider=None):
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.4472.124 Safari/537.36'
         }
 
-        self.openinsider = OpenInsiderAgent(now=now)
+        self.openinsider = (
+            openinsider
+            if openinsider is not None
+            else OpenInsiderAgent(now=now)
+        )
         self._health_lock = Lock()
         self.health = self._empty_health()
         # Initialize PRAW if credentials are available
@@ -440,7 +444,9 @@ class SocialAgent:
         is_openinsider = 'openinsider' in url
         if is_openinsider:
             logger.info("OpenInsider RSS URL serves HTML; using table scraper directly")
-            return self.openinsider.format_for_whispers(days_back=7, limit=limit)
+            return self.openinsider.format_for_whispers(
+                days_back=7, limit=limit, allow_stale=True
+            )
 
         try:
             # Determine source label based on URL

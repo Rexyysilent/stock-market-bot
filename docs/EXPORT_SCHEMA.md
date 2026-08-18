@@ -9,13 +9,15 @@ Top-level fields:
 
 - `generated_at` - ISO timestamp for the export
 - `schema_version` - public JSON contract (`2.6`)
-- `pipeline_version` - upstream logic era (`2.6.1`); ledger statistics never pool eras
+- `pipeline_version` - upstream logic era (`2.6.2`); ledger statistics never pool eras
 - `run_context` - immutable UTC/NYSE clock shared by all stages, including
   market state and the latest completed/settled session
 - `pipeline_time_seconds` - total runtime
 - `health` - source quality and failure metadata
 - `summary` - high-level counts
 - `sections` - structured data payloads
+- `data_quality` - audit metadata, including the additive headline sub-contract
+  discriminator described below
 
 ## Health
 
@@ -45,15 +47,66 @@ The health object is designed to answer: "Can I trust today's dump?"
 
 Common `WARN` reasons:
 
-- A configured headline provider failed, the publisher-diverse section
-  underfilled, the raw pool was empty/stale, or Google News required its
-  targeted alternate query
-- OpenInsider rows are stale or missing
+- A configured headline provider failed, lane-scoped publisher/provider
+  diversity selection underfilled, the raw pool was empty/stale, or Google
+  News required its targeted alternate query
+- OpenInsider live acquisition failed, or only stale/invalid rows were available
 - SEC EDGAR had retries or failed calls after retries
 - Reddit/RSS social fetches returned 403/429/5xx
 - Twitter fell back to slower Google News proxy data or only a subset of
   configured Nitter accounts returned usable feeds
 - Options or earnings coverage is incomplete
+
+### OpenInsider acquisition and evidence policy
+
+Each export owns one run-scoped OpenInsider acquisition: transaction filter
+`ALL`, a 30-calendar-day lookback, and a maximum of 500 rows. The social
+renderer takes at most five recent rows from that normalized result, while the
+SEC stage derives watchlist insider clusters from the same in-memory rows. The
+pipeline does not issue a second OpenInsider request for either consumer.
+
+The acquisition reuses one `requests.Session` and one source-level rate gate.
+Only connection failures and timeouts receive up to three retries, with
+exponential delays and jitter (approximately 2, 5, and 10 seconds). Health
+classifies failures rather than flattening them into an empty result; expected
+reasons include `connection_refused`, `connection_error`, `timeout`,
+`http_403`, `http_429`, other `http_<status>`, `parser_failed`,
+`untrusted_response_url`, and `unexpected_error`.
+
+The single acquisition record is exported under `health.sources.openinsider`.
+Its transport/run fields include `failure_reason`, `attempts`, `retries`,
+`retry_delays_seconds`, `live`, `run_origin`, and `scope`. `undated_rows`
+counts missing source dates without deleting those canonical rows. In pipeline
+2.6.2, `future_rows_dropped` and `out_of_window_rows_dropped` remain zero:
+the acquisition deliberately preserves dated rows so the SEC consumer can
+apply and audit cluster eligibility in one place. They are reserved
+source-normalization counters, not the cluster-exclusion totals.
+
+Cache provenance is reported independently as `cache_used`, `cache_status`,
+`cache_path`, `cache_fetched_at`, `cache_age_days`, and `cache_error`. The
+daily `ALL`/30-day/500-row scope uses `state/openinsider_last_good.json`;
+nondefault scopes derive separate scope-safe filenames so a deeper or
+ticker-specific acquisition cannot overwrite the daily cache. A fallback run
+has `run_origin=stale_cache`. SEC health exposes
+`openinsider_cluster_rows_considered`, `openinsider_cluster_rows_eligible`,
+`openinsider_cluster_rows_dropped` (including `stale`, `undated`, `future`,
+and `out_of_window`; these are the authoritative eligibility exclusions),
+`insider_cluster_source`,
+`insider_cluster_fallback_used`, and `insider_cluster_fallback_reason`. This
+reports cluster eligibility and fallback without maintaining a contradictory
+second OpenInsider acquisition status. The fallback reason is one of
+`stale_cache_disallowed`, `source_unavailable`,
+`no_temporally_eligible_rows`, `no_watchlist_rows`, or
+`no_qualifying_clusters` when fallback is used.
+
+A successful live parse replaces the atomic last-known-good row cache. If the
+live acquisition fails, `state/openinsider_last_good.json` may supply cached
+rows. They are marked stale and may be rendered only as narrative context.
+Cached, undated, future-dated, and out-of-window rows are ineligible for
+OpenInsider cluster constituents and therefore cannot enter
+confluence. The SEC EDGAR Form 4 scan remains the cluster fallback; the health
+output distinguishes OpenInsider failure/eligibility loss from EDGAR fallback
+success.
 
 An unexpected top-level stage exception produces `ERROR`, appears under
 `health.errors` and `health.sources.pipeline_stages.failed`, and causes a
@@ -80,8 +133,8 @@ Important section keys:
   context scores as macro evidence. Each row retains:
   - `provider`: acquisition path (Official Feeds, FMP, Alpha Vantage News,
     GDELT, or Google News)
-  - `publisher` / `publisher_domain`: underlying newsroom used for
-    concentration caps
+  - `publisher` / `publisher_domain`: underlying newsroom used for lane-scoped
+    concentration caps; acquisition-provider caps are lane-scoped too
   - `source_class`, `source_record_id`, and `canonical_url`
   - `published`, `observed_at`, and `source_time_kind`. The adapter-internal
     `provider_seen_at` is mapped differently by evidence type: for sources
@@ -96,8 +149,8 @@ Important section keys:
     provider metadata, or issuer alias
   - `score_components`: separate nonnegative `issuer_relevance`,
     `macro_relevance`, `vertical_relevance`, `authority`, `novelty`, and
-    `impact` measurements. `novelty` remains zero until longitudinal event
-    history exists; it is not inferred from one fetched pool
+    `impact` measurements. `novelty` measures uniqueness within the current
+    fetched pool; it is not longitudinal and does not claim historical newness
   `source` remains a compatibility alias for `provider`.
   Headline `record_id` remains based on legacy `text`; additive provenance
   does not rewrite the identity contract for prior consumers.
@@ -114,7 +167,12 @@ Important section keys:
 - `sec_filings`
 - `pdufa_catalysts`
 - `cash_runway_alerts`
-- `insider_clusters`
+- `insider_clusters` — OpenInsider constituents require a parseable source
+  filing date no later than the run clock and inside the exact trailing
+  30-calendar-day window. Undated, future-dated, out-of-window, and cached
+  rows are excluded before clustering. If no eligible live OpenInsider cluster
+  remains, the SEC EDGAR Form 4 path runs as the fallback. Eligibility/drop
+  counts and the fallback reason remain visible in source health.
 - `options_flow`
 - `sector_rotation`
 - `earnings_calendar`
@@ -212,7 +270,7 @@ Generated exports are ignored by git because they are time-sensitive and may con
 - `data_quality.registry_diff.records_compared` makes an empty registry-change
   section auditable instead of merely silent.
 
-## v2.6.2 headline source diversity
+## Headline source diversity
 
 - Provider precedence is official SEC/Federal Reserve/FDA/Nasdaq feeds,
   optional FMP and Alpha Vantage News, keyless rate-aware GDELT discovery
@@ -226,15 +284,73 @@ Generated exports are ignored by git because they are time-sensitive and may con
 - A configured provider failure is isolated, retained under
   `health.sources.news.providers`, and does not erase usable rows.
 - Relevance and the three-day gate run before cross-provider exact/near-title
-  deduplication. Selection is deterministic, capped at one row per underlying
-  publisher, one press-release wire, and two Google-provider rows. The brief
-  may contain fewer than five rows rather than relax those caps.
+  deduplication. Selection is deterministic: at most one row per publisher in
+  each lane, and no more than two rows per acquisition provider in each lane
+  or three overall. The existing press-release and Google-provider limits also
+  apply; the brief may remain underfilled rather than relax any cap.
 - `data_quality.headline_pool` exposes provider/publisher counts, selected
   concentration, Google-fill activation, dedupe counts, cap-drop counts, and
   per-provider health. `data_quality.headlines_dropped` identifies the
   provider and publisher for stale, duplicate, and cap-excluded rows.
 - These are narrative-context and additive-provenance changes. Schema remains
-  `2.6`; the Tier-1 Signal Ledger and statistical segment remain `2.6.1`.
+  `2.6`. The headline work itself did not require an era change; the current
+  pipeline is `2.6.2` because the later OpenInsider cluster-constituent
+  eligibility change affects confluence and ledger populations.
+
+
+## Headline sub-contract compatibility
+
+Newly emitted schema-2.6 briefs set
+`data_quality.headline_contract_version` to `2.6-headline-lanes-1`. The public
+schema uses that additive discriminator to enforce the current contract without
+retroactively invalidating stored schema-2.6 artifacts. For an unmarked brief:
+
+- stored `pipeline_version` 2.6.0 and 2.6.1 artifacts remain valid; the schema
+  also recognizes 2.6.2, while newly emitted 2.6.2 briefs always carry the
+  headline contract marker;
+- an early `2.6.0` brief may omit `data_quality.headline_pool`, and an early
+  pool requires only `fetched_count` and `fresh_before_relevance`;
+- a selected headline may omit provider, publisher/domain, source-class, and
+  source-record identity provenance; and
+- `lane`, `universe_tickers`, and `score_components` remain an optional group,
+  while any declared fields still receive their normal type and integrity
+  validation. The accounting pair is likewise validated as a group when used.
+
+For a marked brief, `pipeline_version` may be `2.6.1` or `2.6.2`; this preserves
+stored marked 2.6.1 output while admitting the new pipeline era. The pool and
+all selected-count, lane-histogram, and candidate-accounting fields are
+required. Every selected row must contain the complete normalized shape emitted
+by `build_headline_export_records`: canonical URL, nullable publication and
+observation values, source-time kind, non-empty provider/source-class/source
+identity, nullable publisher/domain, raw tickers, nullable summary, duplicate
+provider/publisher lineage, the `source` compatibility alias, and lane/component
+fields. The semantic validator also requires `source == provider`.
+Current `link` and `canonical_url` strings must be absolute HTTP(S) web URLs
+with a non-empty, syntactically valid DNS-style host. Their path, query, and
+fragment tails admit only ASCII RFC-3986 reserved/unreserved characters and
+valid `%HH` escapes; controls, backslashes, and raw unsafe characters are
+rejected. Current `as_of` and `observed_at` strings must be timezone-qualified
+RFC-3339-shaped date-times. These marker-only patterns remain effective when
+optional `jsonschema` format checker dependencies are absent; `published`
+intentionally remains nullable raw provider text. The marked semantic validator
+also rejects unsafe URL characters, malformed percent escapes, impossible
+calendar dates, and invalid or out-of-range URL ports.
+Each marked `data_quality.headlines_dropped` row is a typed machine-audit
+record. It requires a non-empty `reason` and `source_record_id` and retains
+text/title, link and canonical URL, publication/source/observation times,
+provider, publisher, source class, raw and mapped tickers, summary, component
+scores, and duplicate lineage. A null lane is valid if and only if
+`reason=no_approved_lane`; it must have no universe mapping, zero issuer/macro
+scores, and must not satisfy the discovery-lane predicate.
+
+`scripts/validate_export_schema.py` supplements JSON Schema with marked-only
+cross-field checks: `selected_count` equals the selected-row count, the declared
+lane histogram exactly matches those rows, `accounted_candidate_count` equals
+`fetched_count`, and selected plus dropped rows equals the accounted total. The
+exporter overwrites those derived diagnostics from its selected and dropped
+records and raises a clear error if that terminal total contradicts
+`fetched_count`. Fail-soft news artifacts derive explicit zero counts and still
+satisfy the marked contract.
 
 ## Editorial headline lanes
 
@@ -252,8 +368,9 @@ Generated exports are ignored by git because they are time-sensitive and may con
 - Selection continues to apply source time, syndication dedupe, publisher and
   press-release caps, and deterministic ordering. The frozen August 17 fixture
   makes the NXE/DUOT regression reproducible without network or user state.
-- This is additive editorial ranking for narrative headlines. Headlines are
-  not Tier-1 Signal Ledger inputs, and no baseline, confluence population, or
-  signal identity changed. Therefore schema remains `2.6` and
-  `pipeline_version` remains `2.6.1`; changing those signal populations later
-  still requires a new pipeline era.
+- This additive editorial ranking did not itself change a baseline, confluence
+  population, signal identity, or schema. Schema therefore remains `2.6`.
+  Pipeline era `2.6.2` starts separately because OpenInsider now excludes
+  cached, undated, future-dated, and out-of-window cluster constituents; that
+  changes possible confluence and ledger membership and must not be pooled with
+  2.6.1 statistics.

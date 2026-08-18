@@ -1,6 +1,6 @@
 # Public Roadmap
 
-This roadmap keeps the project centered on data tooling, provenance, reproducibility, and operational safety. It does not include brokerage connectivity, order placement, portfolio allocation, or personalized recommendations.
+This roadmap keeps the open-source project centered on data tooling, provenance, reproducibility, and operational safety. It does not include brokerage connectivity, order placement, portfolio allocation, paid signal tiers, target prices, or personalized recommendations.
 
 ## Shipped in the current port
 
@@ -30,6 +30,7 @@ This roadmap keeps the project centered on data tooling, provenance, reproducibi
    - Standardize adapter metadata, timestamps, parser versions, and exclusion reasons.
    - Add fixture coverage for provider schema changes and quota responses.
    - Preserve raw checksums where source terms permit.
+   - Prefer official, public, and keyless sources for the default path; keep optional commercial adapters replaceable.
 
 4. Data-quality surfaces
    - Show run health, stale sections, null timestamps, and partial coverage first in the dashboard.

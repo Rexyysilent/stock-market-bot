@@ -1,8 +1,22 @@
-# Stock Market Intelligence Bot
+# Public Market Data & Observability Bot
 
-A local-first data collection and observability pipeline for public market information. It gathers public headlines, filings, price/volume measurements, social context, options statistics, earnings dates, and clinical/regulatory events into a versioned daily brief for human or software review.
+An open-source, local-first data collection and observability pipeline for public market information. It gathers public headlines, filings, price/volume measurements, social context, options statistics, earnings dates, and clinical/regulatory events into a versioned daily brief for human or software review.
 
-This repository is tooling, not a market-advisory service. It does not issue buy/sell/hold recommendations, personalize output, manage a portfolio, connect to a broker, or place orders. Labels such as `RISK_ON`, threshold tags, and legacy JSON keys containing `signal` or `alert` are deterministic data classifications retained for schema compatibility—not investment recommendations or claims about intent, causality, or future performance.
+## Project scope
+
+This repository is public data tooling, not a market-advisory, research-call, or execution service. It does not provide paid or free trading signals, buy/sell/hold recommendations, security rankings, target prices, personalized suitability assessments, position sizing, portfolio management, brokerage connectivity, or order placement.
+
+Labels such as `RISK_ON`, threshold tags, and legacy JSON keys containing `signal` or `alert` are deterministic measurement classifications retained for schema compatibility. They do not express a recommendation, expected return, trading intent, inferred causality, or view about what any person should do.
+
+The neutral scope is a product-design constraint, not legal advice or a representation that a particular operator, deployment, or downstream use is registered, exempt, or compliant in any jurisdiction. Anyone publishing reports or opinions about securities should obtain advice appropriate to their own activities and location.
+
+## Open-source and provider policy
+
+- The code, schemas, deterministic fixtures, and offline verification workflow are published under the MIT License.
+- Prefer official filings, regulator or exchange publications, public RSS/HTML sources, keyless endpoints, and auditable open-source libraries for the default pipeline.
+- Optional commercial data providers remain replaceable adapters; missing credentials must not disable the core export or offline tests.
+- Keep collection, provenance, health, timestamp, and exclusion logic inspectable. Do not introduce opaque scoring sold as a signal service.
+- Generated data remains local by default. The repository does not operate a hosted recommendation feed or subscriber tier.
 
 ## Outputs
 
@@ -19,12 +33,15 @@ The JSON includes source health, run context, timestamps, coverage gaps, retries
 
 ## Current pipeline
 
-The public twin tracks the current v2.6 collection pipeline (`schema_version=2.6`, `pipeline_version=2.6.1`):
+This repository tracks the current v2.6 collection pipeline (`schema_version=2.6`, `pipeline_version=2.6.2`):
 
 - publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill; and explicit universe, macro, and impact-gated discovery lanes
 - watchlist prices and completed-session technical measurements via yfinance
 - SEC EDGAR 8-K and Form 4 collection with retry/failure metadata
-- OpenInsider enrichment with parser fallback and staleness checks
+- one run-scoped OpenInsider `ALL` acquisition (30 days, at most 500 rows)
+  shared by narrative and cluster consumers, with a shared session, bounded
+  connection/timeout retries, a source rate gate, typed failure health, and a
+  last-known-good narrative-only cache
 - Reddit RSS, ApeWisdom, Hacker News, RSS, Substack, Nitter, and Google News narrative inputs
 - completed-session put/call statistics and short-dated contract volume/open-interest anomalies
 - earnings dates, ClinicalTrials.gov changes, FDA event extraction, and cash-runway measurements
@@ -33,6 +50,12 @@ The public twin tracks the current v2.6 collection pipeline (`schema_version=2.6
 - a separate outcome ledger for measuring +1/+5/+20 completed-session behavior without changing production collection rules
 
 Acquisition providers and underlying publishers are separated. Aggregators and social sources are discovery/context inputs; they do not establish filings, regulatory outcomes, trade direction, or issuer facts.
+
+OpenInsider live rows must have a parseable, non-future filing date inside the
+cluster lookback before they can become cluster evidence. Cached rows are
+explicitly stale and may supply narrative context only; they never enter
+insider clusters or confluence. When live OpenInsider rows cannot produce a
+cluster, SEC EDGAR Form 4 remains the cluster fallback.
 
 ## Quickstart
 
@@ -127,6 +150,7 @@ CI repeats those checks on Python 3.11 and 3.12, installs only from hash-locked 
 - Do not infer option trade direction from CALL/PUT type or estimated notional.
 - Do not treat a headline count, social mention, technical label, or outcome sample as a recommendation.
 - No automated order placement is implemented or authorized by this project.
+- Do not market forks or generated artifacts as guaranteed, actionable, or regulator-approved signals.
 - Users remain responsible for professional advice and laws or regulations applicable to their own activities.
 
 ## License

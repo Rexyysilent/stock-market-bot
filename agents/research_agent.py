@@ -349,7 +349,7 @@ class ResearchAgent:
         re.IGNORECASE,
     )
 
-    # Minimum thresholds for structural alpha (not promotional mud)
+    # Minimum source-measurement thresholds for geology relevance.
     URANIUM_GRADE_MIN = 1.0     # ≥ 1.0% U3O8
     INTERCEPT_LENGTH_MIN = 5.0  # > 5m intercept
 
@@ -385,7 +385,7 @@ class ResearchAgent:
     def _passes_drill_filter(self, grades):
         """
         Check if extracted grades meet minimum thresholds.
-        Returns True if the signal has structural alpha.
+        Returns True if the extracted source measurements meet the thresholds.
         """
         if not grades:
             return False
@@ -1190,7 +1190,7 @@ class ResearchAgent:
         
         # CEO.ca / Uranium
         output.append("=" * 50)
-        output.append("CEO.CA / URANIUM INTELLIGENCE")
+        output.append("CEO.CA / URANIUM SOURCE CONTEXT")
         output.append("Tickers: UUUU, CCJ, NXE, DNN")
         output.append("=" * 50)
         
@@ -1285,7 +1285,7 @@ if __name__ == "__main__":
     agent = ResearchAgent()
     
     print("\n" + "=" * 60)
-    print("RESEARCH AGENT - LIVE DUMP")
+    print("PUBLIC-SOURCE RESEARCH DATA - LIVE DUMP")
     print("=" * 60)
     
     dump = agent.get_full_research_dump()

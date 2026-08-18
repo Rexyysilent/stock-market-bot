@@ -50,6 +50,8 @@ class NewsAgent:
     TARGET_COUNT = HEADLINE_TARGET_COUNT
     MAX_PER_PUBLISHER = HEADLINE_MAX_PER_PUBLISHER
     GOOGLE_MAX_SELECTED = HEADLINE_GOOGLE_MAX_SELECTED
+    MAX_PER_PROVIDER = 3
+    MAX_PER_PROVIDER_PER_LANE = 2
     SOURCE_PRIORITY = {
         "official_central_bank": 0,
         "official_exchange": 0,
@@ -71,8 +73,404 @@ class NewsAgent:
     )
     LANE_PRIORITY = {"universe": 0, "macro": 1, "discovery": 2}
     EXCHANGE_LISTING_PATTERN = re.compile(
-        r"(?i)(?:\(\s*)?\b(?:NASDAQ|NYSE|AMEX)\s*:\s*"
-        r"([A-Z][A-Z0-9.=-]{0,11})(?:\s*\))?"
+        r"(?P<open>\(\s*)?\b"
+        r"(?P<exchange>(?i:NASDAQ|NYSEARCA|NYSE|AMEX))"
+        r"\s*(?P<delimiter>:|[-\u2010-\u2015])\s*"
+        r"(?P<symbol>[A-Z][A-Z0-9.=-]{0,10})"
+        r"(?![A-Za-z0-9.=-])(?P<close>\s*\))?"
+    )
+    EXCHANGE_LISTED_PATTERN = re.compile(
+        r"\b(?i:NASDAQ|NYSEARCA|NYSE|AMEX)"
+        r"(?:[-\s\u2010-\u2015]+listed)\b"
+    )
+    EXCHANGE_LISTED_SYMBOL_PATTERN = re.compile(
+        r"\b(?i:NASDAQ|NYSEARCA|NYSE|AMEX)"
+        r"(?:[-\s\u2010-\u2015]+listed)\b\s+"
+        r"(?P<symbol>[A-Z][A-Z0-9.=-]{0,10})"
+        r"(?![A-Za-z0-9.=-])"
+    )
+    LISTING_SUBJECT_WORDS = {
+        "COMPANY", "COMPOSITE", "EXCHANGE", "FUTURE", "FUTURES",
+        "HALT", "HALTS", "INDEX", "ISSUER", "MARKET", "MARKETS",
+        "NEWS", "SHARE", "SHARES", "STOCK", "STOCKS", "SYSTEM",
+        "SYSTEMS", "TRADING", "UPDATE",
+    }
+    DISPLAY_TICKER_ALIASES = {"^VIX": ("VIX",)}
+    AMBIGUOUS_TITLE_TICKERS = {"COIN", "SHOP", "ITA"}
+    EXCHANGE_PREFIX_MACRO_SUBJECT_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:"
+        r"(?:trading|trade)\s+(?:halts?|halted|resumes?|resumed|opens?|"
+        r"opened|closes?|closed|stops?|stopped|pauses?|paused)\b|"
+        r"(?:market|exchange|systems?|composite|index|futures?)\s+(?:"
+        r"halts?|halted|resumes?|resumed|opens?|opened|closes?|closed|"
+        r"rises?|rose|falls?|fell|gains?|gained|slides?|slid|drops?|"
+        r"dropped|surges?|surged|outage|failure|update)\b|"
+        r"(?:stock|market)\s+futures?\s+(?:rises?|rose|falls?|fell|"
+        r"gains?|gained|slides?|slid|drops?|dropped|surges?|surged)\b"
+        r")"
+    )
+
+    CONTEXTUAL_MACRO_KEYWORDS = {
+        "treasury", "yield", "inflation", "cpi", "tariff", "payroll",
+        "china", "nasdaq", "dow", "wall street", "oil", "crude",
+        "crypto", "bitcoin",
+    }
+    EXCHANGE_SUBJECT_PATTERN = re.compile(
+        r"\b(?:nasdaq|nysearca|nyse|amex)\b\s*(?::|[-\u2010-\u2015])?\s*"
+        r"(?:exchange|market|trading|trade|systems?|composite|index|futures?|"
+        r"halts?|halted|resumes?|resumed|opens?|opened|closes?|closed|"
+        r"outage|technical|rises?|rose|falls?|fell|gains?|gained|slides?|"
+        r"slid|drops?|dropped|surges?|surged)\b"
+    )
+    EXCHANGE_LEADING_SUBJECT_PATTERN = re.compile(
+        r"^(?:nasdaq|nysearca|nyse|amex)\b\s*"
+        r"(?::|[-\u2010-\u2015])?\s*(?:(?:exchange|market|trading|trade|"
+        r"systems?|composite|index|futures?)\s+(?:halts?|halted|resumes?|"
+        r"resumed|opens?|opened|closes?|closed|stops?|stopped|pauses?|"
+        r"paused|rises?|rose|falls?|fell|declines?|declined|gains?|gained|"
+        r"drops?|dropped|surges?|surged|outage|failure|update)|"
+        r"(?:halts?|halted|resumes?|resumed|opens?|opened|closes?|closed|"
+        r"outage|failure))\b"
+    )
+    EXCHANGE_REVERSE_SUBJECT_PATTERN = re.compile(
+        r"\b(?:trading|trade)\s+"
+        r"(?:halts?|halted|resumes?|resumed|opens?|opened|closes?|closed)"
+        r"\s+(?:on|at)\s+(?:nasdaq|nysearca|nyse|amex)\b"
+    )
+    INFLATION_SUBJECT_PATTERNS = (
+        r"\b(?:(?:u\.?s\.?|us|headline|core|consumer|annual|monthly)\s+)"
+        r"{0,3}inflation\s+(?:cools?|cooled|eases?|eased|slows?|slowed|"
+        r"falls?|fell|drops?|dropped|rises?|rose|climbs?|climbed|"
+        r"accelerates?|accelerated|holds?|held|ticks?|ticked|comes?|came)\b",
+        r"^(?:(?:nasdaq|nysearca|nyse|amex)\s*"
+        r"(?::|[-\u2010-\u2015])\s*)?(?:(?:u\.?s\.?|us|headline|core|"
+        r"consumer|annual)\s+){0,2}inflation\s+"
+        r"(?:remains?|remained|stays?|stayed)\s+"
+        r"(?:sticky|elevated|high|hot|persistent|above|below)\b",
+        r"\bcpi\s+(?:cools?|cooled|eases?|eased|slows?|slowed|falls?|fell|"
+        r"drops?|dropped|rises?|rose|climbs?|climbed|accelerates?|"
+        r"accelerated|holds?|held|ticks?|ticked|hotter|cooler|higher|lower|"
+        r"report|data|reading|print)\b",
+        r"\b(?:inflation|cpi)\s+(?:rate|report|data|reading|print)\b",
+    )
+    PAYROLL_SUBJECT_PATTERNS = (
+        r"\bpayrolls\s+(?:miss(?:es|ed)?|beat(?:s|en)?|rise|rises|rose|"
+        r"fall|falls|fell|increase|increases|increased|decline|declines|"
+        r"declined|add|adds|added|shed|sheds|come|comes|came|surprise|"
+        r"surprises|surprised)\b",
+        r"\b(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|"
+        r"jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|"
+        r"nov(?:ember)?|dec(?:ember)?|u\.?s\.?|us|nonfarm)\s+){1,3}"
+        r"payrolls?\s+(?:miss(?:es|ed)?|beat(?:s|en)?|rise|rises|rose|"
+        r"fall|falls|fell|increase|increases|increased|decline|declines|"
+        r"declined|add|adds|added|shed|sheds|come|comes|came|surprise|"
+        r"surprises|surprised)\b",
+        r"\b(?:nonfarm\s+payrolls?|payrolls?\s+(?:report|data))\b",
+    )
+    TARIFF_SUBJECT_PATTERNS = (
+        r"\b(?:u\.?s\.?|us|china|eu|european\s+union|administration|"
+        r"government)\s+(?:imposes?|imposed|raises?|raised|cuts?|cut|"
+        r"delays?|delayed|announces?|announced|lifts?|lifted|pauses?|"
+        r"paused)\s+(?:new\s+)?tariffs?\b",
+        r"\btariffs?\s+(?:take|takes|took)\s+effect\b",
+        r"\btariffs?\s+(?:rise|rises|rose|fall|falls|fell|increase|"
+        r"increases|increased|hit|hits|target|targets|cover|covers)\b",
+        r"\btariffs?\s+(?:on|against)\s+(?:imports?|exports?|china|"
+        r"europe|mexico|canada|goods|steel|aluminum|semiconductors?)\b",
+        r"\b(?:trade|tariff)\s+policy\b",
+    )
+    WALL_STREET_SUBJECT_PATTERNS = (
+        r"\bwall\s+street\s+(?:falls?|fell|rises?|rose|gains?|gained|"
+        r"slides?|slid|drops?|dropped|surges?|surged|rallies|rallied|"
+        r"retreats?|retreated|slumps?|slumped|slips?|slipped|jumps?|"
+        r"jumped|tumbles?|tumbled|opens?|opened|closes?|closed|braces|"
+        r"reacts?|stocks?|markets?|futures?)\b",
+    )
+    WALL_STREET_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^wall\s+street\s+(?:falls?|fell|rises?|rose|gains?|gained|"
+        r"slides?|slid|drops?|dropped|surges?|surged|rally|rallies|rallied|"
+        r"retreats?|retreated|slumps?|slumped|slips?|slipped|jumps?|"
+        r"jumped|tumbles?|tumbled|opens?|opened|closes?|closed|braces|"
+        r"reacts?|(?:stocks?|markets?|futures?)\s+(?:rise|rises|rose|fall|"
+        r"falls|fell|gain|gains|gained|drop|drops|dropped|rally|rallies|"
+        r"rallied|open|opens|opened|close|closes|closed))\b"
+    )
+
+
+    DOW_COMPANY_PATTERN = re.compile(
+        r"\bdow\s+(?:inc\.?|incorporated|chemical)\b"
+    )
+    DOW_SUBJECT_PATTERNS = (
+        r"\bdow(?:\s+jones(?:\s+industrial\s+average)?|\s+industrials?|"
+        r"\s+index|\s+futures?)\b",
+        r"\bdow\b\s+(?:market\s+update|rises?|rose|falls?|fell|gains?|"
+        r"gained|slides?|slid|drops?|dropped|surges?|surged|opens?|opened|"
+        r"closes?|closed)\b",
+        r"\b(?:market|stocks?|equities|futures?)\b.{0,30}\bdow\b",
+    )
+    CHINA_MACRO_PATTERNS = (
+        r"\bchina(?:'s)?\s+(?:economy|economic|markets?|stocks?|equities|"
+        r"growth|gdp|inflation|deflation|trade|tariffs?|exports?|imports?|"
+        r"stimulus|central\s+bank|pboc|property|currency|yuan)\b",
+        r"\bchina(?:'s)?\s+(?:manufacturing|industrial)\s+"
+        r"(?:pmi|activity|output|data|index|survey)\b",
+        r"\b(?:economy|economic|markets?|stocks?|equities|growth|gdp|"
+        r"inflation|deflation|trade|tariffs?|exports?|imports?|stimulus|"
+        r"central\s+bank|pboc|property|currency|yuan)\b.{0,24}\bchina\b",
+        r"\b(?:manufacturing|industrial)\s+"
+        r"(?:pmi|activity|output|data|index|survey)\b.{0,24}\bchina\b",
+    )
+    YIELD_CONTEXT_PATTERNS = (
+        r"\b(?:treasury|treasuries|bond|bonds|note|notes|rates?)\s+yields?\b",
+        r"\byields?\s+(?:on\s+)?(?:treasury|treasuries|bond|bonds|notes?)\b",
+        r"\b(?:2|5|10|20|30)[- ]year\s+(?:treasury\s+)?yields?\b",
+        r"\byields?\s+(?:rise|rises|rose|fall|falls|fell|jump|jumps|"
+        r"surge|surges|drop|drops)\b.{0,30}\b(?:rates?|bonds?|treasur(?:y|ies))\b",
+    )
+    OIL_SUBJECT_PATTERNS = (
+        r"\b(?:oil|crude(?:\s+oil)?)\s+(?:prices?|market|futures?|supply|"
+        r"demand|inventor(?:y|ies)|rises?|rose|falls?|fell|gains?|gained|"
+        r"slides?|slid|drops?|dropped|surges?|surged|tumbles?|tumbled|update)\b",
+        r"\b(?:prices?|market|futures?|supply|demand|inventor(?:y|ies))\b"
+        r".{0,24}\b(?:oil|crude)\b",
+        r"\b(?:u\.?s\.?|us|opec|global|world|worldwide)\s+"
+        r"(?:crude\s+)?oil\s+(?:output|production)\b",
+    )
+    CRYPTO_SUBJECT_PATTERNS = (
+        r"\b(?:bitcoin|crypto(?:currency)?)\s+(?:prices?|market|markets|"
+        r"futures?|etfs?|trading|regulation|rises?|rose|falls?|fell|gains?|"
+        r"gained|slides?|slid|drops?|dropped|surges?|surged|update)\b",
+        r"\b(?:prices?|market|markets|futures?|etfs?|trading|regulation)\b"
+        r".{0,24}\b(?:bitcoin|crypto(?:currency)?)\b",
+    )
+    HUMAN_MACRO_SUBJECT_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:economists?|analysts?|investors?|consumers?|"
+        r"policymakers?|officials?)\s+(?:"
+        r"(?:brace|prepare)\s+for|"
+        r"(?:watch|await|expect|forecast|predict|weigh)(?:\s+the)?|"
+        r"(?:warn|signal)(?:\s+that)?"
+        r")\s+(?:fed|fomc|federal\s+reserve|cpi|inflation|"
+        r"payrolls?|jobs\s+report|recession|interest\s+rates?|"
+        r"rate\s+(?:cut|hike)|treasury|bond\s+yields?|yields?|"
+        r"oil|crude|opec|bitcoin|crypto(?:currency)?|wall\s+street|"
+        r"dow|nasdaq|s&p\s+500|russell\s+2000|markets?|stocks?)\b"
+    )
+    EDITORIAL_SUBJECT_PREFIX_PATTERN = re.compile(
+        r"^(?:(?:breaking(?:\s+news)?|update(?:\s+\d+)?|exclusive)\s*"
+        r"(?::|[-\u2010-\u2015])\s*)+"
+    )
+    EXCHANGE_LABEL_SUBJECT_PATTERN = re.compile(
+        r"^(?:nasdaq|nysearca|nyse|amex)\s*"
+        r"(?::|[-\u2010-\u2015])\s*"
+    )
+    CPI_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|"
+        r"apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|"
+        r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|"
+        r"u\.?s\.?|us|headline|core|consumer|annual|monthly|eurozone|"
+        r"european)\s+){0,2}cpi\s+(?:(?:comes?|came)\s+in\s+)?(?:"
+        r"hot|cold|hotter|cooler|higher|lower|stronger|weaker|"
+        r"cools?|cooled|eases?|eased|slows?|slowed|falls?|fell|"
+        r"drops?|dropped|rises?|rose|climbs?|climbed|accelerates?|"
+        r"accelerated|holds?|held|ticks?|ticked|"
+        r"(?:report|data|reading|print)\s+(?:shows?|showed|signals?|"
+        r"signaled|indicates?|indicated|reveals?|revealed|hurts?|hurt|"
+        r"pressures?|pressured|reshapes?|reshaped|affects?|affected|"
+        r"comes?|came|rises?|rose|falls?|fell|remains?|remained|stays?|stayed)"
+        r")\b"
+    )
+    LEADING_MARKET_ACTION_PATTERN = re.compile(
+        r"^(?:the\s+)?"
+        r"(?:(?:u\.?s\.?|us|global|worldwide|eurozone|european|asian)"
+        r"\s+)?(?:stock\s+market\s+today\s*:|"
+        r"(?:stock\s+markets?|markets?|stocks?|shares?|equities|futures?|dollar|bonds?|treasuries|"
+        r"yields?)\s+(?:"
+        r"rises?|rose|falls?|fell|declines?|declined|gains?|gained|"
+        r"drops?|dropped|surges?|surged|slides?|slid|rally|rallies|rallied|"
+        r"retreats?|retreated|slumps?|slumped|slips?|slipped|jumps?|"
+        r"jumped|tumbles?|tumbled|opens?|opened|closes?|closed|"
+        r"advances?|advanced|climbs?|climbed|dips?|dipped|sinks?|sank|"
+        r"soars?|soared|edges?|edged|trades?|traded|holds?|held|"
+        r"braces?|reacts?|points?|pointed)\b)"
+    )
+    POWELL_POLICY_SUBJECT_PATTERN = re.compile(
+        r"^(?:jerome\s+)?powell\s+(?:says?|said|signals?|signaled|warns?|warned|"
+        r"expects?|expected|sees?|saw|backs?|backed|defends?|defended)\b"
+        r".{0,60}\b(?:fed|rates?|inflation|cpi|payrolls?|jobs|economy|"
+        r"growth|policy)\b"
+    )
+    TREASURY_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^(?:(?:(?:u\.?s\.?|us)\s+treasur(?:y|ies)|"
+        r"treasury\s+(?:department|secretary))\s+(?:announces?|announced|"
+        r"updates?|updated|says?|said|signals?|signaled|issues?|issued|"
+        r"releases?|released|imposes?|imposed|warns?|warned)\b|"
+        r"(?:(?:u\.?s\.?|us)\s+)?(?:(?:2|5|10|20|30)[- ]year\s+)?treasury\s+"
+        r"(?:yields?|bonds?|notes?|bills?|auctions?|curve|markets?)\s+"
+        r"(?:rises?|rose|falls?|fell|climbs?|climbed|drops?|dropped|"
+        r"jumps?|jumped|surges?|surged|slides?|slid|inverts?|inverted|"
+        r"steepens?|steepened|flattens?|flattened|holds?|held|steady)\b)"
+    )
+    DOW_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^dow(?:\s+market\s+update\b|"
+        r"\s+jones(?:\s+industrial\s+average)?\s+(?:"
+        r"futures?\b|market\s+update\b|rises?|rose|falls?|fell|"
+        r"declines?|declined|gains?|gained|drops?|dropped|surges?|"
+        r"surged|slides?|slid|rally|rallies|rallied|opens?|opened|closes?|"
+        r"closed|advances?|advanced|climbs?|climbed|sinks?|sank|"
+        r"tumbles?|tumbled)|"
+        r"\s+(?:industrials?|index|futures?)\s+(?:rises?|rose|falls?|fell|"
+        r"declines?|declined|gains?|gained|drops?|dropped|surges?|surged|"
+        r"slides?|slid|rally|rallies|rallied|opens?|opened|closes?|closed)|"
+        r"\s+(?:rises?|rose|falls?|fell|declines?|declined|gains?|gained|"
+        r"drops?|dropped|surges?|surged|slides?|slid|rally|rallies|rallied|"
+        r"opens?|opened|closes?|closed))\b"
+    )
+    OIL_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^(?:(?:u\.?s\.?|us|global|worldwide|opec)\s+)?"
+        r"(?:oil|crude(?:\s+oil)?)\s+"
+        r"(?:(?:prices?|market|futures?|supply|demand|inventor(?:y|ies)|"
+        r"output|production)\s+)?(?:rises?|rose|falls?|fell|gains?|gained|"
+        r"slides?|slid|drops?|dropped|surges?|surged|tumbles?|tumbled|"
+        r"rally|rallies|rallied|climbs?|climbed|eases?|eased|tightens?|tightened|"
+        r"expands?|expanded|contracts?|contracted|update|outlook\s+"
+        r"(?:improves?|improved|darkens?|darkened|tightens?|eases?))\b"
+    )
+    CRYPTO_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^(?:(?:u\.?s\.?|us|global|worldwide)\s+)?"
+        r"(?:bitcoin|crypto(?:currency)?)\s+"
+        r"(?:(?:prices?|market|markets|futures?|etfs?|trading|regulation)"
+        r"\s+)?(?:rises?|rose|falls?|fell|gains?|gained|slides?|slid|"
+        r"drops?|dropped|surges?|surged|tumbles?|tumbled|rallies|rallied|"
+        r"climbs?|climbed|expands?|expanded|contracts?|contracted|"
+        r"hits?|hit|update|rally|outlook\s+(?:improves?|improved|"
+        r"darkens?|darkened|expands?|expanded|contracts?|contracted))\b"
+    )
+
+    CORPORATE_LEAD_DESIGNATOR_PATTERN = re.compile(
+        r"^(?:\S+\s+){0,3}(?:inc\.?|incorporated|corp\.?|corporation|"
+        r"llc|ltd\.?|limited|plc|co\.?|company|group|holdings)\b"
+    )
+    NOMINAL_MACRO_PREDICATE = (
+        r"(?:shows?|showed|signals?|signaled|informs?|informed|continues?|"
+        r"continued|changes?|changed|shifts?|shifted|tightens?|tightened|"
+        r"eases?|eased|moves?|moved|looms?|loomed|remains?|remained|"
+        r"stays?|stayed|raises?|raised|cuts?|cut|brightens?|brightened|"
+        r"darkens?|darkened|improves?|improved|worsens?|worsened)"
+    )
+    NOMINAL_MACRO_SUBJECT_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:(?:fed|fomc|federal\s+reserve|central\s+banks?|"
+        r"white\s+house|government|administration)\s+(?:decision|policy|"
+        r"meeting|minutes|data|inflation|rates?|outlook|tightening|easing|"
+        r"shutdown)|opec\s+(?:policy|meeting|action|decision)|"
+        r"(?:(?:u\.?s\.?|us|global|worldwide)\s+)?(?:oil|crude(?:\s+oil)?|"
+        r"bitcoin|crypto(?:currency)?)\s+outlook|"
+        r"cpi\s+(?:report|data|reading|print)|"
+        r"wall\s+street\s+(?:markets?|stocks?|futures?))\s+"
+        + NOMINAL_MACRO_PREDICATE + r"\b"
+    )
+    POLICY_SPOKESPERSON_SUBJECT_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:fed|fomc|federal\s+reserve|central\s+banks?)\s+"
+        r"(?:chair(?:\s+[a-z][a-z.'-]+){0,2}|governors?|officials?)\s+"
+        r"(?:says?|said|signals?|signaled|warns?|warned|expects?|expected)\b"
+    )
+
+    POLICY_INSTITUTION_SUBJECT_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:fed|fomc|federal\s+reserve|central\s+banks?|"
+        r"white\s+house|government|administration)\s+(?:"
+        r"holds?|held|leaves?|left|cuts?|cut|raises?|raised|signals?|"
+        r"signaled|keeps?|kept|pauses?|paused|decides?|decided|says?|said|"
+        r"warns?|warned|announces?|announced|expects?|expected|sees?|saw|"
+        r"meets?|met|market\s+update\b|"
+        r"decision\s+(?:moves?|moved|signals?|signaled|shifts?|shifted)|"
+        r"policy\s+(?:officials?\s+(?:signal|signals|signaled|say|says|said|"
+        r"warn|warns|warned)|(?:outlook|stance|path)\s+(?:changes?|changed|"
+        r"shifts?|shifted|tightens?|tightened|eases?|eased))|"
+        r"(?:meeting|minutes|data|inflation|rates?|outlook|tightening|"
+        r"easing|shutdown)\s+(?:shows?|showed|signals?|signaled|informs?|"
+        r"informed|continues?|continued|changes?|changed|shifts?|shifted|"
+        r"tightens?|tightened|eases?|eased|moves?|moved|looms?|loomed)|"
+        r"(?:officials?|chair|governors?)\s+(?:say|says|said|signal|signals|"
+        r"signaled|warn|warns|warned|expect|expects|expected))\b"
+    )
+    INFLATION_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|"
+        r"apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|"
+        r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|"
+        r"u\.?s\.?|us|global|worldwide|eurozone|european|headline|core|"
+        r"consumer|annual|monthly)\s+){0,2}inflation\s+"
+        r"(?:(?:unexpectedly|surprisingly)\s+)?(?:cools?|cooled|eases?|"
+        r"eased|slows?|slowed|falls?|fell|drops?|dropped|rises?|rose|"
+        r"climbs?|climbed|accelerates?|accelerated|holds?|held|ticks?|"
+        r"ticked|remains?|remained|stays?|stayed|persists?|persisted|"
+        r"heats?|heated|surprises?|surprised|"
+        r"(?:data|report|rate|reading|print|expectations?|pressures?|"
+        r"outlook)\s+(?:shows?|showed|signals?|signaled|points?|pointed|"
+        r"indicates?|indicated|reshapes?|reshaped|surprises?|surprised|"
+        r"cools?|cooled|eases?|eased|falls?|fell|rises?|rose|comes?|came|"
+        r"remains?|remained|stays?|stayed))\b"
+    )
+    ECONOMIC_DATA_SUBJECT_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:(?:u\.?s\.?|us|monthly|annual|headline|core)"
+        r"\s+)?(?:(?:consumer\s+price\s+index|consumer\s+prices?)\s+"
+        r"(?:(?:(?:comes?|came)\s+in\s+)?(?:hot|cold|hotter|cooler|"
+        r"higher|lower|stronger|weaker)|rises?|rose|falls?|fell|climbs?|"
+        r"climbed|drops?|dropped|accelerates?|accelerated|cools?|cooled|"
+        r"eases?|eased)|unemployment(?:\s+rate)?\s+(?:rises?|rose|falls?|"
+        r"fell|climbs?|climbed|drops?|dropped|holds?|held|ticks?|ticked|"
+        r"increases?|increased|decreases?|decreased)|jobs\s+(?:report|data)"
+        r"\s+(?:shows?|showed|signals?|signaled|indicates?|indicated|"
+        r"reveals?|revealed|confirms?|confirmed|misses?|missed|beats?|beat|"
+        r"surprises?|surprised))\b"
+    )
+
+    RATE_RECESSION_SUBJECT_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:(?:u\.?s\.?|us|global|worldwide|eurozone|"
+        r"european)\s+)?(?:"
+        r"interest\s+rates?\s+(?:hit|hits|remain|remains|remained|stay|"
+        r"stays|stayed|rise|rises|rose|fall|falls|fell|climb|climbs|"
+        r"climbed|drop|drops|dropped|hold|holds|held|ease|eases|eased|"
+        r"peak|peaks|peaked)|"
+        r"rate\s+(?:cuts?|hikes?)\s+(?:hopes?|bets?|odds?|expectations?|"
+        r"outlook|prospects?|look|looks|seem|seems|remain|remains|rise|"
+        r"rises|rose|fall|falls|fell|grow|grows|grew|fade|fades|faded)|"
+        r"recession\s+(?:(?:fears?|risks?|odds?|concerns?|warnings?)\s+"
+        r"(?:rise|rises|rose|fall|falls|fell|grow|grows|grew|ease|eases|"
+        r"eased|spread|spreads|mount|mounts|fade|fades|faded)|"
+        r"(?:looms?|loomed|begins?|began|ends?|ended|deepens?|deepened|"
+        r"hits?|hit|threatens?|threatened))|"
+        r"bond\s+yields?\s+(?:rise|rises|rose|fall|falls|fell|climb|"
+        r"climbs|climbed|drop|drops|dropped|jump|jumps|jumped|surge|"
+        r"surges|surged|slide|slides|slid|hold|holds|held))\b"
+    )
+    OPEC_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^opec\s+(?:(?:oil\s+)?(?:production|output|supply|demand)\s+"
+        r"(?:cuts?|cut|rises?|rose|falls?|fell|grows?|grew|drops?|dropped|"
+        r"tightens?|tightened|eases?|eased)|(?:policy|meeting|action|"
+        r"decision)\s+(?:changes?|changed|signals?|signaled|cuts?|cut|"
+        r"tightens?|tightened|eases?|eased|takes?|took)|(?:agrees?|agreed|"
+        r"cuts?|cut|raises?|raised|holds?|held|signals?|signaled|"
+        r"announces?|announced|meets?|met))\b"
+    )
+    INDEX_SUBJECT_LEAD_PATTERN = re.compile(
+        r"^(?:s&p\s+500|russell\s+2000)\s+(?:(?:index|benchmark|futures?)"
+        r"\s+)?(?:rises?|rose|falls?|fell|declines?|declined|gains?|"
+        r"gained|drops?|dropped|surges?|surged|slides?|slid|rally|rallies|"
+        r"rallied|opens?|opened|closes?|closed|advances?|advanced|"
+        r"climbs?|climbed|update|outlook)\b"
+    )
+
+    ISSUER_POLICY_DRIVER_PATTERN = re.compile(
+        r"\b(?:as|after|amid|on)\s+(?:fed|fomc|federal\s+reserve)\b"
+        r".{0,24}\b(?:bets?|odds?|expectations?|outlook)\s+"
+        r"(?:rises?|rose|falls?|fell|grows?|grew|eases?|eased|"
+        r"strengthens?|strengthened|fades?|faded)\b"
+    )
+    POLICY_ACTOR_MACRO_PATTERN = re.compile(
+        r"^(?:the\s+)?(?:u\.?s\.?|us|china|eu|european\s+union|"
+        r"uk|united\s+kingdom|government|administration|white\s+house)"
+        r"\s+(?:imposes?|imposed|raises?|raised|cuts?|cut|delays?|delayed|"
+        r"announces?|announced|lifts?|lifted|pauses?|paused)"
+        r"\s+(?:new\s+)?tariffs?\b"
     )
     COMPANY_CONTEXT_ONLY_KEYWORDS = {
         "earnings",
@@ -287,6 +685,8 @@ class NewsAgent:
             for row in result.records
         ]
         primary = self._process_pool(raw_primary)
+        raw = raw_primary
+        processed = primary
 
         google_fallback_used = False
         if (
@@ -309,13 +709,13 @@ class NewsAgent:
                     ),
                 )
             results.append(google_result)
-
-        raw = [
-            dict(row)
-            for result in results
-            for row in result.records
-        ]
-        processed = self._process_pool(raw)
+            if google_result.records:
+                raw = [
+                    dict(row)
+                    for result in results
+                    for row in result.records
+                ]
+                processed = self._process_pool(raw)
         if (
             google_fallback_used
             and len(processed["selected"]) < self.TARGET_COUNT
@@ -414,8 +814,22 @@ class NewsAgent:
                 row.get("provider") or "unknown"
                 for row in self._scored_headlines
             )),
+            "selected_provider_lane_counts": dict(Counter(
+                (
+                    f"{row.get('lane') or 'unknown'}:"
+                    f"{row.get('provider') or 'unknown'}"
+                )
+                for row in self._scored_headlines
+            )),
             "selected_publisher_counts": dict(Counter(
                 self._publisher_key(row) for row in self._scored_headlines
+            )),
+            "selected_publisher_lane_counts": dict(Counter(
+                (
+                    f"{row.get('lane') or 'unknown'}:"
+                    f"{self._publisher_key(row)}"
+                )
+                for row in self._scored_headlines
             )),
             "relevant_before_recency": len(processed["relevant"]),
             "fresh_relevance_zero_count": len(processed["fresh_zero"]),
@@ -425,6 +839,9 @@ class NewsAgent:
             "dedupe_dropped_count": len(processed["duplicate_dropped"]),
             "eligible_before_caps": len(processed["deduped"]),
             "cap_dropped_count": len(processed["cap_dropped"]),
+            "cap_drop_reason_counts": dict(Counter(
+                row.get("drop_reason") for row in processed["cap_dropped"]
+            )),
             "selected_count": len(self._scored_headlines),
             "no_approved_lane_count": len(
                 processed["relevance_dropped"]
@@ -538,12 +955,16 @@ class NewsAgent:
             "provider_counts": {},
             "publisher_counts": {},
             "selected_provider_counts": {},
+            "selected_provider_lane_counts": {},
             "selected_publisher_counts": {},
+            "selected_publisher_lane_counts": {},
             "dedupe_input_count": 0,
             "dedupe_dropped_count": 0,
             "eligible_before_caps": 0,
             "cap_dropped_count": 0,
+            "cap_drop_reason_counts": {},
             "selected_count": 0,
+            "accounted_candidate_count": 0,
             "no_approved_lane_count": 0,
             "relevant_lane_counts": {},
             "eligible_lane_counts": {},
@@ -576,23 +997,89 @@ class NewsAgent:
         return fresh, dropped
 
     @classmethod
+    def _is_listing_symbol(cls, symbol):
+        return bool(symbol) and symbol.upper() not in cls.LISTING_SUBJECT_WORDS
+
+    @classmethod
+    def _is_exchange_subject_match(cls, match, title):
+        if match.group("open") and match.group("close"):
+            return False
+        prefix = unicodedata.normalize(
+            "NFKC", (title or "")[:match.start()]
+        ).casefold()
+        if cls._macro_subject_text(prefix):
+            return False
+        raw_subject = unicodedata.normalize(
+            "NFKC", (title or "")[match.start("symbol"):]
+        ).casefold()
+        subject_text = cls._macro_subject_text(raw_subject)
+        return bool(
+            cls.EXCHANGE_PREFIX_MACRO_SUBJECT_PATTERN.search(subject_text)
+            or cls._macro_subject_admitted(
+                raw_subject, subject_text, ()
+            )
+        )
+
+    @classmethod
+    def _is_listing_match(cls, match, title):
+        return (
+            cls._is_listing_symbol(match.group("symbol"))
+            and not cls._is_exchange_subject_match(match, title)
+        )
+
+    @classmethod
     def _listing_symbols(cls, title):
-        return [
-            match.group(1).upper()
-            for match in cls.EXCHANGE_LISTING_PATTERN.finditer(title or "")
-        ]
+        symbols = []
+        for match in cls.EXCHANGE_LISTING_PATTERN.finditer(title or ""):
+            if cls._is_listing_match(match, title):
+                symbols.append(match.group("symbol").upper())
+        for match in cls.EXCHANGE_LISTED_SYMBOL_PATTERN.finditer(title or ""):
+            symbol = match.group("symbol").upper()
+            if cls._is_listing_symbol(symbol):
+                symbols.append(symbol)
+        return list(dict.fromkeys(symbols))
 
     @classmethod
     def _strip_exchange_listing_metadata(cls, title):
-        return re.sub(
-            r"\s+", " ", cls.EXCHANGE_LISTING_PATTERN.sub(" ", title or "")
-        ).strip()
+        def strip_listing(match):
+            if cls._is_listing_match(match, title):
+                return " "
+            return match.group(0)
+
+        normalized = cls.EXCHANGE_LISTING_PATTERN.sub(
+            strip_listing, title or ""
+        )
+        normalized = cls.EXCHANGE_LISTED_PATTERN.sub(" ", normalized)
+        return re.sub(r"\s+", " ", normalized).strip()
 
     @staticmethod
     def _has_keyword(text, keyword):
         return bool(re.search(
             rf"\b{re.escape(keyword)}(?:e?s)?\b", text
         ))
+
+    @staticmethod
+    def _has_any_pattern(text, patterns):
+        return any(re.search(pattern, text) for pattern in patterns)
+
+    @classmethod
+    def _has_title_ticker_context(cls, text, ticker):
+        escaped = re.escape(ticker)
+        patterns = (
+            rf"\${escaped}(?![A-Za-z0-9])",
+            rf"\(\s*{escaped}\s*\)",
+            rf"\b(?:ticker|symbol)\s*[:#-]?\s*{escaped}(?![A-Za-z0-9])",
+            rf"(?<![A-Za-z0-9]){escaped}(?![A-Za-z0-9])\s+"
+            r"(?:stock|shares?|etf|price|closes?|closed|rises?|rose|falls?|"
+            r"fell|gains?|gained|trades?|trading|surges?|surged|drops?|"
+            r"dropped|earnings|guidance)\b",
+            r"\b(?:stock|shares?|etf|price)\b.{0,16}"
+            rf"(?<![A-Za-z0-9]){escaped}(?![A-Za-z0-9])",
+        )
+        return any(
+            re.search(pattern, text, flags=re.IGNORECASE)
+            for pattern in patterns
+        )
 
     @classmethod
     def _matched_universe_tickers(cls, item):
@@ -603,20 +1090,44 @@ class NewsAgent:
         raw_tickers = item.get("tickers") or []
         if isinstance(raw_tickers, str):
             raw_tickers = re.split(r"[,\s]+", raw_tickers)
-        matched = {
-            str(ticker).upper()
+        explicit_symbols = {
+            str(ticker).strip().upper()
             for ticker in raw_tickers
-            if str(ticker).upper() in universe
+            if str(ticker).strip()
         }
-        matched.update(
-            symbol for symbol in cls._listing_symbols(title)
-            if symbol in universe
-        )
-        for ticker, aliases in TICKER_ALIASES.items():
-            if re.search(
+        explicit_symbols.update(cls._listing_symbols(title))
+
+        matched = explicit_symbols & universe
+        for ticker, aliases in cls.DISPLAY_TICKER_ALIASES.items():
+            display_symbols = {alias.upper() for alias in aliases}
+            if explicit_symbols & display_symbols:
+                matched.add(ticker)
+
+        for ticker in ALL_TICKERS:
+            symbol_match = re.search(
                 rf"(?<![A-Za-z0-9]){re.escape(ticker)}(?![A-Za-z0-9])",
                 normalized,
-            ) or any(
+            )
+            if not symbol_match:
+                continue
+            if (
+                ticker in cls.AMBIGUOUS_TITLE_TICKERS
+                and not cls._has_title_ticker_context(normalized, ticker)
+            ):
+                continue
+            matched.add(ticker)
+        for ticker, aliases in cls.DISPLAY_TICKER_ALIASES.items():
+            if any(
+                re.search(
+                    rf"(?<![A-Za-z0-9]){re.escape(alias)}"
+                    rf"(?![A-Za-z0-9])",
+                    normalized,
+                )
+                for alias in aliases
+            ):
+                matched.add(ticker)
+        for ticker, aliases in TICKER_ALIASES.items():
+            if any(
                 re.search(rf"\b{re.escape(alias)}\b", normalized_lower)
                 for alias in aliases
             ):
@@ -624,34 +1135,160 @@ class NewsAgent:
         return sorted(matched)
 
     @classmethod
+    def _macro_subject_text(cls, text):
+        subject_text = (text or "").strip()
+        while subject_text:
+            previous = subject_text
+            subject_text = cls.EDITORIAL_SUBJECT_PREFIX_PATTERN.sub(
+                "", subject_text
+            )
+            subject_text = cls.EXCHANGE_LABEL_SUBJECT_PATTERN.sub(
+                "", subject_text
+            ).lstrip()
+            if subject_text == previous:
+                break
+        return subject_text
+
+    @classmethod
+    def _has_strict_macro_subject(cls, subject_text):
+        subject_text = subject_text or ""
+        category_subject = re.sub(
+            r"^the\s+", "", subject_text, count=1
+        )
+        if cls.CORPORATE_LEAD_DESIGNATOR_PATTERN.search(subject_text):
+            return False
+        return bool(
+            cls.POLICY_INSTITUTION_SUBJECT_PATTERN.search(subject_text)
+            or cls.NOMINAL_MACRO_SUBJECT_PATTERN.search(subject_text)
+            or cls.POLICY_SPOKESPERSON_SUBJECT_PATTERN.search(subject_text)
+            or cls.INFLATION_SUBJECT_LEAD_PATTERN.search(subject_text)
+            or cls.ECONOMIC_DATA_SUBJECT_PATTERN.search(subject_text)
+            or cls.RATE_RECESSION_SUBJECT_PATTERN.search(subject_text)
+            or cls.OPEC_SUBJECT_LEAD_PATTERN.search(category_subject)
+            or cls.INDEX_SUBJECT_LEAD_PATTERN.search(category_subject)
+            or cls.CPI_SUBJECT_LEAD_PATTERN.search(subject_text)
+            or cls.LEADING_MARKET_ACTION_PATTERN.search(subject_text)
+            or cls.POWELL_POLICY_SUBJECT_PATTERN.search(category_subject)
+            or cls.TREASURY_SUBJECT_LEAD_PATTERN.search(category_subject)
+            or any(
+                re.match(pattern, category_subject)
+                for pattern in cls.PAYROLL_SUBJECT_PATTERNS
+            )
+            or any(
+                re.match(pattern, category_subject)
+                for pattern in cls.TARIFF_SUBJECT_PATTERNS
+            )
+            or any(
+                re.match(pattern, category_subject)
+                for pattern in cls.CHINA_MACRO_PATTERNS
+            )
+            or cls.WALL_STREET_SUBJECT_LEAD_PATTERN.search(category_subject)
+            or cls.DOW_SUBJECT_LEAD_PATTERN.search(category_subject)
+            or cls.OIL_SUBJECT_LEAD_PATTERN.search(category_subject)
+            or cls.CRYPTO_SUBJECT_LEAD_PATTERN.search(category_subject)
+        )
+
+    @classmethod
+    def _macro_subject_admitted(
+        cls, normalized_text, subject_text, universe_tickers
+    ):
+        if cls.CORPORATE_LEAD_DESIGNATOR_PATTERN.search(subject_text):
+            return False
+        labeled_subject = cls.EDITORIAL_SUBJECT_PREFIX_PATTERN.sub(
+            "", (normalized_text or "").strip()
+        )
+        category_subject = re.sub(
+            r"^the\s+", "", subject_text or "", count=1
+        )
+        return bool(
+            cls.HUMAN_MACRO_SUBJECT_PATTERN.search(subject_text)
+            or cls.POLICY_ACTOR_MACRO_PATTERN.search(subject_text)
+            or cls._has_strict_macro_subject(subject_text)
+            or cls.EXCHANGE_LEADING_SUBJECT_PATTERN.match(labeled_subject)
+            or cls.EXCHANGE_LEADING_SUBJECT_PATTERN.match(subject_text)
+            or cls.EXCHANGE_PREFIX_MACRO_SUBJECT_PATTERN.search(subject_text)
+            or cls.EXCHANGE_REVERSE_SUBJECT_PATTERN.match(category_subject)
+            or (
+                universe_tickers
+                and cls.ISSUER_POLICY_DRIVER_PATTERN.search(normalized_text)
+            )
+        )
+
+    @classmethod
     def _score_components(cls, item):
         title = item.get("title") or ""
         normalized = cls._strip_exchange_listing_metadata(title)
         normalized_lower = normalized.casefold()
+        subject_text = cls._macro_subject_text(normalized_lower)
         universe_tickers = cls._matched_universe_tickers(item)
         outside_listing = bool(
             set(cls._listing_symbols(title)) - set(ALL_TICKERS)
         ) and not universe_tickers
 
-        macro_hits = 0
-        for keyword in MACRO_KEYWORDS:
-            if (
-                keyword == "treasury"
-                or keyword in cls.COMPANY_CONTEXT_ONLY_KEYWORDS
-            ):
-                continue
-            if cls._has_keyword(normalized_lower, keyword):
-                macro_hits += 1
-        if any(
-            re.search(pattern, normalized_lower)
-            for pattern in cls.TREASURY_PATTERNS
-        ):
-            macro_hits += 1
-        # A listing label is metadata, not a macro subject. If the title is
-        # explicitly about an out-of-universe listing, broad words elsewhere
-        # cannot silently promote the issuer into the macro lane.
-        if outside_listing:
+        excluded_keywords = (
+            cls.COMPANY_CONTEXT_ONLY_KEYWORDS
+            | cls.CONTEXTUAL_MACRO_KEYWORDS
+        )
+        macro_hits = sum(
+            1
+            for keyword in MACRO_KEYWORDS
+            if keyword not in excluded_keywords
+            and cls._has_keyword(normalized_lower, keyword)
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.TREASURY_PATTERNS
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.YIELD_CONTEXT_PATTERNS
+        )
+        macro_hits += bool(cls.EXCHANGE_SUBJECT_PATTERN.search(normalized_lower))
+        macro_hits += bool(
+            cls.EXCHANGE_REVERSE_SUBJECT_PATTERN.search(normalized_lower)
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.INFLATION_SUBJECT_PATTERNS
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.PAYROLL_SUBJECT_PATTERNS
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.TARIFF_SUBJECT_PATTERNS
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.WALL_STREET_SUBJECT_PATTERNS
+        )
+        dow_subject_text = cls.DOW_COMPANY_PATTERN.sub(
+            " ", normalized_lower
+        )
+        macro_hits += cls._has_any_pattern(
+            dow_subject_text, cls.DOW_SUBJECT_PATTERNS
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.CHINA_MACRO_PATTERNS
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.OIL_SUBJECT_PATTERNS
+        )
+        macro_hits += cls._has_any_pattern(
+            normalized_lower, cls.CRYPTO_SUBJECT_PATTERNS
+        )
+        macro_hits += bool(
+            cls.HUMAN_MACRO_SUBJECT_PATTERN.search(subject_text)
+        )
+        # Macro evidence is admissible only when the headline owns a macro
+        # subject. Ambiguous category names must pair with their own leading
+        # action/evidence; unrelated macro phrases later in an entity title
+        # cannot create a macro lane. Every admitted subject supplies one
+        # evidence point even when legacy keyword patterns omit its morphology.
+        macro_subject_admitted = cls._macro_subject_admitted(
+            normalized_lower,
+            subject_text,
+            universe_tickers,
+        )
+        if outside_listing or not macro_subject_admitted:
             macro_hits = 0
+        else:
+            macro_hits = max(1, macro_hits)
 
         vertical_hits = sum(
             1
@@ -670,8 +1307,8 @@ class NewsAgent:
             "authority": cls.AUTHORITY_SCORES.get(
                 item.get("source_class") or "aggregator", 0
             ),
-            # Longitudinal novelty needs event history. PR 2 intentionally
-            # reports zero instead of fabricating novelty from one raw pool.
+            # Pool-relative novelty is injected once the complete fetched
+            # candidate cohort is available.
             "novelty": 0,
             "impact": impact,
         }
@@ -718,11 +1355,117 @@ class NewsAgent:
         )
 
     @classmethod
-    def _select_relevant(cls, items, top_n=5):
+    def _prepare_story(cls, row):
+        """Build the normalized identity inputs once for one fetched row."""
+        normalized_title = cls._normalized_title(row)
+        return (
+            row.get("canonical_url") or "",
+            normalized_title,
+            frozenset(normalized_title.split()),
+        )
+
+    @staticmethod
+    def _prepared_same_story(left, right):
+        left_url, left_title, left_tokens = left
+        right_url, right_title, right_tokens = right
+        if left_url and right_url and left_url == right_url:
+            return True
+        if left_title and left_title == right_title:
+            return True
+        smaller = min(len(left_tokens), len(right_tokens))
+        larger = max(len(left_tokens), len(right_tokens))
+        if smaller < 6 or smaller * 100 < larger * 85:
+            return False
+        intersection = len(left_tokens & right_tokens)
+        union_size = len(left_tokens) + len(right_tokens) - intersection
+        return intersection * 100 >= union_size * 85
+
+    @classmethod
+    def _story_group_ids(cls, items):
+        """Return transitive same-story group ids using cached signatures."""
+        items = list(items)
+        prepared = [cls._prepare_story(item) for item in items]
+        parent = list(range(len(items)))
+
+        def find(index):
+            while parent[index] != index:
+                parent[index] = parent[parent[index]]
+                index = parent[index]
+            return index
+
+        def union(left_index, right_index):
+            left_root = find(left_index)
+            right_root = find(right_index)
+            if left_root == right_root:
+                return
+            if left_root > right_root:
+                left_root, right_root = right_root, left_root
+            parent[right_root] = left_root
+
+        url_owner = {}
+        title_owner = {}
+        for index, (url, normalized_title, _tokens) in enumerate(prepared):
+            for value, owners in (
+                (url, url_owner),
+                (normalized_title, title_owner),
+            ):
+                if not value:
+                    continue
+                previous = owners.setdefault(value, index)
+                if previous != index:
+                    union(index, previous)
+
+        for left_index, left in enumerate(prepared):
+            for right_index in range(left_index + 1, len(prepared)):
+                if find(left_index) == find(right_index):
+                    continue
+                if cls._prepared_same_story(left, prepared[right_index]):
+                    union(left_index, right_index)
+        return [find(index) for index in range(len(items))]
+
+    @classmethod
+    def _score_pool_components(cls, items, story_group_ids=None):
+        """Score candidates with deterministic fetched-pool novelty.
+
+        Novelty is one only for a singleton transitive story group in this
+        fetched cohort. Every syndicated/same-story group member receives zero.
+        This is not a longitudinal claim about whether an event happened before.
+        """
+        items = list(items)
+        if story_group_ids is None:
+            story_group_ids = cls._story_group_ids(items)
+        if len(story_group_ids) != len(items):
+            raise ValueError("story group count must match candidate count")
+        group_sizes = Counter(story_group_ids)
+        scores = [cls._score_components(item) for item in items]
+        for components, group_id in zip(scores, story_group_ids):
+            components["novelty"] = int(group_sizes[group_id] == 1)
+        return scores
+
+    @classmethod
+    def _select_relevant(
+        cls,
+        items,
+        top_n=5,
+        pool_components=None,
+        story_group_ids=None,
+    ):
+        items = list(items)
+        if story_group_ids is None:
+            story_group_ids = cls._story_group_ids(items)
+        if len(story_group_ids) != len(items):
+            raise ValueError("story group count must match candidate count")
+        if pool_components is None:
+            pool_components = cls._score_pool_components(
+                items, story_group_ids=story_group_ids
+            )
+        if len(pool_components) != len(items):
+            raise ValueError("pool component count must match candidate count")
+
         scored = []
-        for idx, item in enumerate(items):
+        for idx, (item, components) in enumerate(zip(items, pool_components)):
             title = item.get("title") or ""
-            components = cls._score_components(item)
+            components = dict(components)
             lane = cls._assign_lane(item, components)
             if lane is None:
                 continue
@@ -737,6 +1480,7 @@ class NewsAgent:
                 "lane": lane,
                 "universe_tickers": cls._matched_universe_tickers(item),
                 "score_components": components,
+                "_story_group_id": story_group_ids[idx],
             })
             scored.append((cls._selection_key(record, idx), record))
         scored.sort(key=lambda row: row[0])
@@ -780,21 +1524,10 @@ class NewsAgent:
 
     @classmethod
     def _same_story(cls, left, right):
-        left_url = left.get("canonical_url")
-        right_url = right.get("canonical_url")
-        if left_url and right_url and left_url == right_url:
-            return True
-        left_title = cls._normalized_title(left)
-        right_title = cls._normalized_title(right)
-        if left_title and left_title == right_title:
-            return True
-        left_tokens = cls._title_tokens(left)
-        right_tokens = cls._title_tokens(right)
-        if min(len(left_tokens), len(right_tokens)) < 6:
-            return False
-        union = left_tokens | right_tokens
-        similarity = len(left_tokens & right_tokens) / len(union)
-        return similarity >= 0.85
+        return cls._prepared_same_story(
+            cls._prepare_story(left),
+            cls._prepare_story(right),
+        )
 
     @classmethod
     def _representative_key(cls, row):
@@ -806,46 +1539,98 @@ class NewsAgent:
             -cls._sort_stamp(row),
             row.get("provider") or "",
             row.get("canonical_url") or "",
+            row.get("source_record_id") or "",
         )
 
     @classmethod
-    def _deduplicate(cls, rows):
-        groups = []
-        for row in sorted(rows, key=cls._representative_key):
-            group = next(
-                (
-                    candidate for candidate in groups
-                    if cls._same_story(row, candidate[0])
-                ),
-                None,
+    def _merge_duplicate_group(cls, group):
+        group.sort(key=cls._representative_key)
+        representative = dict(group[0])
+        component_names = (
+            "issuer_relevance",
+            "macro_relevance",
+            "vertical_relevance",
+            "authority",
+            "novelty",
+            "impact",
+        )
+        merged_components = {
+            name: max(
+                (row.get("score_components") or {}).get(name, 0)
+                for row in group
             )
-            if group is None:
-                groups.append([row])
-            else:
-                group.append(row)
+            for name in component_names
+        }
+        universe_tickers = sorted({
+            ticker
+            for row in group
+            for ticker in (row.get("universe_tickers") or [])
+        })
+        merged_components["issuer_relevance"] = max(
+            merged_components["issuer_relevance"],
+            2 * len(universe_tickers),
+        )
+        representative.update({
+            "universe_tickers": universe_tickers,
+            "score_components": merged_components,
+            "relevance": cls._compatibility_relevance(merged_components),
+        })
+        representative["lane"] = cls._assign_lane(
+            representative, merged_components
+        )
+        if len(group) > 1:
+            representative["duplicate_providers"] = sorted({
+                row.get("provider") for row in group
+                if row.get("provider")
+            })
+            representative["duplicate_publishers"] = sorted({
+                row.get("publisher") for row in group
+                if row.get("publisher")
+            })
+        return representative
+
+    @classmethod
+    def _deduplicate(cls, rows):
+        rows = list(rows)
+        if not rows:
+            return [], []
+        if all("_story_group_id" in row for row in rows):
+            story_group_ids = [
+                row["_story_group_id"] for row in rows
+            ]
+        else:
+            story_group_ids = cls._story_group_ids(rows)
+
+        grouped = {}
+        for group_id, row in zip(story_group_ids, rows):
+            grouped.setdefault(group_id, []).append(row)
+        groups = sorted(
+            grouped.values(),
+            key=lambda group: min(
+                cls._representative_key(row) for row in group
+            ),
+        )
+
         kept, dropped = [], []
         for group in groups:
-            group.sort(key=cls._representative_key)
-            representative = dict(group[0])
-            if len(group) > 1:
-                representative["duplicate_providers"] = sorted({
-                    row.get("provider") for row in group
-                    if row.get("provider")
-                })
-                representative["duplicate_publishers"] = sorted({
-                    row.get("publisher") for row in group
-                    if row.get("publisher")
-                })
+            representative = cls._merge_duplicate_group(group)
+            representative.pop("_story_group_id", None)
             kept.append(representative)
             for row in group[1:]:
-                dropped.append({
-                    **row,
+                duplicate = dict(row)
+                duplicate.pop("_story_group_id", None)
+                duplicate.update({
                     "drop_reason": "duplicate",
                     "kept_source_record_id": representative.get(
                         "source_record_id"
                     ),
                 })
+                dropped.append(duplicate)
         kept.sort(key=cls._selection_key)
+        dropped.sort(key=lambda row: (
+            row.get("kept_source_record_id") or "",
+            cls._representative_key(row),
+        ))
         return kept, dropped
 
     @classmethod
@@ -860,7 +1645,9 @@ class NewsAgent:
     @classmethod
     def _select_diverse(cls, rows):
         selected, dropped = [], []
-        publisher_counts = Counter()
+        publisher_lane_counts = Counter()
+        provider_counts = Counter()
+        provider_lane_counts = Counter()
         google_count = 0
         press_release_count = 0
         for row in rows:
@@ -870,8 +1657,14 @@ class NewsAgent:
                 })
                 continue
             publisher = cls._publisher_key(row)
+            provider = (row.get("provider") or "unknown").casefold()
+            lane = row.get("lane") or "unknown"
             source_class = row.get("source_class")
-            if publisher_counts[publisher] >= cls.MAX_PER_PUBLISHER:
+            publisher_lane = (publisher, lane)
+            if (
+                publisher_lane_counts[publisher_lane]
+                >= cls.MAX_PER_PUBLISHER
+            ):
                 dropped.append({
                     **row, "drop_reason": "publisher_cap"
                 })
@@ -889,8 +1682,24 @@ class NewsAgent:
                     **row, "drop_reason": "press_release_cap"
                 })
                 continue
+            if provider_counts[provider] >= cls.MAX_PER_PROVIDER:
+                dropped.append({
+                    **row, "drop_reason": "provider_cap"
+                })
+                continue
+            provider_lane = (provider, lane)
+            if (
+                provider_lane_counts[provider_lane]
+                >= cls.MAX_PER_PROVIDER_PER_LANE
+            ):
+                dropped.append({
+                    **row, "drop_reason": "provider_lane_cap"
+                })
+                continue
             selected.append(row)
-            publisher_counts[publisher] += 1
+            publisher_lane_counts[publisher_lane] += 1
+            provider_counts[provider] += 1
+            provider_lane_counts[provider_lane] += 1
             google_count += row.get("provider") == "Google News"
             press_release_count += source_class == "press_release"
         return selected, dropped
@@ -924,27 +1733,41 @@ class NewsAgent:
         ]
 
     def _process_pool(self, raw):
-        relevant = self._select_relevant(raw, top_n=None)
+        raw = list(raw)
+        story_group_ids = self._story_group_ids(raw)
+        pool_components = self._score_pool_components(
+            raw, story_group_ids=story_group_ids
+        )
+        relevant = self._select_relevant(
+            raw,
+            top_n=None,
+            pool_components=pool_components,
+            story_group_ids=story_group_ids,
+        )
         cutoff = to_utc_z(
             self.now_utc - timedelta(days=self.HEADLINES_MAX_AGE_DAYS)
         )
         relevance_dropped = []
         fresh_zero = []
-        for item in raw:
+        for item, components in zip(raw, pool_components):
             stamp = to_utc_z(self._record_time(item))
-            components = self._score_components(item)
+            relevance = self._compatibility_relevance(components)
             if self._assign_lane(item, components) is None:
                 dropped = {
                     **item,
                     "as_of": stamp,
-                    "relevance": self._compatibility_relevance(components),
+                    "relevance": relevance,
                     "lane": None,
                     "universe_tickers": self._matched_universe_tickers(item),
-                    "score_components": components,
+                    "score_components": dict(components),
                     "drop_reason": "no_approved_lane",
                 }
                 relevance_dropped.append(dropped)
-                if stamp is not None and stamp >= cutoff:
+                if (
+                    relevance == 0
+                    and stamp is not None
+                    and stamp >= cutoff
+                ):
                     fresh_zero.append({
                         "title": item.get("title"),
                         "as_of": stamp,
@@ -957,6 +1780,9 @@ class NewsAgent:
         )
         deduped, duplicate_dropped = self._deduplicate(fresh)
         selected, cap_dropped = self._select_diverse(deduped)
+        for cohort in (relevant, fresh, stale_dropped):
+            for row in cohort:
+                row.pop("_story_group_id", None)
         return {
             "relevant": relevant,
             "fresh": fresh,

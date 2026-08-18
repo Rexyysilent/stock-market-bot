@@ -1,4 +1,8 @@
-"""Sniper-layer signal derivations for the daily brief.
+"""Deterministic event-classification derivations for the daily brief.
+
+Legacy public keys containing ``signal`` or ``alert`` are retained for schema
+compatibility. They represent threshold labels and cross-source coincidence,
+not recommendations, expected returns, or execution instructions.
 
 Pure functions over already-fetched section data plus small JSON state files
 under state/ (same conventions as update_baselines_and_score in the exporter):
@@ -611,6 +615,8 @@ def collect_alert_events(social_alerts, baseline_alerts, options_flow,
             )
 
     for cluster in insider_clusters or []:
+        if cluster.get("signal_eligible") is False:
+            continue
         direction = cluster.get("cluster_direction")
         if direction not in ("buy", "mixed"):
             continue

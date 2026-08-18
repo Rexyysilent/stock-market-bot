@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-08-17T15:34:26Z",
   "schema_version": "2.6",
-  "pipeline_version": "2.6.1",
+  "pipeline_version": "2.6.2",
   "run_context": {
     "started_at": "2026-08-17T15:32:36Z",
     "utc_date": "2026-08-17",
@@ -45,18 +45,56 @@
         "publisher_domain": "federalreserve.gov",
         "source_class": "official_central_bank",
         "source_record_id": "fixture:fed",
+        "tickers": [],
+        "summary": null,
+        "duplicate_providers": [],
+        "duplicate_publishers": [],
         "source": "Official Feeds",
         "record_id": "0123456789abcdef"
       }
     ]
   },
   "data_quality": {
-    "headlines_dropped": [],
+    "headline_contract_version": "2.6-headline-lanes-1",
+    "headlines_dropped": [
+      {
+        "text": null,
+        "title": "Outside-universe company announces quarterly dividend",
+        "link": "https://example.com/dropped",
+        "canonical_url": "https://example.com/dropped",
+        "published": "2026-08-17T13:30:00Z",
+        "as_of": "2026-08-17T13:30:00Z",
+        "observed_at": "2026-08-17T15:32:36Z",
+        "source_time_kind": "published",
+        "relevance": 0,
+        "reason": "no_approved_lane",
+        "lane": null,
+        "universe_tickers": [],
+        "score_components": {
+          "issuer_relevance": 0,
+          "macro_relevance": 0,
+          "vertical_relevance": 0,
+          "authority": 0,
+          "novelty": 0,
+          "impact": 0
+        },
+        "provider": "GDELT",
+        "publisher": "Example News",
+        "publisher_domain": "example.com",
+        "source_class": "aggregator",
+        "source_record_id": "fixture:dropped:one",
+        "tickers": [],
+        "summary": "Quarterly dividend announcement",
+        "duplicate_providers": [],
+        "duplicate_publishers": [],
+        "kept_source_record_id": null
+      }
+    ],
     "headline_pool": {
-      "fetched_count": 1,
-      "fresh_before_relevance": 1,
+      "fetched_count": 2,
+      "fresh_before_relevance": 2,
       "selected_count": 1,
-      "accounted_candidate_count": 1,
+      "accounted_candidate_count": 2,
       "selected_lane_counts": {
         "macro": 1
       }

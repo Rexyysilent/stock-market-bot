@@ -48,6 +48,7 @@ from agents.watcher_agent import WatcherAgent
 from agents.research_agent import ResearchAgent
 from agents.twitter_agent import TwitterAgent
 from agents.sec_agent import SECAgent
+from openinsider_agent import OpenInsiderAgent
 import signals
 from stateutil import (
     atomic_text_writer,
@@ -112,6 +113,7 @@ BASELINE_MATURE_POINTS = 20
 BASELINE_IMMATURE_Z_CAP = 8.0
 BASELINE_Z_ALERT = 2.0
 EXPORT_LOCK_FILE = os.path.join("state", "export.lock")
+HEADLINE_CONTRACT_VERSION = "2.6-headline-lanes-1"
 
 
 def update_baselines_and_score(options_flow, technicals, run_date,
@@ -595,7 +597,7 @@ def build_headline_export_records(headlines_scored):
             "link": row["link"],
             "canonical_url": row.get("canonical_url"),
             "published": row.get("published"),
-            "as_of": row.get("published") or (
+            "as_of": row.get("as_of") or (
                 provider_seen_at if provider_seen_time else None
             ),
             "observed_at": None if provider_seen_time else provider_seen_at,
@@ -616,6 +618,73 @@ def build_headline_export_records(headlines_scored):
             "source": row.get("provider"),
         })
     return records
+
+
+def build_dropped_headline_export_records(headlines_dropped):
+    """Preserve normalized candidate data for every editorial exclusion.
+
+    ``provider_seen_at`` is adapter-internal. As with selected headlines, it
+    becomes public ``as_of`` only for observation-native provider records;
+    otherwise it is the pipeline observation time in ``observed_at``.
+    """
+    records = []
+    for row in headlines_dropped:
+        provider_seen_at = row.get("provider_seen_at")
+        provider_seen_time = row.get("source_time_kind") == "provider_seen"
+        records.append({
+            "text": row.get("text"),
+            "title": row.get("title"),
+            "link": row.get("link"),
+            "canonical_url": row.get("canonical_url"),
+            "published": row.get("published"),
+            "as_of": row.get("as_of") or row.get("published") or (
+                provider_seen_at if provider_seen_time else None
+            ),
+            "observed_at": None if provider_seen_time else provider_seen_at,
+            "source_time_kind": row.get("source_time_kind"),
+            "relevance": row.get("relevance"),
+            "reason": row.get("drop_reason"),
+            "lane": row.get("lane"),
+            "universe_tickers": list(row.get("universe_tickers") or []),
+            "score_components": dict(row.get("score_components") or {}),
+            "provider": row.get("provider"),
+            "publisher": row.get("publisher"),
+            "publisher_domain": row.get("publisher_domain"),
+            "source_class": row.get("source_class"),
+            "source_record_id": row.get("source_record_id"),
+            "tickers": list(row.get("tickers") or []),
+            "summary": row.get("summary"),
+            "duplicate_providers": list(row.get("duplicate_providers") or []),
+            "duplicate_publishers": list(row.get("duplicate_publishers") or []),
+            "kept_source_record_id": row.get("kept_source_record_id"),
+        })
+    return records
+
+
+def normalize_headline_pool_diagnostics(
+        diagnostics, selected_headlines=(), dropped_headlines=()):
+    """Derive a self-consistent current-contract pool, including fail-soft."""
+    normalized = dict(diagnostics or {})
+    normalized.setdefault("fetched_count", 0)
+    normalized.setdefault("fresh_before_relevance", 0)
+    selected_count = len(selected_headlines)
+    dropped_count = len(dropped_headlines)
+    accounted_count = selected_count + dropped_count
+    selected_lane_counts = dict(Counter(
+        row.get("lane")
+        for row in selected_headlines
+        if isinstance(row, dict) and row.get("lane")
+    ))
+    normalized["selected_count"] = selected_count
+    normalized["accounted_candidate_count"] = accounted_count
+    normalized["selected_lane_counts"] = selected_lane_counts
+    if normalized["fetched_count"] != accounted_count:
+        raise ValueError(
+            "headline candidate accounting mismatch: "
+            f"fetched_count={normalized['fetched_count']}, "
+            f"selected_count={selected_count}, dropped_count={dropped_count}"
+        )
+    return normalized
 
 
 def _copy_health(agent, attr_name="health"):
@@ -659,6 +728,7 @@ def build_export_health(
     all_option_anomalies,
     news_agent,
     social_agent,
+    openinsider_agent,
     twitter_agent,
     sec_agent,
     research_agent=None,
@@ -748,31 +818,53 @@ def build_export_health(
     elif social_agent_health.get("apewisdom_enabled") and not social_agent_health.get("apewisdom_items", 0):
         _add_unique(warnings, "ApeWisdom returned zero ticker-heat rows.")
 
-    openinsider_agent = getattr(social_agent, "openinsider", None)
     openinsider_health = _copy_health(openinsider_agent)
     openinsider_warning_items = [
         item for item in whispers
         if parse_source_from_string(item) == "OpenInsider/WARN"
+    ]
+    openinsider_stale_items = [
+        item for item in whispers
+        if parse_source_from_string(item) == "OpenInsider/STALE"
     ]
     openinsider_trade_items = [
         item for item in whispers
         if parse_source_from_string(item) == "OpenInsider"
     ]
     if openinsider_health.get("error"):
-        # One transport/parser failure can also produce a rendered WARN row and
-        # an empty trade list. Report the root cause once; SEC fallback coverage
-        # is reported separately below.
-        _add_unique(warnings, f"OpenInsider error: {openinsider_health['error']}")
+        failure_reason = (
+            openinsider_health.get("failure_reason") or "source_error"
+        )
+        _add_unique(
+            warnings,
+            f"OpenInsider {failure_reason}: {openinsider_health['error']}",
+        )
     else:
         if openinsider_health.get("warning") and not openinsider_warning_items:
             _add_unique(warnings, f"OpenInsider: {openinsider_health['warning']}")
         for item in openinsider_warning_items:
             _add_unique(warnings, item)
-        if not openinsider_trade_items:
+        if not openinsider_trade_items and not openinsider_stale_items:
             _add_unique(
                 warnings,
                 "OpenInsider returned no trade rows in the social feed.",
             )
+    if openinsider_health.get("cache_used"):
+        _add_unique(
+            warnings,
+            "OpenInsider stale cache supplied narrative-only context; cached "
+            "rows were excluded from insider clusters and confluence.",
+        )
+
+    if openinsider_health.get("cache_status") == "write_error":
+        cache_error = (
+            openinsider_health.get("cache_error") or "unknown cache error"
+        )
+        _add_unique(
+            warnings,
+            "OpenInsider live data was usable, but the last-known-good cache "
+            f"could not be updated: {cache_error}",
+        )
 
     sec_health = _copy_health(sec_agent)
     sec_failed_count = (
@@ -786,7 +878,14 @@ def build_export_health(
     if not sec_filings:
         _add_unique(warnings, "SEC EDGAR returned zero filings for the watchlist.")
     if sec_health.get("insider_cluster_fallback_used"):
-        _add_unique(warnings, "Insider cluster scan used SEC EDGAR fallback after OpenInsider produced no clusters.")
+        fallback_reason = (
+            sec_health.get("insider_cluster_fallback_reason") or "unknown"
+        )
+        _add_unique(
+            warnings,
+            "Insider cluster scan used SEC EDGAR fallback "
+            f"({fallback_reason}).",
+        )
 
     twitter_health = _copy_health(twitter_agent)
     twitter_used_google = any(
@@ -911,7 +1010,20 @@ def build_export_health(
             "openinsider": {
                 **openinsider_health,
                 "social_trade_items": len(openinsider_trade_items),
+                "social_stale_items": len(openinsider_stale_items),
                 "warning_items": len(openinsider_warning_items),
+                "cluster_rows_considered": sec_health.get(
+                    "openinsider_cluster_rows_considered", 0
+                ),
+                "cluster_rows_eligible": sec_health.get(
+                    "openinsider_cluster_rows_eligible", 0
+                ),
+                "cluster_rows_dropped": sec_health.get(
+                    "openinsider_cluster_rows_dropped", {}
+                ),
+                "cluster_count": sec_health.get("openinsider_cluster_count"),
+                "edgar_fallback_used": sec_health.get("insider_cluster_fallback_used"),
+                "edgar_fallback_reason": sec_health.get("insider_cluster_fallback_reason"),
             },
             "sec_edgar": {
                 **sec_health,
@@ -948,12 +1060,15 @@ def _generate_daily_brief():
         run_context.started_at.replace("Z", "+00:00")
     )
 
+    openinsider_agent = OpenInsiderAgent(
+        now=run_now, run_days_back=30, run_limit=500
+    )
     news_agent = NewsAgent(now=run_now)
-    social_agent = SocialAgent(now=run_now)
+    social_agent = SocialAgent(now=run_now, openinsider=openinsider_agent)
     watcher_agent = WatcherAgent(run_context=run_context)
     research_agent = ResearchAgent(now=run_now)
     twitter_agent = TwitterAgent(now=run_now)
-    sec_agent = SECAgent(now=run_now)
+    sec_agent = SECAgent(now=run_now, openinsider=openinsider_agent)
 
     # ═══════════════════════════════════════════════════════════════════
     # PHASE 1: Fire ALL data fetches in parallel
@@ -962,6 +1077,8 @@ def _generate_daily_brief():
     start_time = time.monotonic()
 
     with ThreadPoolExecutor(max_workers=8) as pool:
+        # One canonical acquisition supplies both social and cluster consumers.
+        fut_openinsider = pool.submit(openinsider_agent.acquire_run_trades)
         # Core intelligence
         fut_news       = pool.submit(news_agent.get_global_headlines)
         fut_social     = pool.submit(social_agent.get_whisper)
@@ -994,10 +1111,14 @@ def _generate_daily_brief():
             stage, future, default, pipeline_failures
         )
 
+    _openinsider_trades = collect_stage("openinsider", fut_openinsider, [])
     headlines = collect_stage("news", fut_news, [])
     headlines_scored = news_agent.get_scored_headlines()  # data layer
-    headlines_dropped = news_agent.get_dropped_headlines()  # recency-gate drops
+    headlines_dropped = news_agent.get_dropped_headlines()  # all exclusions
     headline_pool = news_agent.get_pool_diagnostics()
+    headline_pool = normalize_headline_pool_diagnostics(
+        headline_pool, headlines_scored, headlines_dropped
+    )
     whispers = collect_stage("social", fut_social, [])
     prices = collect_stage("prices", fut_prices, {})
     technicals = collect_stage("technicals", fut_techs, {})
@@ -1101,25 +1222,29 @@ def _generate_daily_brief():
     # Generate timestamp — observation time, UTC Z (as_of never uses this)
     iso_timestamp = utc_now_z()
     timestamp = iso_timestamp.replace("T", " ")
-    health = build_export_health(
-        iso_timestamp,
-        elapsed,
-        whispers,
-        prices,
-        technicals,
-        twitter_data,
-        sec_filings,
-        options_flow,
-        earnings_cal,
-        ceo_signals,
-        all_option_anomalies,
-        news_agent,
-        social_agent,
-        twitter_agent,
-        sec_agent,
-        research_agent,
-        pipeline_failures,
-    )
+    try:
+        health = build_export_health(
+            iso_timestamp,
+            elapsed,
+            whispers,
+            prices,
+            technicals,
+            twitter_data,
+            sec_filings,
+            options_flow,
+            earnings_cal,
+            ceo_signals,
+            all_option_anomalies,
+            news_agent,
+            social_agent,
+            openinsider_agent,
+            twitter_agent,
+            sec_agent,
+            research_agent,
+            pipeline_failures,
+        )
+    finally:
+        openinsider_agent.close()
 
     # ========== Write TXT file (human readable) ==========
     filename_txt = "daily_brief.txt"
@@ -1608,10 +1733,11 @@ def _generate_daily_brief():
             "fragility": "on catalyst records: runway_risk from cash_runway, market_cap_musd (financials -> weekly mcap cache -> null); fragility_flag = runway RED/YELLOW and mcap < $2000M; fragile_alert FRAGILE_CATALYST when flagged and event 0-90 days out",
             "confluence_score": "count of distinct source-timestamped alert families active in an exact trailing 48h UTC window; persistent stale conditions are de-duplicated and cannot refresh on rerun; records require >=2 families",
             "headlines.relevance": "compatibility score retained for existing consumers; editorial selection uses explicit universe/macro/discovery lanes and separate issuer, macro, vertical, authority, novelty, and impact components rather than treating the composite as ground truth",
+            "headlines.novelty": "uniqueness within the current fetched candidate pool after normalized-title comparison; it is not longitudinal novelty and does not claim the event is historically new",
             "headlines.lanes": "universe requires a configured ticker or alias; macro requires a true macro subject after stripping exchange listing metadata; discovery requires explicit high-impact evidence plus a covered vertical or official authority",
             "ceo_ca_signals": "source_record_verified means a direct CEO.ca API row carried both a post ID and source timestamp; threshold_qualified means the text crossed the deterministic geology threshold; neither field verifies the factual truth of a user post. Context-only domain-relevant rows may render, while irrelevant chatter is excluded into data_quality.ceo_ca_quality_dropped",
             "headlines.recency": f"hard cutoff, not a decay: headlines whose as_of is older than {NewsAgent.HEADLINES_MAX_AGE_DAYS} days are dropped before the top-5 selection, so a stale high-relevance item cannot outrank a fresh one; survivors keep the relevance sort. Headlines with NO as_of are dropped too — unprovable freshness fails a freshness gate. That is a deliberate exception to the brief-wide null-preserving convention and applies to this section only; everywhere else a missing source time is exported as null and listed in data_quality.as_of_nulled. Drops are listed in data_quality.headlines_dropped, so an empty section is distinguishable from a slow news day",
-            "headlines.provenance": "provider is the acquisition path; publisher/publisher_domain identify the underlying newsroom; source_time_kind distinguishes published, event_time, and provider_seen; scoring is followed by freshness gating, syndication dedupe, and publisher-diverse selection",
+            "headlines.provenance": "provider is the acquisition path; publisher/publisher_domain identify the underlying newsroom; source_time_kind distinguishes published, event_time, and provider_seen; scoring is followed by freshness gating, syndication dedupe, and lane-scoped publisher/provider diversity selection",
             "insider_clusters": "a cluster is >=2 DISTINCT filers transacting the same open-market direction in the window; insider_count = distinct filers in the cluster direction; buyers/sellers = distinct filers with any P / any S; filing_count = Form 4 documents; code_counts are transaction codes as filed; cluster_direction = buy/sell by filer majority, mixed on tie; BUY clusters are HIGH at >=3 buyers and MEDIUM at 2, mixed is MEDIUM, SELL clusters are LOW context and excluded from confluence; filer identity = rptOwnerCik or insider name; filings whose XML could not be fetched count toward filing_count only",
         },
         "health": health,
@@ -1863,24 +1989,16 @@ def _generate_daily_brief():
     nan_fields_nulled = []
     json_data = sanitize_nans(json_data, "$", nan_fields_nulled)
     json_data["data_quality"] = {
+        "headline_contract_version": HEADLINE_CONTRACT_VERSION,
         "nan_fields_nulled": nan_fields_nulled,
         "as_of_nulled": as_of_nulled,
         # Relevant-but-stale headlines the recency gate removed. Listed rather
         # than counted: an empty headlines section on a busy news day should say
         # why, and "the gate ate everything" reads very differently from "nothing
         # scored". Undated items land here too — see NewsAgent._drop_stale.
-        "headlines_dropped": [
-            {"title": h.get("title"), "as_of": h.get("as_of"),
-             "relevance": h.get("relevance"), "reason": h.get("drop_reason"),
-             "lane": h.get("lane"),
-             "universe_tickers": h.get("universe_tickers", []),
-             "score_components": h.get("score_components", {}),
-             "provider": h.get("provider"), "publisher": h.get("publisher"),
-             "publisher_domain": h.get("publisher_domain"),
-             "source_record_id": h.get("source_record_id"),
-             "kept_source_record_id": h.get("kept_source_record_id")}
-            for h in headlines_dropped
-        ],
+        "headlines_dropped": build_dropped_headline_export_records(
+            headlines_dropped
+        ),
         "headline_pool": headline_pool,
         "fda_adcom_detail_failures": list(
             getattr(research_agent, "adcom_detail_failures", [])
@@ -1998,6 +2116,7 @@ def _mutable_signal_state_paths():
         signals.MCAP_CACHE_FILE,
         signals.CTGOV_SNAPSHOT_FILE,
         signals.ALERT_HISTORY_FILE,
+        OpenInsiderAgent.DEFAULT_CACHE_PATH,
         ResearchAgent.ADCOM_CACHE_FILE,
     ]
 

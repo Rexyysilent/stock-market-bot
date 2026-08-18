@@ -12,6 +12,7 @@ CHECKS = (
     "test_headline_providers.py",
     "test_headlines_relevance.py",
     "test_headline_lanes.py",
+    "test_headline_lane_edges.py",
     "test_headline_export_contract.py",
     "test_export_schema.py",
     "test_signal_ledger.py",
@@ -23,7 +24,10 @@ CHECKS = (
     "test_earnings_calendar.py",
     "test_insider_direction.py",
     "test_openinsider_params.py",
+    "test_openinsider_resilience.py",
+    "test_openinsider_integration.py",
     "test_reddit_rss_fallback.py",
+    "test_public_positioning.py",
     "test_security_regressions.py",
 )
 

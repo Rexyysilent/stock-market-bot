@@ -17,9 +17,12 @@ if importlib.util.find_spec("bs4") is None:
     bs4_stub.BeautifulSoup = object
     sys.modules["bs4"] = bs4_stub
 
-import openinsider_agent as openinsider_module
 from discord_guard import BoundedChatHistory, RequestGate
 from openinsider_agent import OpenInsiderAgent
+from scripts.run_secret_scan import (
+    find_baseline_audit_failures,
+    validate_baseline_audit_status,
+)
 from serve_dump import resolve_dashboard_path
 
 
@@ -50,10 +53,6 @@ with tempfile.TemporaryDirectory(prefix="dashboard-path-test-") as temp_dir:
 
 
 # Cleartext or unexpected redirect targets must be rejected before parsing.
-agent = OpenInsiderAgent(now=datetime(2026, 8, 15, tzinfo=timezone.utc))
-assert agent.base_url.startswith("https://")
-real_get = openinsider_module.requests.get
-
 
 class Response:
     status_code = 200
@@ -63,26 +62,38 @@ class Response:
         self.url = url
 
 
-try:
+class Session:
+    def __init__(self, response_url):
+        self.response_url = response_url
+
+    def get(self, *_args, **_kwargs):
+        return Response(self.response_url)
+
+
+with tempfile.TemporaryDirectory(prefix="openinsider-security-test-") as temp_dir:
+    cache_path = Path(temp_dir) / "openinsider-cache.json"
+    agent = OpenInsiderAgent(
+        now=datetime(2026, 8, 15, tzinfo=timezone.utc),
+        session=Session("https://www.openinsider.com/screener"),
+        cache_path=cache_path,
+    )
+    assert agent.base_url.startswith("https://")
     parse_called = []
     agent._parse_tables_with_pandas = lambda text: parse_called.append(text) or [
         {"filing_date": "2026-08-15 12:00:00"}
     ]
-    openinsider_module.requests.get = lambda *_args, **_kwargs: Response(
-        "https://www.openinsider.com/screener"
-    )
     assert agent.get_recent_trades(days_back=30, limit=1)
     assert parse_called == ["trusted table"]
 
-    agent._parse_tables_with_pandas = lambda _text: (_ for _ in ()).throw(
+    untrusted_agent = OpenInsiderAgent(
+        now=datetime(2026, 8, 15, tzinfo=timezone.utc),
+        session=Session("http://openinsider.com/screener"),
+        cache_path=Path(temp_dir) / "untrusted-cache.json",
+    )
+    untrusted_agent._parse_tables_with_pandas = lambda _text: (_ for _ in ()).throw(
         AssertionError("untrusted response must not be parsed")
     )
-    openinsider_module.requests.get = lambda *_args, **_kwargs: Response(
-        "http://openinsider.com/screener"
-    )
-    assert agent.get_recent_trades(days_back=30, limit=1) == []
-finally:
-    openinsider_module.requests.get = real_get
+    assert untrusted_agent.get_recent_trades(days_back=30, limit=1) == []
 
 assert '"http://openinsider.com' not in (ROOT / "config.py").read_text(
     encoding="utf-8"
@@ -110,6 +121,23 @@ history.append(2, "user", "two")
 history.append(3, "user", "three")
 assert history.channel_count == 2
 assert history.recent(1, 10) == []
+
+
+# Every detect-secrets baseline finding needs an explicit false-positive audit.
+assert validate_baseline_audit_status() == []
+assert find_baseline_audit_failures(
+    {"results": {"fixture.py": [{"line_number": 7, "is_secret": False}]}}
+) == []
+string_false = "false"
+for unaudited_finding in (
+    {"line_number": 7},
+    {"line_number": 7, "is_secret": None},
+    {"line_number": 7, "is_secret": string_false},
+    {"line_number": 7, "is_secret": True},
+):
+    assert find_baseline_audit_failures(
+        {"results": {"fixture.py": [unaudited_finding]}}
+    )
 
 
 # Publisher-controlled values are rendered with DOM text APIs, with CSP backup.

@@ -32,7 +32,7 @@ OPENINSIDER_CODE_RE = re.compile(r"^\s*([A-Za-z])\s*[-–]")
 
 
 class SECAgent:
-    def __init__(self, now=None):
+    def __init__(self, now=None, openinsider=None):
         now = now or datetime.now(timezone.utc)
         if now.tzinfo is None:
             now = now.replace(tzinfo=timezone.utc)
@@ -46,7 +46,11 @@ class SECAgent:
         # CIK -> trimmed submissions JSON (shared by watchlist scan + insider fallback)
         self._submissions_cache = {}
         self._cache_lock = Lock()
-        self.openinsider = OpenInsiderAgent(now=self.now_utc)
+        self.openinsider = (
+            openinsider
+            if openinsider is not None
+            else OpenInsiderAgent(now=self.now_utc)
+        )
         self._health_lock = Lock()
         self.health = self._empty_health()
 
@@ -66,6 +70,17 @@ class SECAgent:
             "openinsider_cluster_count": None,
             "insider_cluster_count": None,
             "form4_code_fetch_failures": 0,
+            "openinsider_cluster_rows_considered": 0,
+            "openinsider_cluster_rows_eligible": 0,
+            "openinsider_cluster_rows_dropped": {
+                "not_mapping": 0,
+                "stale": 0,
+                "off_watchlist": 0,
+                "undated": 0,
+                "future": 0,
+                "out_of_window": 0,
+            },
+            "insider_cluster_fallback_reason": None,
         }
 
     def _bump_health(self, key, amount=1):
@@ -344,11 +359,19 @@ class SECAgent:
             )
             self._set_health_value("insider_cluster_source", "openinsider")
             self._set_health_value("insider_cluster_fallback_used", False)
+            self._set_health_value("insider_cluster_fallback_reason", None)
             self._set_health_value("openinsider_cluster_count", len(openinsider_clusters))
             self._set_health_value("insider_cluster_count", len(openinsider_clusters))
             return openinsider_clusters
 
-        logger.warning("OpenInsider produced no clusters; falling back to SEC EDGAR Form 4 scan")
+        fallback_reason = self.get_health().get("insider_cluster_fallback_reason")
+        if not fallback_reason:
+            fallback_reason = "no_qualifying_clusters"
+            self._set_health_value("insider_cluster_fallback_reason", fallback_reason)
+        logger.warning(
+            "OpenInsider produced no usable clusters (%s); falling back to SEC EDGAR Form 4 scan",
+            fallback_reason,
+        )
         self._set_health_value("insider_cluster_source", "edgar_fallback")
         self._set_health_value("insider_cluster_fallback_used", True)
         self._set_health_value("openinsider_cluster_count", 0)
@@ -410,16 +433,159 @@ class SECAgent:
         return clusters
 
 
+    def _openinsider_source_health(self):
+        get_health = getattr(self.openinsider, "get_health", None)
+        if not callable(get_health):
+            return {}
+        try:
+            health = get_health()
+        except Exception as exc:
+            logger.warning("Could not read OpenInsider health: %s", exc)
+            return {}
+        return health if isinstance(health, dict) else {}
+
+    @staticmethod
+    def _empty_openinsider_cluster_drops():
+        return {
+            "not_mapping": 0,
+            "stale": 0,
+            "off_watchlist": 0,
+            "undated": 0,
+            "future": 0,
+            "out_of_window": 0,
+        }
+
+    def _openinsider_empty_reason(self, source_health):
+        if (
+            getattr(self.openinsider, "run_uses_stale_cache", False)
+            or (
+                source_health.get("cache_used")
+                and source_health.get("cache_stale")
+            )
+        ):
+            return "stale_cache_disallowed"
+        acquisition_status = str(
+            source_health.get("acquisition_status") or ""
+        ).strip().lower()
+        if (
+            source_health.get("failure_reason")
+            or source_health.get("error")
+            or acquisition_status in {"error", "failed", "unavailable"}
+        ):
+            return "source_unavailable"
+        return "no_qualifying_clusters"
+
+    def _openinsider_source_is_stale(self, source_health):
+        return bool(
+            getattr(self.openinsider, "run_uses_stale_cache", False)
+            or source_health.get("run_origin") == "stale_cache"
+            or (
+                source_health.get("cache_used")
+                and source_health.get("live") is not True
+            )
+        )
+
     def _detect_openinsider_clusters(self, days_back=30):
-        trades = self.openinsider.get_recent_trades(days_back=days_back, limit=500)
+        drop_counts = self._empty_openinsider_cluster_drops()
+        self._set_health_value("insider_cluster_fallback_reason", None)
+        try:
+            trades = self.openinsider.get_run_trades(
+                days_back=days_back,
+                limit=500,
+                allow_stale=False,
+            )
+        except Exception as exc:
+            logger.error("OpenInsider canonical run view failed: %s", exc)
+            trades = []
+            self._set_health_value(
+                "insider_cluster_fallback_reason", "source_unavailable"
+            )
+
+        trades = trades if isinstance(trades, list) else []
+        self._set_health_value(
+            "openinsider_cluster_rows_considered", len(trades)
+        )
+        self._set_health_value("openinsider_cluster_rows_eligible", 0)
+        self._set_health_value(
+            "openinsider_cluster_rows_dropped", drop_counts
+        )
+        source_health = self._openinsider_source_health()
+        if not trades:
+            if self.get_health().get("insider_cluster_fallback_reason") is None:
+                self._set_health_value(
+                    "insider_cluster_fallback_reason",
+                    self._openinsider_empty_reason(
+                        source_health
+                    ),
+                )
+            return []
+
+        # Fail closed even if a future adapter violates allow_stale=False and
+        # returns cache-backed rows. Source-level and per-row provenance are
+        # both checked before any constituent can enter a cluster.
+        if self._openinsider_source_is_stale(source_health):
+            drop_counts["stale"] = len(trades)
+            self._set_health_value(
+                "openinsider_cluster_rows_dropped", drop_counts
+            )
+            self._set_health_value(
+                "insider_cluster_fallback_reason", "stale_cache_disallowed"
+            )
+            return []
+
         watchlist = {t.upper() for t in ALL_TICKERS}
         by_ticker = {}
+        temporally_eligible_count = 0
+        cutoff = self.now_utc - timedelta(days=days_back)
 
         for trade in trades:
-            ticker = trade.get("ticker", "").upper()
+            if not isinstance(trade, dict):
+                drop_counts["not_mapping"] += 1
+                continue
+            if trade.get("source_stale") not in (None, False):
+                drop_counts["stale"] += 1
+                continue
+            filing_stamp = to_utc_z(trade.get("filing_date"))
+            if filing_stamp is None:
+                drop_counts["undated"] += 1
+                continue
+            try:
+                filing_at = datetime.fromisoformat(
+                    filing_stamp.replace("Z", "+00:00")
+                )
+            except ValueError:
+                drop_counts["undated"] += 1
+                continue
+            if filing_at > self.now_utc:
+                drop_counts["future"] += 1
+                continue
+            if filing_at < cutoff:
+                drop_counts["out_of_window"] += 1
+                continue
+            temporally_eligible_count += 1
+            ticker = str(trade.get("ticker") or "").strip().upper()
             if ticker not in watchlist:
+                drop_counts["off_watchlist"] += 1
                 continue
             by_ticker.setdefault(ticker, []).append(trade)
+
+        eligible_count = sum(len(rows) for rows in by_ticker.values())
+        self._set_health_value(
+            "openinsider_cluster_rows_eligible", eligible_count
+        )
+        self._set_health_value(
+            "openinsider_cluster_rows_dropped", drop_counts
+        )
+        if not eligible_count:
+            reason = (
+                "stale_cache_disallowed"
+                if drop_counts["stale"] and temporally_eligible_count == 0
+                else "no_temporally_eligible_rows"
+                if temporally_eligible_count == 0
+                else "no_watchlist_rows"
+            )
+            self._set_health_value("insider_cluster_fallback_reason", reason)
+            return []
 
         clusters = []
         for ticker, filings in by_ticker.items():
@@ -457,7 +623,12 @@ class SECAgent:
             )
             clusters.append(cluster)
 
-        return self._sort_clusters(clusters)
+        clusters = self._sort_clusters(clusters)
+        self._set_health_value(
+            "insider_cluster_fallback_reason",
+            None if clusters else "no_qualifying_clusters",
+        )
+        return clusters
 
     @staticmethod
     def _build_cluster(ticker, buyers, sellers, filing_count, owner_codes,
