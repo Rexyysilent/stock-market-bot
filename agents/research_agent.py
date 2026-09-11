@@ -335,7 +335,8 @@ class ResearchAgent:
     MAX_GRADE_SOURCE_CHARS = 100_000
     # Only standalone unsigned ASCII decimal tokens are supported. Do not
     # interpret a suffix of a signed, grouped, exponent, or Unicode token.
-    _GRADE_NUMBER = r'(?<![\w.,+\-\u2212\u2010-\u2015])((?>[0-9]+(?:\.[0-9]*)?))(?![\w.,])'
+    # Unit expressions supply the suffix boundary, including compact "6m @".
+    _GRADE_NUMBER = r'(?<![\w.,+\-\u2212\u2010-\u2015])((?>[0-9]+(?:\.[0-9]*)?))(?![0-9.,])'
     GRADE_PATTERN = re.compile(
         _GRADE_NUMBER + r'\s*%\s*U3O8'  # "1.5% U3O8"
         + r'|' + _GRADE_NUMBER + r'\s*g/t\s*(?:Au|Ag)'

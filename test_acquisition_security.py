@@ -159,6 +159,16 @@ class GradeExtractionTests(unittest.TestCase):
         self.assertIsNone(agent._extract_grades("1.2.5% U3O8"))
         self.assertIsNone(agent._extract_grades(b"1% U3O8"))
 
+    def test_compact_recognized_units_preserve_threshold_qualification(self):
+        from agents.research_agent import ResearchAgent
+
+        agent = ResearchAgent()
+        grades = agent._extract_grades("1%U3O8; 8g/t Au; 6m @; 7meters grading")
+        self.assertEqual(grades, {
+            "uranium_pct": [1.0], "gold_gpt": [8.0], "intercept_m": [6.0, 7.0],
+        })
+        self.assertTrue(agent._passes_drill_filter(grades))
+
     def test_over_limit_fails_closed_without_suffix_matching(self):
         from agents.research_agent import ResearchAgent
 
