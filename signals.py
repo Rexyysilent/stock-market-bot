@@ -14,15 +14,30 @@ import re
 from datetime import datetime, timedelta, timezone
 from statistics import median
 
-from config import ALL_TICKERS, PIPELINE_VERSION, TICKER_ALIASES
+from config import (
+    PIPELINE_VERSION,
+    SIGNAL_ELIGIBLE_TICKERS,
+    SIGNAL_ELIGIBLE_TICKER_SET,
+    TICKER_ALIASES,
+)
 from stateutil import atomic_write_json, load_json_state
 from timeutil import to_utc_z
 
 logger = logging.getLogger("Signals")
 
 STATE_DIR = "state"
-SOCIAL_HISTORY_FILE = os.path.join(STATE_DIR, "social_history.json")
+_STATE_VERSION_TOKEN = re.sub(r"[^A-Za-z0-9_.-]+", "_", PIPELINE_VERSION)
+SOCIAL_HISTORY_FILE = os.path.join(
+    STATE_DIR, f"social_history_{_STATE_VERSION_TOKEN}.json"
+)
 MCAP_CACHE_FILE = os.path.join(STATE_DIR, "mcap_cache.json")
+
+
+def is_signal_eligible_ticker(ticker):
+    """True only for a normalized member of the instrumented core universe."""
+    if not isinstance(ticker, str):
+        return False
+    return ticker.strip().upper() in SIGNAL_ELIGIBLE_TICKER_SET
 
 # Burst ratio: mentions today vs trailing-20-run median (floor 1).
 SOCIAL_HISTORY_WINDOW = 30      # entries kept per ticker
@@ -86,7 +101,7 @@ def get_mcap_musd(ticker, now=None):
 
 def update_social_signals(social_attention, top200_rows, run_date,
                           mcap_lookup=get_mcap_musd, observed_at=None):
-    """Burst ratios + leaderboard entrances from state/social_history.json.
+    """Burst ratios + entrances from the pipeline-versioned social state.
 
     Mutates universe all-stocks rows in social_attention (adds burst_ratio),
     appends today's history (same-date replace, trim), and returns the list of
@@ -101,7 +116,9 @@ def update_social_signals(social_attention, top200_rows, run_date,
     for rec in social_attention:
         if not rec.get("universe_member") or rec.get("filter") != "all-stocks":
             continue
-        ticker = rec["ticker"]
+        ticker = str(rec.get("ticker") or "").strip().upper()
+        if not is_signal_eligible_ticker(ticker):
+            continue
         history = tickers_state.setdefault(ticker, [])
         prior = [h for h in history if h.get("date") != run_date]
         mentions_today = rec.get("mentions") or 0
@@ -131,7 +148,14 @@ def update_social_signals(social_attention, top200_rows, run_date,
         tickers_state[ticker] = prior[-SOCIAL_HISTORY_WINDOW:]
 
     # --- 1c: top-200 entrances ---------------------------------------------
-    top200_tickers = sorted({r["ticker"] for r in top200_rows})
+    eligible_top200_rows = [
+        row for row in (top200_rows or [])
+        if isinstance(row, dict)
+        and is_signal_eligible_ticker(row.get("ticker"))
+    ]
+    top200_tickers = sorted({
+        str(row["ticker"]).strip().upper() for row in eligible_top200_rows
+    })
     history_runs = [h for h in state.get("top200_history", [])
                     if h.get("date") != run_date]
     prior_runs = history_runs[-ENTRANCE_ABSENT_RUNS:]
@@ -139,7 +163,10 @@ def update_social_signals(social_attention, top200_rows, run_date,
         seen_before = set()
         for run in prior_runs:
             seen_before.update(run.get("tickers", []))
-        by_ticker = {r["ticker"]: r for r in top200_rows}
+        by_ticker = {
+            str(row["ticker"]).strip().upper(): row
+            for row in eligible_top200_rows
+        }
         for ticker in top200_tickers:
             if ticker in seen_before:
                 continue
@@ -211,7 +238,10 @@ _DATE_RES = [
 ]
 
 # Universe tickers text mining can attribute to (no futures/indices).
-_MINEABLE_TICKERS = [t for t in ALL_TICKERS if "^" not in t and "=" not in t]
+_MINEABLE_TICKERS = [
+    ticker for ticker in SIGNAL_ELIGIBLE_TICKERS
+    if "^" not in ticker and "=" not in ticker
+]
 
 
 def _extract_event_date(text, kw_start, kw_end):
@@ -293,6 +323,8 @@ def mine_fda_catalysts(sec_filings, biotech_news, ceo_signals, run_date,
         ticker, event_type, event_dt, headline, link, source, as_of,
         observed_at=None,
     ):
+        if not is_signal_eligible_ticker(ticker):
+            return
         event_date = event_dt.strftime("%Y-%m-%d") if event_dt else None
         key = (ticker, event_type, event_date)
         if key in records:
@@ -372,7 +404,9 @@ def mine_fda_catalysts(sec_filings, biotech_news, ceo_signals, run_date,
 # Diffs run against the UNFILTERED merge (a flip to TERMINATED must be seen
 # even though the filtered clinical_catalysts section drops that trial).
 
-CTGOV_SNAPSHOT_FILE = os.path.join(STATE_DIR, "ctgov_snapshot.json")
+CTGOV_SNAPSHOT_FILE = os.path.join(
+    STATE_DIR, f"ctgov_snapshot_{_STATE_VERSION_TOKEN}.json"
+)
 DATE_SLIP_MIN_DAYS = 14          # primary completion moved more than this
 ENROLLMENT_CHANGE_MIN_PCT = 10.0
 REGISTRY_HIGH_SEVERITY = {"TERMINATED", "SUSPENDED", "WITHDRAWN"}
@@ -389,7 +423,8 @@ def _parse_ctgov_date(text):
 
 
 def diff_registry(registry_view, as_of):
-    """Day-over-day CT.gov diffs vs state/ctgov_snapshot.json.
+    """Day-over-day CT.gov diffs vs the pipeline-versioned CT.gov snapshot;
+    legacy unversioned state remains untouched for rollback.
 
     registry_view: unfiltered merged trial records (nct_id, ticker, title,
     status, primary_completion_date, enrollment). First run seeds the snapshot
@@ -421,6 +456,9 @@ def diff_registry(registry_view, as_of):
     snapshot = dict(prior)
 
     for rec in registry_view:
+        ticker = rec.get("ticker")
+        if ticker is not None and not is_signal_eligible_ticker(ticker):
+            continue
         nct_id = rec.get("nct_id")
         if not nct_id or nct_id == "N/A":
             continue
@@ -526,7 +564,8 @@ def attach_fragility(catalyst_records, financials_map):
         days = rec.get("days_until")
         rec["fragile_alert"] = (
             "FRAGILE_CATALYST"
-            if fragility_flag and days is not None
+            if is_signal_eligible_ticker(ticker)
+            and fragility_flag and days is not None
             and 0 <= days <= FDA_CATALYST_NEAR_DAYS
             else None
         )
@@ -543,7 +582,7 @@ ALERT_HISTORY_FILE = os.path.join(STATE_DIR, "alert_history.json")
 CONFLUENCE_WINDOW_HOURS = 48
 CONFLUENCE_MIN_FAMILIES = 2
 
-_UNIVERSE_SET = set(ALL_TICKERS)
+_UNIVERSE_SET = SIGNAL_ELIGIBLE_TICKER_SET
 
 
 def collect_alert_events(social_alerts, baseline_alerts, options_flow,
@@ -557,12 +596,13 @@ def collect_alert_events(social_alerts, baseline_alerts, options_flow,
     events = []
 
     def add(ticker, family, tag, detail, event_at=None, observed_at=None):
+        normalized_ticker = str(ticker or "").strip().upper()
         stamp = to_utc_z(event_at) or to_utc_z(observed_at)
-        if ticker not in _UNIVERSE_SET or not family or not tag or stamp is None:
+        if not is_signal_eligible_ticker(normalized_ticker) or not family or not tag or stamp is None:
             return
-        identity = "|".join((str(ticker), str(family), str(tag), stamp))
+        identity = "|".join((normalized_ticker, str(family), str(tag), stamp))
         events.append({
-            "ticker": ticker,
+            "ticker": normalized_ticker,
             "family": family,
             "tag": tag,
             "detail": detail,
@@ -611,6 +651,8 @@ def collect_alert_events(social_alerts, baseline_alerts, options_flow,
             )
 
     for cluster in insider_clusters or []:
+        if cluster.get("signal_eligible") is False:
+            continue
         direction = cluster.get("cluster_direction")
         if direction not in ("buy", "mixed"):
             continue
@@ -712,6 +754,11 @@ def build_confluence(events, run_at, pipeline_version=PIPELINE_VERSION):
 
     incoming = {}
     for event in events:
+        ticker = str(event.get("ticker") or "").strip().upper()
+        if not is_signal_eligible_ticker(ticker):
+            continue
+        event = dict(event)
+        event["ticker"] = ticker
         if not in_window(event):
             continue
         identity = event.get("event_id")
@@ -731,6 +778,9 @@ def build_confluence(events, run_at, pipeline_version=PIPELINE_VERSION):
         })
 
     for ticker in set(tickers_state) | set(incoming):
+        if not is_signal_eligible_ticker(ticker):
+            tickers_state.pop(ticker, None)
+            continue
         current = [entry for entry in tickers_state.get(ticker, [])
                    if in_window(entry)]
         by_id = {

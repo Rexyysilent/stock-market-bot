@@ -18,6 +18,7 @@ import sys
 sys.path.insert(0, ".")
 
 from collections import Counter
+from datetime import datetime, timezone
 from agents.sec_agent import SECAgent, FORM4_CODE_RE, FORM4_OWNER_RE
 
 # --- direction: filer majority, tie = mixed, no open-market filers = null
@@ -93,11 +94,20 @@ assert [(c["cluster_direction"], c["insider_count"]) for c in ordered] == [
     ("buy", 4), ("buy", 2), ("mixed", 2), ("sell", 5)]
 
 # --- OpenInsider path end-to-end (no network)
-agent = SECAgent.__new__(SECAgent)  # skip __init__: no session, no locks needed
-
-
 class FakeOpenInsider:
-    def get_recent_trades(self, days_back=30, limit=500):
+    run_uses_stale_cache = False
+
+    def get_health(self):
+        return {
+            "acquisition_status": "ok",
+            "cache_used": False,
+            "cache_stale": False,
+        }
+
+    def get_run_trades(self, days_back=30, limit=500, allow_stale=True):
+        assert days_back == 30
+        assert limit == 500
+        assert allow_stale is False
         return [
             # COIN: one insider selling in three tranches + one distinct seller
             {"ticker": "COIN", "trade_type": "S - Sale", "filing_date": "2026-07-10", "insider_name": "Same Cfo"},
@@ -113,7 +123,10 @@ class FakeOpenInsider:
         ]
 
 
-agent.openinsider = FakeOpenInsider()
+agent = SECAgent(
+    now=datetime(2026, 7, 15, 12, tzinfo=timezone.utc),
+    openinsider=FakeOpenInsider(),
+)
 clusters = {c["ticker"]: c for c in agent._detect_openinsider_clusters(days_back=30)}
 
 assert set(clusters) == {"COIN"}, clusters  # ROKU = one human, not a cluster
@@ -124,6 +137,12 @@ assert coin["code_counts"] == {"S": 4}
 assert coin["cluster_direction"] == "sell"
 assert coin["alert_level"] == "LOW"  # sell cluster = context, never above LOW
 assert coin["source"] == "openinsider"
+assert "signal_eligible" not in coin  # keep the live signal record shape stable
+cluster_health = agent.get_health()
+assert cluster_health["openinsider_cluster_rows_considered"] == 8
+assert cluster_health["openinsider_cluster_rows_eligible"] == 7
+assert cluster_health["openinsider_cluster_rows_dropped"]["off_watchlist"] == 1
+assert cluster_health["insider_cluster_fallback_reason"] is None
 
 
 # --- EDGAR document fetch: XSL rewrite, failure honesty

@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import shutil
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from timeutil import to_utc_z
 
 from .config import (
     ARCHIVE_DIR, BURST_BUCKETS, BURST_MIN, BURST_MIN_MENTIONS, HORIZONS,
-    LEGACY_PIPELINE_VERSION, NOTIONAL_BUCKETS, Z_BUCKETS,
+    LEGACY_PIPELINE_VERSION, NOTIONAL_BUCKETS, UNIVERSE_TICKER_SET, Z_BUCKETS,
 )
 from .db import connect
 
@@ -67,6 +68,20 @@ def _signal_id(pipeline_version, source_record_id):
     return _digest(f"{pipeline_version}|{source_record_id}")[:32]
 
 
+ELIGIBILITY_GATE_VERSION = (2, 6, 3)
+
+
+def _strict_eligibility_applies(pipeline_version):
+    """Preserve historical replay; enforce the core allowlist from 2.6.3 on."""
+    if pipeline_version == LEGACY_PIPELINE_VERSION:
+        return False
+    match = re.fullmatch(r"(\d+)\.(\d+)(?:\.(\d+))?(?:[-+].*)?", pipeline_version)
+    if not match:
+        return True
+    version = tuple(int(part or 0) for part in match.groups())
+    return version >= ELIGIBILITY_GATE_VERSION
+
+
 def _generated_at(data, path):
     raw = data.get("generated_at")
     text = str(raw or "")
@@ -102,6 +117,8 @@ def _iter_signals(data, run_id, pipeline_version):
 
     def insider():
         for row in records("insider_clusters"):
+            if row.get("signal_eligible") is False:
+                continue
             direction_name = str(row.get("cluster_direction") or "").lower()
             direction = "long" if direction_name == "buy" else "none"
             yield row, "insider_cluster", direction_name or None, direction, row.get("alert_level")
@@ -221,6 +238,13 @@ def _iter_signals(data, run_id, pipeline_version):
                 ticker = str(row.get("ticker") or "").upper()
                 if not ticker:
                     logger.warning("%s row missing ticker; skipped", section_name)
+                    continue
+                if (_strict_eligibility_applies(pipeline_version)
+                        and ticker not in UNIVERSE_TICKER_SET):
+                    logger.warning(
+                        "%s row ticker %s outside signal-eligible universe; skipped",
+                        section_name, ticker,
+                    )
                     continue
                 source_id = _source_id(family, row, f"{run_id}|{ticker}|{subtype}")
                 yield {

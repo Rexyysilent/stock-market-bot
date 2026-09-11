@@ -48,7 +48,15 @@ from agents.watcher_agent import WatcherAgent
 from agents.research_agent import ResearchAgent
 from agents.twitter_agent import TwitterAgent
 from agents.sec_agent import SECAgent
+from openinsider_agent import OpenInsiderAgent
+from editorial_focus import (
+    FOCUS_CONTRACT_VERSION,
+    attach_legacy_context,
+    render_focus_text,
+    select_focus,
+)
 import signals
+from coverage_policy import coverage_policy_manifest
 from stateutil import (
     atomic_text_writer,
     atomic_write_json,
@@ -59,6 +67,9 @@ from stateutil import (
 from config import (
     ALL_TICKERS, WATCHLIST_STOCKS, WATCHLIST_VULTURE, FOCUS_TICKER,
     UNIVERSE_NAME, TICKER_ALIASES, APEWISDOM_LOW_VOLUME_MENTIONS,
+    SIGNAL_ELIGIBLE_TICKERS, SIGNAL_ELIGIBLE_TICKER_SET,
+    EDITORIAL_ONLY_TICKERS, EDITORIAL_ONLY_TICKER_SET,
+    EDITORIAL_COVERAGE_TICKERS, EDITORIAL_COVERAGE_MODE,
     PIPELINE_VERSION, SCHEMA_VERSION, BRIEF_ARCHIVE_DIR,
     BRIEF_ARCHIVE_MIRROR_DIR,
 )
@@ -112,6 +123,9 @@ BASELINE_MATURE_POINTS = 20
 BASELINE_IMMATURE_Z_CAP = 8.0
 BASELINE_Z_ALERT = 2.0
 EXPORT_LOCK_FILE = os.path.join("state", "export.lock")
+UNIVERSE_CONTRACT_VERSION = "2.8-tiered-universe-1"
+HEADLINE_CONTRACT_VERSION = "2.7-headline-lanes-1"
+SIGNAL_ELIGIBILITY_AUDIT_VERSION = "2.7-signal-eligibility-1"
 
 
 def update_baselines_and_score(options_flow, technicals, run_date,
@@ -141,6 +155,14 @@ def update_baselines_and_score(options_flow, technicals, run_date,
 
     def score_and_append(ticker, metric, value, observation_key,
                          as_of=None, observed_at=None, eligible=True):
+        ticker = str(ticker).upper()
+        if ticker not in SIGNAL_ELIGIBLE_TICKER_SET:
+            return {
+                "z": None,
+                "sample_size": 0,
+                "baseline_immature": True,
+                "baseline_updated": False,
+            }
         history = version_state.setdefault(ticker, {}).setdefault(metric, [])
         prior_rows = [
             row for row in history
@@ -410,6 +432,19 @@ def build_cash_runway_record(fin):
     }
 
 
+def filter_signal_eligible_cash_runway_alerts(alerts):
+    """Return normalized cash-runway alert inputs for the instrumented 29."""
+    filtered = []
+    for alert in alerts or []:
+        if not isinstance(alert, dict):
+            continue
+        ticker = str(alert.get("ticker") or "").strip().upper()
+        if not signals.is_signal_eligible_ticker(ticker):
+            continue
+        filtered.append({**alert, "ticker": ticker})
+    return filtered
+
+
 # P3-13: key fields that identify a record within each section. Keep headline
 # identity on its legacy rendered-text basis: the new provenance fields are
 # additive and must not silently rewrite historical identities.
@@ -583,24 +618,57 @@ def _count_social_sources(whispers):
         counts[source] = counts.get(source, 0) + 1
     return counts
 
+def coverage_metadata_for_tickers(tickers):
+    """Return deterministic coverage metadata for mapped editorial tickers."""
+    mapped = {str(ticker).upper() for ticker in (tickers or [])}
+    instrumented = bool(mapped & SIGNAL_ELIGIBLE_TICKER_SET)
+    editorial_only = bool(mapped & EDITORIAL_ONLY_TICKER_SET)
+    if instrumented and editorial_only:
+        return {
+            "coverage_tier": "mixed",
+            "signal_eligible": False,
+            "signal_eligibility_reason": "mixed_coverage_requires_ticker_filter",
+        }
+    if editorial_only:
+        return {
+            "coverage_tier": "editorial_only",
+            "signal_eligible": False,
+            "signal_eligibility_reason": "editorial_only_coverage",
+        }
+    if instrumented:
+        return {
+            "coverage_tier": "instrumented",
+            "signal_eligible": True,
+            "signal_eligibility_reason": "instrumented_universe",
+        }
+    return {
+        "coverage_tier": None,
+        "signal_eligible": False,
+        "signal_eligibility_reason": "no_mapped_ticker",
+    }
+
+
 def build_headline_export_records(headlines_scored):
     """Map selected provider records to the additive public JSON contract."""
     records = []
     for row in headlines_scored:
         provider_seen_at = row.get("provider_seen_at")
         provider_seen_time = row.get("source_time_kind") == "provider_seen"
-        records.append({
+        record = {
             "text": row["text"],
             "title": row["title"],
             "link": row["link"],
             "canonical_url": row.get("canonical_url"),
             "published": row.get("published"),
-            "as_of": row.get("published") or (
+            "as_of": row.get("as_of") or (
                 provider_seen_at if provider_seen_time else None
             ),
             "observed_at": None if provider_seen_time else provider_seen_at,
             "source_time_kind": row.get("source_time_kind"),
             "relevance": row["relevance"],
+            "lane": row.get("lane"),
+            "universe_tickers": row.get("universe_tickers", []),
+            "score_components": dict(row.get("score_components") or {}),
             "provider": row.get("provider"),
             "publisher": row.get("publisher"),
             "publisher_domain": row.get("publisher_domain"),
@@ -611,8 +679,195 @@ def build_headline_export_records(headlines_scored):
             "duplicate_providers": row.get("duplicate_providers", []),
             "duplicate_publishers": row.get("duplicate_publishers", []),
             "source": row.get("provider"),
-        })
+        }
+        record.update(coverage_metadata_for_tickers(record["universe_tickers"]))
+        if "ticker_metadata_kind" in row:
+            record["ticker_metadata_kind"] = row["ticker_metadata_kind"]
+        records.append(record)
     return records
+
+
+def build_dropped_headline_export_records(headlines_dropped):
+    """Preserve normalized candidate data for every editorial exclusion.
+
+    ``provider_seen_at`` is adapter-internal. As with selected headlines, it
+    becomes public ``as_of`` only for observation-native provider records;
+    otherwise it is the pipeline observation time in ``observed_at``.
+    """
+    records = []
+    for row in headlines_dropped:
+        provider_seen_at = row.get("provider_seen_at")
+        provider_seen_time = row.get("source_time_kind") == "provider_seen"
+        record = {
+            "text": row.get("text"),
+            "title": row.get("title"),
+            "link": row.get("link"),
+            "canonical_url": row.get("canonical_url"),
+            "published": row.get("published"),
+            "as_of": row.get("as_of") or row.get("published") or (
+                provider_seen_at if provider_seen_time else None
+            ),
+            "observed_at": None if provider_seen_time else provider_seen_at,
+            "source_time_kind": row.get("source_time_kind"),
+            "relevance": row.get("relevance"),
+            "reason": row.get("drop_reason"),
+            "lane": row.get("lane"),
+            "universe_tickers": list(row.get("universe_tickers") or []),
+            "score_components": dict(row.get("score_components") or {}),
+            "provider": row.get("provider"),
+            "publisher": row.get("publisher"),
+            "publisher_domain": row.get("publisher_domain"),
+            "source_class": row.get("source_class"),
+            "source_record_id": row.get("source_record_id"),
+            "tickers": list(row.get("tickers") or []),
+            "summary": row.get("summary"),
+            "duplicate_providers": list(row.get("duplicate_providers") or []),
+            "duplicate_publishers": list(row.get("duplicate_publishers") or []),
+            "kept_source_record_id": row.get("kept_source_record_id"),
+        }
+        record.update(coverage_metadata_for_tickers(record["universe_tickers"]))
+        if "ticker_metadata_kind" in row:
+            record["ticker_metadata_kind"] = row["ticker_metadata_kind"]
+        records.append(record)
+    return records
+
+
+def normalize_headline_pool_diagnostics(
+        diagnostics, selected_headlines=(), dropped_headlines=()):
+    """Derive a self-consistent current-contract pool, including fail-soft."""
+    normalized = dict(diagnostics or {})
+    normalized.setdefault("fetched_count", 0)
+    normalized.setdefault("fresh_before_relevance", 0)
+    normalized.setdefault("editorial_shadow", {
+        "mode": EDITORIAL_COVERAGE_MODE,
+        "candidate_count": 0,
+        "fresh_candidate_count": 0,
+        "records": [],
+    })
+    selected_count = len(selected_headlines)
+    dropped_count = len(dropped_headlines)
+    accounted_count = selected_count + dropped_count
+    selected_lane_counts = dict(Counter(
+        row.get("lane")
+        for row in selected_headlines
+        if isinstance(row, dict) and row.get("lane")
+    ))
+    normalized["selected_count"] = selected_count
+    normalized["accounted_candidate_count"] = accounted_count
+    normalized["selected_lane_counts"] = selected_lane_counts
+    if normalized["fetched_count"] != accounted_count:
+        raise ValueError(
+            "headline candidate accounting mismatch: "
+            f"fetched_count={normalized['fetched_count']}, "
+            f"selected_count={selected_count}, dropped_count={dropped_count}"
+        )
+    return normalized
+
+SIGNAL_BEARING_SECTIONS = (
+    "confluence",
+    "prices",
+    "technicals",
+    "sec_filings",
+    "clinical_catalysts",
+    "fda_catalysts",
+    "registry_changes",
+    "insider_clusters",
+    "options_flow",
+    "earnings_calendar",
+    "ceo_ca_signals",
+    "social_attention",
+    "cash_runway_alerts",
+    "social_alerts",
+    "baseline_alerts",
+)
+
+
+def _iter_explicit_tickers(value, path):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key == "ticker" and isinstance(child, str):
+                yield child_path, child.upper()
+            elif key == "tickers" and isinstance(child, list):
+                for index, ticker in enumerate(child):
+                    if isinstance(ticker, str):
+                        yield f"{child_path}[{index}]", ticker.upper()
+            else:
+                yield from _iter_explicit_tickers(child, child_path)
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from _iter_explicit_tickers(child, f"{path}[{index}]")
+
+
+def _signal_rows_for_audit(section_name, value, eligible_tickers=None):
+    if not isinstance(value, list):
+        return value
+    if section_name == "social_attention":
+        return [
+            row for row in value
+            if isinstance(row, dict) and (
+                row.get("universe_member") is True
+                or row.get("signal_eligible") is True
+            )
+        ]
+    if section_name == "clinical_catalysts":
+        return [row for row in value if isinstance(row, dict) and row.get("fragile_alert")]
+    if section_name == "fda_catalysts":
+        return [row for row in value if isinstance(row, dict) and (
+            row.get("alert") or row.get("fragile_alert")
+        )]
+    if section_name == "ceo_ca_signals":
+        eligible = eligible_tickers or SIGNAL_ELIGIBLE_TICKER_SET
+        return [row for row in value if isinstance(row, dict) and (
+            str(row.get("ticker") or "").upper() in eligible
+            or row.get("signal_eligible") is True
+        )]
+    return value
+
+
+def audit_signal_eligible_tickers(document):
+    """Fail publication if a structured signal/measurement leaks outside core.
+
+    Editorial headlines, dropped candidates, shadow diagnostics, deep dives,
+    and raw narrative/discovery sections are intentionally outside this audit.
+    """
+    if (
+        not isinstance(document, dict)
+        or document.get("schema_version") != SCHEMA_VERSION
+        or document.get("pipeline_version") != PIPELINE_VERSION
+    ):
+        return True
+    sections = document.get("sections") if isinstance(document, dict) else None
+    if not isinstance(sections, dict):
+        raise ValueError("signal eligibility audit requires sections object")
+    violations = []
+    for section_name in SIGNAL_BEARING_SECTIONS:
+        value = sections.get(section_name)
+        if value is None:
+            continue
+        if section_name == "options_flow" and isinstance(value, dict):
+            for ticker in value:
+                normalized = str(ticker).upper()
+                if normalized not in SIGNAL_ELIGIBLE_TICKER_SET:
+                    violations.append(
+                        (f"$.sections.options_flow.{ticker}", normalized)
+                    )
+        audited_value = _signal_rows_for_audit(
+            section_name, value, SIGNAL_ELIGIBLE_TICKER_SET
+        )
+        for path, ticker in _iter_explicit_tickers(
+                audited_value, f"$.sections.{section_name}"):
+            if ticker not in SIGNAL_ELIGIBLE_TICKER_SET:
+                violations.append((path, ticker))
+    if violations:
+        detail = ", ".join(
+            f"{path}={ticker}" for path, ticker in sorted(set(violations))
+        )
+        raise ValueError(
+            "signal eligibility publication audit failed; outside-core ticker "
+            f"in structured signal/measurement data: {detail}"
+        )
+    return True
 
 
 def _copy_health(agent, attr_name="health"):
@@ -656,6 +911,7 @@ def build_export_health(
     all_option_anomalies,
     news_agent,
     social_agent,
+    openinsider_agent,
     twitter_agent,
     sec_agent,
     research_agent=None,
@@ -668,6 +924,11 @@ def build_export_health(
         for failure in pipeline_failures
     ]
     news_health = news_agent.get_pool_diagnostics()
+    intake_health = news_health.get("evidence_intake") or {}
+    if intake_health.get("status") == "error":
+        _add_unique(warnings, "Shadow evidence intake failed; active headline selection is unchanged.")
+    elif intake_health.get("replay_status") == "incomplete":
+        _add_unique(warnings, "Shadow evidence capture is incomplete; do not claim exact offline replay.")
     if news_health.get("fetch_error"):
         _add_unique(warnings, f"Headline fetch failed: {news_health['fetch_error']}")
     elif not news_health.get("fetched_count"):
@@ -745,31 +1006,61 @@ def build_export_health(
     elif social_agent_health.get("apewisdom_enabled") and not social_agent_health.get("apewisdom_items", 0):
         _add_unique(warnings, "ApeWisdom returned zero ticker-heat rows.")
 
-    openinsider_agent = getattr(social_agent, "openinsider", None)
     openinsider_health = _copy_health(openinsider_agent)
     openinsider_warning_items = [
         item for item in whispers
         if parse_source_from_string(item) == "OpenInsider/WARN"
+    ]
+    openinsider_stale_items = [
+        item for item in whispers
+        if parse_source_from_string(item) == "OpenInsider/STALE"
+    ]
+    openinsider_insecure_items = [
+        item for item in whispers
+        if parse_source_from_string(item) == "OpenInsider/HTTP-INSECURE"
     ]
     openinsider_trade_items = [
         item for item in whispers
         if parse_source_from_string(item) == "OpenInsider"
     ]
     if openinsider_health.get("error"):
-        # One transport/parser failure can also produce a rendered WARN row and
-        # an empty trade list. Report the root cause once; SEC fallback coverage
-        # is reported separately below.
-        _add_unique(warnings, f"OpenInsider error: {openinsider_health['error']}")
+        failure_reason = (
+            openinsider_health.get("failure_reason") or "source_error"
+        )
+        _add_unique(
+            warnings,
+            f"OpenInsider {failure_reason}: {openinsider_health['error']}",
+        )
     else:
         if openinsider_health.get("warning") and not openinsider_warning_items:
             _add_unique(warnings, f"OpenInsider: {openinsider_health['warning']}")
         for item in openinsider_warning_items:
             _add_unique(warnings, item)
-        if not openinsider_trade_items:
+        if (
+            not openinsider_trade_items
+            and not openinsider_stale_items
+            and not openinsider_insecure_items
+        ):
             _add_unique(
                 warnings,
                 "OpenInsider returned no trade rows in the social feed.",
             )
+    if openinsider_health.get("cache_used"):
+        _add_unique(
+            warnings,
+            "OpenInsider stale cache supplied narrative-only context; cached "
+            "rows were excluded from insider clusters and confluence.",
+        )
+
+    if openinsider_health.get("cache_status") == "write_error":
+        cache_error = (
+            openinsider_health.get("cache_error") or "unknown cache error"
+        )
+        _add_unique(
+            warnings,
+            "OpenInsider live data was usable, but the last-known-good cache "
+            f"could not be updated: {cache_error}",
+        )
 
     sec_health = _copy_health(sec_agent)
     sec_failed_count = (
@@ -783,7 +1074,14 @@ def build_export_health(
     if not sec_filings:
         _add_unique(warnings, "SEC EDGAR returned zero filings for the watchlist.")
     if sec_health.get("insider_cluster_fallback_used"):
-        _add_unique(warnings, "Insider cluster scan used SEC EDGAR fallback after OpenInsider produced no clusters.")
+        fallback_reason = (
+            sec_health.get("insider_cluster_fallback_reason") or "unknown"
+        )
+        _add_unique(
+            warnings,
+            "Insider cluster scan used SEC EDGAR fallback "
+            f"({fallback_reason}).",
+        )
 
     twitter_health = _copy_health(twitter_agent)
     twitter_used_google = any(
@@ -908,7 +1206,21 @@ def build_export_health(
             "openinsider": {
                 **openinsider_health,
                 "social_trade_items": len(openinsider_trade_items),
+                "social_stale_items": len(openinsider_stale_items),
+                "social_insecure_items": len(openinsider_insecure_items),
                 "warning_items": len(openinsider_warning_items),
+                "cluster_rows_considered": sec_health.get(
+                    "openinsider_cluster_rows_considered", 0
+                ),
+                "cluster_rows_eligible": sec_health.get(
+                    "openinsider_cluster_rows_eligible", 0
+                ),
+                "cluster_rows_dropped": sec_health.get(
+                    "openinsider_cluster_rows_dropped", {}
+                ),
+                "cluster_count": sec_health.get("openinsider_cluster_count"),
+                "edgar_fallback_used": sec_health.get("insider_cluster_fallback_used"),
+                "edgar_fallback_reason": sec_health.get("insider_cluster_fallback_reason"),
             },
             "sec_edgar": {
                 **sec_health,
@@ -945,12 +1257,15 @@ def _generate_daily_brief():
         run_context.started_at.replace("Z", "+00:00")
     )
 
+    openinsider_agent = OpenInsiderAgent(
+        now=run_now, run_days_back=30, run_limit=500
+    )
     news_agent = NewsAgent(now=run_now)
-    social_agent = SocialAgent(now=run_now)
+    social_agent = SocialAgent(now=run_now, openinsider=openinsider_agent)
     watcher_agent = WatcherAgent(run_context=run_context)
     research_agent = ResearchAgent(now=run_now)
     twitter_agent = TwitterAgent(now=run_now)
-    sec_agent = SECAgent(now=run_now)
+    sec_agent = SECAgent(now=run_now, openinsider=openinsider_agent)
 
     # ═══════════════════════════════════════════════════════════════════
     # PHASE 1: Fire ALL data fetches in parallel
@@ -959,6 +1274,8 @@ def _generate_daily_brief():
     start_time = time.monotonic()
 
     with ThreadPoolExecutor(max_workers=8) as pool:
+        # One canonical acquisition supplies both social and cluster consumers.
+        fut_openinsider = pool.submit(openinsider_agent.acquire_run_trades)
         # Core intelligence
         fut_news       = pool.submit(news_agent.get_global_headlines)
         fut_social     = pool.submit(social_agent.get_whisper)
@@ -991,10 +1308,14 @@ def _generate_daily_brief():
             stage, future, default, pipeline_failures
         )
 
+    _openinsider_trades = collect_stage("openinsider", fut_openinsider, [])
     headlines = collect_stage("news", fut_news, [])
     headlines_scored = news_agent.get_scored_headlines()  # data layer
-    headlines_dropped = news_agent.get_dropped_headlines()  # recency-gate drops
+    headlines_dropped = news_agent.get_dropped_headlines()  # all exclusions
     headline_pool = news_agent.get_pool_diagnostics()
+    headline_pool = normalize_headline_pool_diagnostics(
+        headline_pool, headlines_scored, headlines_dropped
+    )
     whispers = collect_stage("social", fut_social, [])
     prices = collect_stage("prices", fut_prices, {})
     technicals = collect_stage("technicals", fut_techs, {})
@@ -1010,6 +1331,8 @@ def _generate_daily_brief():
         fut_pdufa,
         {"catalysts": [], "alerts": [], "financials": {}},
     )
+    cash_runway_alert_inputs = filter_signal_eligible_cash_runway_alerts(
+        pdufa_data.get("alerts", []))
     insider_clusters = collect_stage("insider_clusters", fut_insider, [])
     options_flow = collect_stage("options_flow", fut_options, {})
     earnings_cal = collect_stage("earnings_calendar", fut_earnings, [])
@@ -1098,25 +1421,60 @@ def _generate_daily_brief():
     # Generate timestamp — observation time, UTC Z (as_of never uses this)
     iso_timestamp = utc_now_z()
     timestamp = iso_timestamp.replace("T", " ")
-    health = build_export_health(
-        iso_timestamp,
-        elapsed,
-        whispers,
-        prices,
-        technicals,
-        twitter_data,
-        sec_filings,
-        options_flow,
-        earnings_cal,
-        ceo_signals,
-        all_option_anomalies,
-        news_agent,
-        social_agent,
-        twitter_agent,
-        sec_agent,
-        research_agent,
-        pipeline_failures,
+    try:
+        health = build_export_health(
+            iso_timestamp,
+            elapsed,
+            whispers,
+            prices,
+            technicals,
+            twitter_data,
+            sec_filings,
+            options_flow,
+            earnings_cal,
+            ceo_signals,
+            all_option_anomalies,
+            news_agent,
+            social_agent,
+            openinsider_agent,
+            twitter_agent,
+            sec_agent,
+            research_agent,
+            pipeline_failures,
+        )
+    finally:
+        openinsider_agent.close()
+
+    focus_eligible_tickers = (
+        EDITORIAL_COVERAGE_TICKERS
+        if EDITORIAL_COVERAGE_MODE == "active"
+        else SIGNAL_ELIGIBLE_TICKERS
     )
+    editorial_focus = select_focus(
+        headlines_scored,
+        focus_eligible_tickers,
+        iso_timestamp,
+        configured_ticker=FOCUS_TICKER,
+        coverage_tickers=EDITORIAL_COVERAGE_TICKERS,
+        coverage_mode=EDITORIAL_COVERAGE_MODE,
+    )
+    editorial_focus = attach_legacy_context(
+        editorial_focus,
+        sec_filings=sec_filings,
+        insider_clusters=insider_clusters,
+        linked_whispers=linked_whispers,
+        twitter_signals=twitter_data,
+    )
+    focus_ticker = editorial_focus.get("ticker")
+    if focus_ticker is None:
+        focus_coverage = {
+            "coverage_tier": None,
+            "signal_eligible": None,
+            "signal_eligibility_reason": "no_focus",
+        }
+    else:
+        focus_coverage = coverage_metadata_for_tickers([focus_ticker])
+    editorial_focus.update(focus_coverage)
 
     # ========== Write TXT file (human readable) ==========
     filename_txt = "daily_brief.txt"
@@ -1238,7 +1596,7 @@ def _generate_daily_brief():
         f.write("-" * 40 + "\n")
 
         # Cash-runway flags first
-        alerts = pdufa_data.get('alerts', [])
+        alerts = cash_runway_alert_inputs
         if alerts:
             f.write("\n--- CASH RUNWAY FLAGS ---\n")
             for alert in alerts:
@@ -1454,108 +1812,10 @@ def _generate_daily_brief():
             f.write(f"  Link: {tw['link']}\n")
         f.write("\n")
 
-        # ===== FOCUS TICKER DEEP DIVE =====
-        focus = FOCUS_TICKER.upper()
-        f.write("=" * 70 + "\n")
-        f.write(f"## {focus} DEEP DIVE\n")
-        f.write("=" * 70 + "\n\n")
-
-        focus_price = watcher_agent.render_price(prices.get(focus)) or "N/A"
-        f.write(f"--- PRICE ---\n")
-        f.write(f"- {focus}: {focus_price}\n\n")
-
-        focus_tech = technicals.get(focus, {})
-        f.write(f"--- TECHNICALS ---\n")
-        if focus_tech:
-            f.write(f"- RSI: {focus_tech.get('rsi', '?')}\n")
-            f.write(f"- Trend: {focus_tech.get('trend', '?')}\n")
-            f.write(f"- Volume Ratio: {focus_tech.get('volume_ratio', '?')}\n")
-            if focus_tech.get('rsi_divergence'):
-                f.write(f"- RSI Divergence: {focus_tech['rsi_divergence'].upper()}\n")
-            if focus_tech.get('alerts'):
-                f.write(f"- Notes: {', '.join(focus_tech['alerts'])}\n")
-            if focus_tech.get('sma_50'):
-                f.write(f"- SMA-50: {focus_tech.get('sma_50', '?')} | SMA-200: {focus_tech.get('sma_200', '?')}\n")
-        else:
-            f.write("- No technical data available\n")
-        f.write("\n")
-
-        focus_options = options_flow.get(focus, {})
-        f.write(f"--- OPTIONS FLOW ---\n")
-        if focus_options and (focus_options.get('put_call_vol_ratio') or focus_options.get('alerts')):
-            f.write(f"- P/C Volume Ratio: {focus_options.get('put_call_vol_ratio', '?')}\n")
-            f.write(f"- P/C OI Ratio: {focus_options.get('put_call_oi_ratio', '?')}\n")
-            f.write(f"- Total Put Volume: {focus_options.get('total_put_volume', '?')}\n")
-            f.write(f"- Total Call Volume: {focus_options.get('total_call_volume', '?')}\n")
-            if focus_options.get('option_contract_volume_oi_anomaly'):
-                f.write("- 🎯 OPTION CONTRACT VOLUME/OI ANOMALIES:\n")
-                for anomaly in focus_options['option_contract_volume_oi_anomaly']:
-                    f.write(f"  ${anomaly['strike']}{anomaly['type'][0]} DTE={anomaly['dte']} Vol/OI={anomaly['vol_oi_ratio']}x Est.Notional={anomaly['premium_fmt']}\n")
-            if focus_options.get('alerts'):
-                for alert in focus_options['alerts']:
-                    f.write(f"  Note: {alert}\n")
-        else:
-            f.write("- No significant options flow data\n")
-        f.write("\n")
-
-        focus_filings = [fi for fi in sec_filings if fi.get('ticker', '').upper() == focus]
-        f.write(f"--- SEC FILINGS ---\n")
-        if focus_filings:
-            for fi in focus_filings:
-                f.write(f"- [{fi['form_type']}] {fi['description']}\n")
-                f.write(f"  Filed: {fi['date']} | Link: {fi['link']}\n")
-        else:
-            f.write(f"- No recent {focus} filings\n")
-        f.write("\n")
-
-        focus_insiders = [c for c in insider_clusters if c.get('ticker', '').upper() == focus]
-        f.write(f"--- INSIDER ACTIVITY ---\n")
-        if focus_insiders:
-            for c in focus_insiders:
-                f.write(f"- [{c.get('alert_level', 'MEDIUM')}] {c['insider_count']} distinct filers ({c.get('filing_count', '?')} filings) in {c.get('period_days', 30)}d{format_insider_direction(c)}\n")
-        else:
-            f.write("- No insider clusters detected\n")
-        f.write("\n")
-
-        focus_earnings = [e for e in earnings_cal if e.get('ticker', '').upper() == focus]
-        f.write(f"--- EARNINGS ---\n")
-        if focus_earnings:
-            for e in focus_earnings:
-                timing = e.get('timing') or '?'
-                days = e.get('days_until', '?')
-                f.write(f"- Date: {e.get('earnings_date', '?')} ({timing}, D+{days})\n")
-        else:
-            f.write(f"- No upcoming {focus} earnings in window\n")
-        f.write("\n")
-
-        focus_whispers = [w for w in whispers if focus in w.upper()]
-        f.write(f"--- SOCIAL MENTIONS ---\n")
-        if focus_whispers:
-            for w in focus_whispers:
-                f.write(f"- {w}\n")
-        else:
-            f.write(f"- No {focus} mentions in social whispers\n")
-        f.write("\n")
-
-        focus_headlines = [h for h in headlines if focus in h.upper()]
-        f.write(f"--- NEWS HEADLINES ---\n")
-        if focus_headlines:
-            for h in focus_headlines:
-                f.write(f"- {h}\n")
-        else:
-            f.write(f"- No {focus}-specific headlines\n")
-        f.write("\n")
-
-        focus_twitter = [tw for tw in twitter_data if focus in tw.get('title', '').upper() or focus in tw.get('query', '').upper()]
-        f.write(f"--- X/TWITTER ---\n")
-        if focus_twitter:
-            for tw in focus_twitter:
-                f.write(f"- [{tw.get('account', tw.get('query', 'X'))}] {tw['title']}\n")
-                f.write(f"  Link: {tw['link']}\n")
-        else:
-            f.write(f"- No {focus}-specific Twitter indicators\n")
-        f.write("\n")
-
+        focus_text = render_focus_text(editorial_focus)
+        if focus_text:
+            f.write(focus_text)
+            f.write("\n")
         f.write("=" * 70 + "\n")
         f.write("END OF BRIEF\n")
         f.write("=" * 70 + "\n")
@@ -1572,10 +1832,25 @@ def _generate_daily_brief():
         "run_context": run_context.to_dict(),
         "pipeline_time_seconds": round(elapsed, 1),
         "universe": {
+            "coverage_policy": coverage_policy_manifest(EDITORIAL_COVERAGE_MODE),
             "name": UNIVERSE_NAME,
-            "version": hashlib.sha256(",".join(ALL_TICKERS).encode("utf-8")).hexdigest()[:8],
-            "tickers": ALL_TICKERS,
-            "focus_ticker": FOCUS_TICKER,
+            "version": hashlib.sha256(",".join(EDITORIAL_COVERAGE_TICKERS).encode("utf-8")).hexdigest()[:8],
+            "tickers": list(EDITORIAL_COVERAGE_TICKERS),
+            "instrumented_version": hashlib.sha256(",".join(SIGNAL_ELIGIBLE_TICKERS).encode("utf-8")).hexdigest()[:8],
+            "instrumented_tickers": list(SIGNAL_ELIGIBLE_TICKERS),
+            "editorial_only_tickers": list(EDITORIAL_ONLY_TICKERS),
+            "focus_eligible_tickers": list(
+                EDITORIAL_COVERAGE_TICKERS
+                if EDITORIAL_COVERAGE_MODE == "active"
+                else SIGNAL_ELIGIBLE_TICKERS
+            ),
+            "editorial_coverage_mode": EDITORIAL_COVERAGE_MODE,
+            "focus_ticker": editorial_focus.get("ticker"),
+            "focus_coverage_tier": editorial_focus.get("coverage_tier"),
+            "focus_signal_eligible": editorial_focus.get("signal_eligible"),
+            "focus_signal_eligibility_reason": editorial_focus.get("signal_eligibility_reason"),
+            "configured_focus_ticker": FOCUS_TICKER,
+            "focus_selection_mode": editorial_focus.get("selection_mode"),
         },
         "conventions": {
             "units": "*_musd fields are millions of USD",
@@ -1587,7 +1862,9 @@ def _generate_daily_brief():
             "as_of": "when the data was true at its source — exchange bar time for prices, filing time for filings, publication time for news, registry last-update time for trial records; NEVER the pipeline's observation time; null when the source exposes no usable timestamp (paths listed in data_quality.as_of_nulled, same philosophy as the NaN policy)",
             "observed_at": "when this pipeline fetched a snapshot; it never substitutes for source as_of except for observation-native alerts such as a registry diff or social leaderboard transition",
             "derived_as_of": "derived records inherit source time: single-series computations carry the last observation used; multi-series aggregates (sector_rotation, instrument_relative_return_spread, regime) carry the OLDEST constituent timestamp; event sets carry the newest constituent timestamp",
-            "universe.version": "sha256[:8] of the ticker list; changes whenever the watchlist changes",
+            "universe.version": "sha256[:8] of the ordered 42-name editorial coverage list",
+            "universe.instrumented_version": "sha256[:8] of the ordered 29-name signal-eligible list",
+            "coverage_tier": "instrumented names retain measurement eligibility; editorial_only names can supply neutral headline context/focus only and never enter signals",
             "relevance": "whisper ticker-anchor confidence: 1.0 cashtag, 0.8 bare symbol, 0.6 company-name alias",
             "z_scores": "vs the ticker's own pipeline-versioned trailing 20-run baseline; null until 15 prior runs, baseline_immature through 19, immature z capped at ±8",
             "option_contract_volume_oi_anomaly": "completed-session contract snapshot crossing volume/open-interest, DTE, and estimated-notional thresholds; lastPrice × session volume × 100 is an estimate, not classified premium flow, and CALL/PUT does not imply direction",
@@ -1604,14 +1881,23 @@ def _generate_daily_brief():
             "registry_changes": "day-over-day CT.gov diffs (STATUS_FLIP / DATE_SLIP >14d / ENROLLMENT_CHANGE >10%); observation time = event time; empty on quiet days and on the seeding run",
             "fragility": "on catalyst records: runway_risk from cash_runway, market_cap_musd (financials -> weekly mcap cache -> null); fragility_flag = runway RED/YELLOW and mcap < $2000M; fragile_alert FRAGILE_CATALYST when flagged and event 0-90 days out",
             "confluence_score": "count of distinct source-timestamped alert families active in an exact trailing 48h UTC window; persistent stale conditions are de-duplicated and cannot refresh on rerun; records require >=2 families",
-            "headlines.relevance": "title-only score: universe ticker/alias hit = 2, macro keyword hit = 1 (word-bounded, optional plural); rows below 1 are dropped at fetch, top 5 kept",
+            "headlines.relevance": "compatibility score retained for existing consumers; editorial selection uses explicit universe/macro/discovery lanes and separate issuer, macro, vertical, authority, novelty, and impact components rather than treating the composite as ground truth",
+            "headlines.novelty": "uniqueness within the current fetched candidate pool after normalized-title comparison; it is not longitudinal novelty and does not claim the event is historically new",
+            "headlines.lanes": "universe requires a configured ticker or alias; macro requires a true macro subject after stripping exchange listing metadata; discovery requires explicit high-impact evidence plus a covered vertical or official authority",
             "ceo_ca_signals": "source_record_verified means a direct CEO.ca API row carried both a post ID and source timestamp; threshold_qualified means the text crossed the deterministic geology threshold; neither field verifies the factual truth of a user post. Context-only domain-relevant rows may render, while irrelevant chatter is excluded into data_quality.ceo_ca_quality_dropped",
             "headlines.recency": f"hard cutoff, not a decay: headlines whose as_of is older than {NewsAgent.HEADLINES_MAX_AGE_DAYS} days are dropped before the top-5 selection, so a stale high-relevance item cannot outrank a fresh one; survivors keep the relevance sort. Headlines with NO as_of are dropped too — unprovable freshness fails a freshness gate. That is a deliberate exception to the brief-wide null-preserving convention and applies to this section only; everywhere else a missing source time is exported as null and listed in data_quality.as_of_nulled. Drops are listed in data_quality.headlines_dropped, so an empty section is distinguishable from a slow news day",
-            "headlines.provenance": "provider is the acquisition path; publisher/publisher_domain identify the underlying newsroom; source_time_kind distinguishes published, event_time, and provider_seen; scoring is followed by freshness gating, syndication dedupe, and publisher-diverse selection",
+            "headlines.provenance": "provider is the acquisition path; publisher/publisher_domain identify the underlying newsroom; source_time_kind distinguishes published, event_time, and provider_seen; scoring is followed by freshness gating, syndication dedupe, and lane-scoped publisher/provider diversity selection",
+            "editorial_focus": "presentation-only configured or deterministic dynamic focus from fresh selected mapped headline evidence; impact is a materiality component, not expected return; this section never changes signals, confluence, ledger, or universe membership",
             "insider_clusters": "a cluster is >=2 DISTINCT filers transacting the same open-market direction in the window; insider_count = distinct filers in the cluster direction; buyers/sellers = distinct filers with any P / any S; filing_count = Form 4 documents; code_counts are transaction codes as filed; cluster_direction = buy/sell by filer majority, mixed on tie; BUY clusters are HIGH at >=3 buyers and MEDIUM at 2, mixed is MEDIUM, SELL clusters are LOW context and excluded from confluence; filer identity = rptOwnerCik or insider name; filings whose XML could not be fetched count toward filing_count only",
         },
         "health": health,
         "summary": {
+            "editorial_focus_status": editorial_focus.get("status"),
+            "editorial_focus_ticker": editorial_focus.get("ticker"),
+            "editorial_focus_selection_mode": editorial_focus.get("selection_mode"),
+            "editorial_focus_eligible_candidates": editorial_focus.get(
+                "eligible_candidate_count", 0
+            ),
             "total_confluence": len(confluence),
             "total_headlines": len(headlines_scored),
             "headline_pool_fetched": headline_pool.get("fetched_count", 0),
@@ -1653,7 +1939,7 @@ def _generate_daily_brief():
             "total_twitter_signals": len(twitter_data),
             "total_sec_filings": len(sec_filings),
             "total_technical_alerts": sum(1 for t in technicals.values() if t.get("alerts")),
-            "total_cash_runway_alerts": len(pdufa_data.get('alerts', [])),
+            "total_cash_runway_alerts": len(cash_runway_alert_inputs),
             "total_insider_clusters": len(insider_clusters),
             "total_insider_buy_clusters": sum(
                 1 for c in insider_clusters if c.get("cluster_direction") == "buy"
@@ -1742,12 +2028,11 @@ def _generate_daily_brief():
             "cash_runway_alerts": [
                 build_cash_runway_record(
                     financials_map.get(
-                        a["ticker"],
+                        str(a["ticker"]).upper(),
                         {"ticker": a["ticker"], "risk_level": a.get("risk_level")},
                     )
                 )
-                for a in pdufa_data.get('alerts', [])
-                if isinstance(a, dict)
+                for a in cash_runway_alert_inputs
             ],
             "insider_clusters": [
                 {
@@ -1831,26 +2116,7 @@ def _generate_daily_brief():
                 }
                 for tw in twitter_data
             ],
-            "deep_dive": {
-                "ticker": FOCUS_TICKER,
-                "note": "Numeric data for this ticker lives in the main sections keyed by ticker "
-                        "(prices, technicals, options_flow, insider_clusters, earnings_calendar); "
-                        "this section holds only filing references and ticker-filtered text.",
-                "sec_filing_accessions": [
-                    fi.get("accession_number") for fi in sec_filings
-                    if fi.get("ticker", "").upper() == FOCUS_TICKER
-                ],
-                "has_insider_cluster": any(
-                    c.get("ticker", "").upper() == FOCUS_TICKER for c in insider_clusters
-                ),
-                "social_mentions": [w for w in whispers if FOCUS_TICKER.lower() in w.lower()],
-                "news_headlines": [h for h in headlines if FOCUS_TICKER.lower() in h.lower()],
-                "twitter_signals": [
-                    tw for tw in twitter_data
-                    if FOCUS_TICKER.lower() in tw.get("title", "").lower()
-                    or FOCUS_TICKER.lower() in tw.get("query", "").lower()
-                ]
-            }
+            "deep_dive": editorial_focus,
         }
     }
 
@@ -1859,21 +2125,19 @@ def _generate_daily_brief():
     nan_fields_nulled = []
     json_data = sanitize_nans(json_data, "$", nan_fields_nulled)
     json_data["data_quality"] = {
+        "universe_contract_version": UNIVERSE_CONTRACT_VERSION,
+        "headline_contract_version": HEADLINE_CONTRACT_VERSION,
+        "focus_contract_version": FOCUS_CONTRACT_VERSION,
+        "signal_eligibility_audit_version": SIGNAL_ELIGIBILITY_AUDIT_VERSION,
         "nan_fields_nulled": nan_fields_nulled,
         "as_of_nulled": as_of_nulled,
         # Relevant-but-stale headlines the recency gate removed. Listed rather
         # than counted: an empty headlines section on a busy news day should say
         # why, and "the gate ate everything" reads very differently from "nothing
         # scored". Undated items land here too — see NewsAgent._drop_stale.
-        "headlines_dropped": [
-            {"title": h.get("title"), "as_of": h.get("as_of"),
-             "relevance": h.get("relevance"), "reason": h.get("drop_reason"),
-             "provider": h.get("provider"), "publisher": h.get("publisher"),
-             "publisher_domain": h.get("publisher_domain"),
-             "source_record_id": h.get("source_record_id"),
-             "kept_source_record_id": h.get("kept_source_record_id")}
-            for h in headlines_dropped
-        ],
+        "headlines_dropped": build_dropped_headline_export_records(
+            headlines_dropped
+        ),
         "headline_pool": headline_pool,
         "fda_adcom_detail_failures": list(
             getattr(research_agent, "adcom_detail_failures", [])
@@ -1926,6 +2190,7 @@ def _generate_daily_brief():
         f"newest={headline_pool.get('newest_as_of')}"
     )
 
+    audit_signal_eligible_tickers(json_data)
     atomic_write_json(
         filename_json, json_data, indent=2, encoder_cls=NumpySafeEncoder
     )
@@ -1952,7 +2217,7 @@ def _generate_daily_brief():
     print(f"  Total Twitter indicators: {len(twitter_data)}")
     print(f"  Total SEC filings:      {len(sec_filings)}")
     print(f"  Technical thresholds:   {sum(1 for t in technicals.values() if t.get('alerts'))}")
-    print(f"  Cash runway flags:      {len(pdufa_data.get('alerts', []))}")
+    print(f"  Cash runway flags:      {len(cash_runway_alert_inputs)}")
     print(f"  Total insider clusters: {len(insider_clusters)} "
           f"({sum(1 for c in insider_clusters if c.get('cluster_direction') == 'buy' )} buy-direction)")
     print(f"  Total options flow:     {len({t: d for t, d in options_flow.items() if d.get('alerts')})}")
@@ -1991,6 +2256,7 @@ def _mutable_signal_state_paths():
         signals.MCAP_CACHE_FILE,
         signals.CTGOV_SNAPSHOT_FILE,
         signals.ALERT_HISTORY_FILE,
+        OpenInsiderAgent.DEFAULT_CACHE_PATH,
         ResearchAgent.ADCOM_CACHE_FILE,
     ]
 

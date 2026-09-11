@@ -16,14 +16,13 @@ import os
 import io
 import json
 import mimetypes
+import socketserver
+import threading
+import time
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-# Fix Windows console encoding
-if hasattr(sys.stdout, 'buffer'):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+PORT = 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DUMP_FILE_TXT = os.path.join(BASE_DIR, "daily_brief.txt")
 DUMP_FILE_JSON = os.path.join(BASE_DIR, "daily_brief.json")
@@ -141,24 +140,159 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 
-if __name__ == "__main__":
+class BoundedDashboardServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    """HTTP server with bounded, expiring connections.
+
+    Both limits are applied before BaseHTTPRequestHandler starts parsing headers,
+    so incomplete or slowly-dripped requests cannot monopolize the listener.
+    """
+
+    daemon_threads = True
+    max_workers = 8
+    socket_timeout = 5.0
+    request_deadline = 10.0
+
+    def __init__(self, *args, **kwargs):
+        # HTTPServer.__init__ invokes server_close() when bind/activation fails,
+        # so lifecycle state must exist before the base constructor runs.
+        self._worker_slots = threading.BoundedSemaphore(self.max_workers)
+        self._state_lock = threading.Lock()
+        self._active_requests = 0
+        self._active_timers = set()
+        self._active_sockets = set()
+        self._worker_threads = set()
+        super().__init__(*args, **kwargs)
+
+    @property
+    def active_requests(self):
+        with self._state_lock:
+            return self._active_requests
+
+    @property
+    def active_timers(self):
+        with self._state_lock:
+            return len(self._active_timers)
+
+    @staticmethod
+    def _expire_request(request):
+        try:
+            request.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+
+    def _make_worker_thread(self, request, client_address, timer):
+        return threading.Thread(
+            target=self._run_bounded_request,
+            args=(request, client_address, timer),
+            daemon=self.daemon_threads,
+        )
+
+    def process_request(self, request, client_address):
+        if not self._worker_slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+
+        timer = None
+        thread = None
+        registered = False
+        try:
+            request.settimeout(self.socket_timeout)
+            timer = threading.Timer(
+                self.request_deadline, self._expire_request, args=(request,)
+            )
+            timer.daemon = True
+            thread = self._make_worker_thread(request, client_address, timer)
+            with self._state_lock:
+                self._active_requests += 1
+                self._active_timers.add(timer)
+                self._active_sockets.add(request)
+                self._worker_threads.add(thread)
+            registered = True
+            timer.start()
+            thread.start()
+        except BaseException:
+            if timer is not None:
+                timer.cancel()
+            if registered:
+                with self._state_lock:
+                    self._active_requests -= 1
+                    self._active_timers.discard(timer)
+                    self._active_sockets.discard(request)
+                    self._worker_threads.discard(thread)
+            self._worker_slots.release()
+            self.shutdown_request(request)
+            raise
+
+    def _run_bounded_request(self, request, client_address, timer):
+        try:
+            self.finish_request(request, client_address)
+        except Exception:
+            self.handle_error(request, client_address)
+        finally:
+            timer.cancel()
+            self.shutdown_request(request)
+            with self._state_lock:
+                self._active_requests -= 1
+                self._active_timers.discard(timer)
+                self._active_sockets.discard(request)
+                self._worker_threads.discard(threading.current_thread())
+            self._worker_slots.release()
+
+    def server_close(self):
+        with self._state_lock:
+            timers = tuple(self._active_timers)
+            requests = tuple(self._active_sockets)
+            threads = tuple(self._worker_threads)
+        for timer in timers:
+            timer.cancel()
+        for request in requests:
+            self._expire_request(request)
+        super().server_close()
+
+        # Socket shutdown makes handlers return promptly; wait only a bounded
+        # total interval so cleanup cannot itself hang application shutdown.
+        deadline = time.monotonic() + self.socket_timeout
+        current = threading.current_thread()
+        for thread in threads:
+            # A concurrent admission failure may leave an unstarted Thread in
+            # the snapshot briefly; joining one raises RuntimeError.
+            if thread is current or not thread.is_alive():
+                continue
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            thread.join(remaining)
+
+
+def main():
+    # Keep importing this module safe for test runners with their own argv/stdout.
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer, encoding='utf-8', errors='replace'
+        )
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
     ip = get_lan_ip()
 
     print("=" * 56)
     print("  📡  MARKETBOT DASHBOARD SERVER")
     print("=" * 56)
-    print(f"\n  📱 Phone:     http://{ip}:{PORT}")
-    print(f"  💻 PC:        http://localhost:{PORT}")
-    print(f"  📊 API JSON:  http://{ip}:{PORT}/api/brief")
-    print(f"  📄 API TXT:   http://{ip}:{PORT}/api/txt")
-    print(f"  📄 Raw text:  http://{ip}:{PORT}/raw")
+    print(f"\n  📱 Phone:     http://{ip}:{port}")
+    print(f"  💻 PC:        http://localhost:{port}")
+    print(f"  📊 API JSON:  http://{ip}:{port}/api/brief")
+    print(f"  📄 API TXT:   http://{ip}:{port}/api/txt")
+    print(f"  📄 Raw text:  http://{ip}:{port}/raw")
     print(f"\n  Dashboard:    {DASHBOARD_DIR}")
     print(f"  Data:         {DUMP_FILE_JSON}")
     print(f"\n  Press Ctrl+C to stop\n")
 
-    server = http.server.HTTPServer(("0.0.0.0", PORT), DashboardHandler)
+    server = BoundedDashboardServer(("0.0.0.0", port), DashboardHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nServer stopped.")
+    finally:
         server.server_close()
+
+
+if __name__ == "__main__":
+    main()

@@ -18,6 +18,7 @@ from agents.watcher_agent import WatcherAgent
 from agents.research_agent import ResearchAgent
 from agents.twitter_agent import TwitterAgent
 from agents.sec_agent import SECAgent
+from openinsider_agent import OpenInsiderAgent
 from database import log_sentiment, export_for_notebooklm, init_db
 
 load_dotenv()
@@ -32,12 +33,10 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Initialize Agents
 news_agent = NewsAgent()
-social_agent = SocialAgent()
 analyst_agent = AnalystAgent()
 watcher_agent = WatcherAgent()
 research_agent = ResearchAgent()
 twitter_agent = TwitterAgent()
-sec_agent = SECAgent()
 
 chat_history = BoundedChatHistory(
     max_channels=DISCORD_MAX_HISTORY_CHANNELS,
@@ -50,9 +49,24 @@ bot_work_lock = asyncio.Lock()
 async def on_ready():
     print(f'{bot.user} has connected to Discord and the Council is ready.')
 
+
+def _collect_social_whispers():
+    """Collect one command-scoped social view and close its HTTP session."""
+    with OpenInsiderAgent() as openinsider:
+        return SocialAgent(openinsider=openinsider).get_whisper()
+
+
+def _collect_insider_clusters(days_back=30):
+    """Collect one command-scoped cluster view and close its HTTP session."""
+    with OpenInsiderAgent(run_days_back=days_back, run_limit=500) as openinsider:
+        return SECAgent(openinsider=openinsider).detect_insider_clusters(
+            days_back=days_back
+        )
+
+
 def _collect_live_context():
     """Run blocking provider collection away from Discord's event loop."""
-    whispers = social_agent.get_whisper()
+    whispers = _collect_social_whispers()
     whisper_context = "\n".join(whispers[:15]) if whispers else ""
     ceo_signals = research_agent.get_ceo_ca_signals()
     trials = research_agent.get_clinical_trials()
@@ -137,7 +151,7 @@ async def daily_report(ctx):
     # 1. Gather ALL Data
     headlines, whispers, prices = await asyncio.gather(
         asyncio.to_thread(news_agent.get_global_headlines),
-        asyncio.to_thread(social_agent.get_whisper),
+        asyncio.to_thread(_collect_social_whispers),
         asyncio.to_thread(watcher_agent.get_full_report),
     )
     whispers = whispers or []
@@ -326,7 +340,7 @@ async def full_debate(ctx, ticker: str):
 @bot.command(name='whisper')
 async def show_whispers(ctx):
     """Shows raw social chatter."""
-    whispers = await asyncio.to_thread(social_agent.get_whisper)
+    whispers = await asyncio.to_thread(_collect_social_whispers)
     await ctx.send("**Latest Whispers:**\n" + "\n".join(whispers[:5]))
 
 @bot.command(name='dump')
@@ -456,7 +470,7 @@ async def dip_scanner(ctx):
     # 1. Insider Selling Clusters
     await ctx.send("ℹ️ Scanning insider clusters...")
     clusters = await asyncio.to_thread(
-        sec_agent.detect_insider_clusters, days_back=30
+        _collect_insider_clusters, days_back=30
     )
     if clusters:
         embed_ins = discord.Embed(

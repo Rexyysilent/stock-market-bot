@@ -5,9 +5,15 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import ledger
 import export_for_gemini as exporter
 from timeutil import split_fresh_records
 
+
+CURRENT_PIPELINE_VERSION = "2.6.3"
+assert exporter.SCHEMA_VERSION == "2.8"
+assert exporter.PIPELINE_VERSION == CURRENT_PIPELINE_VERSION
+assert ledger.__version__ == CURRENT_PIPELINE_VERSION
 
 with tempfile.TemporaryDirectory() as tmpdir:
     exporter.BASELINE_STATE_FILE = os.path.join(tmpdir, "baselines.json")
@@ -15,13 +21,22 @@ with tempfile.TemporaryDirectory() as tmpdir:
         "schema_version": 2,
         "versions": {
             "2.6.1": {
+                # Historical-era sentinel: current scoring must never pool it.
+                "TSLA": {
+                    "volume_ratio": [
+                        {"date": f"2026-06-{day:02d}", "value": 100.0}
+                        for day in range(1, 16)
+                    ]
+                }
+            },
+            CURRENT_PIPELINE_VERSION: {
                 "TSLA": {
                     "volume_ratio": [
                         {"date": f"2026-06-{day:02d}", "value": 1.0}
                         for day in range(1, 16)
                     ]
                 }
-            }
+            },
         },
     }
     with open(exporter.BASELINE_STATE_FILE, "w", encoding="utf-8") as handle:
@@ -34,9 +49,16 @@ with tempfile.TemporaryDirectory() as tmpdir:
     assert scores["TSLA"]["volume_ratio_baseline_immature"] is True
     assert alerts[0]["signal"] == "HIGH_VOLUME_SURPRISE"
     assert alerts[0]["baseline_immature"] is True
+    persisted = json.loads(Path(exporter.BASELINE_STATE_FILE).read_text(
+        encoding="utf-8"
+    ))
+    historical_values = persisted["versions"]["2.6.1"]["TSLA"][
+        "volume_ratio"
+    ]
+    assert [row["value"] for row in historical_values] == [100.0] * 15
 
     # Negative volume anomalies are a separate family/tag.
-    version_state["versions"]["2.6.1"]["ROKU"] = {
+    version_state["versions"][CURRENT_PIPELINE_VERSION]["ROKU"] = {
         "volume_ratio": [
             {"date": f"2026-06-{day:02d}", "value": 1.0}
             for day in range(1, 16)
@@ -50,7 +72,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     assert alerts[0]["signal"] == "LOW_PARTICIPATION"
 
     # Twenty prior observations are mature and no longer capped.
-    version_state["versions"]["2.6.1"]["COIN"] = {
+    version_state["versions"][CURRENT_PIPELINE_VERSION]["COIN"] = {
         "volume_ratio": [
             {"date": f"2026-06-{day:02d}", "value": 1.0}
             for day in range(1, 21)
@@ -64,6 +86,40 @@ with tempfile.TemporaryDirectory() as tmpdir:
     assert scores["COIN"]["volume_ratio_z"] > 8
     assert alerts[0]["baseline_immature"] is False
 
+    # Editorial-only and unknown symbols cannot create baseline state even if
+    # a malformed upstream payload reaches this stateful helper directly.
+    leak_tickers = [*exporter.EDITORIAL_ONLY_TICKERS, "OUTSIDE"]
+    clean_state = {
+        "schema_version": 2,
+        "versions": {CURRENT_PIPELINE_VERSION: {}},
+    }
+    with open(exporter.BASELINE_STATE_FILE, "w", encoding="utf-8") as handle:
+        json.dump(clean_state, handle)
+    outside_options = {
+        ticker: {
+            "put_call_vol_ratio": 2.0,
+            "source_session": "2026-07-21",
+            "signal_eligible": True,
+        }
+        for ticker in leak_tickers
+    }
+    outside_technicals = {
+        ticker: {
+            "volume_ratio": 2.0,
+            "source_session": "2026-07-21",
+            "session_complete": True,
+        }
+        for ticker in leak_tickers
+    }
+    _, outside_alerts = exporter.update_baselines_and_score(
+        outside_options, outside_technicals, "2026-07-21"
+    )
+    persisted = json.loads(Path(exporter.BASELINE_STATE_FILE).read_text(
+        encoding="utf-8"
+    ))
+    assert outside_alerts == []
+    blocked = set(leak_tickers)
+    assert not blocked & set(persisted["versions"][CURRENT_PIPELINE_VERSION])
     # Archive copies are byte-identical and never replaced.
     source = os.path.join(tmpdir, "brief.json")
     archive = os.path.join(tmpdir, "archive", "briefs")
@@ -98,9 +154,6 @@ assert [(row["id"], row["drop_reason"]) for row in dropped] == [
     ("stale", "stale"), ("undated", "undated")
 ]
 
-assert exporter.SCHEMA_VERSION == "2.6"
-assert exporter.PIPELINE_VERSION == "2.6.1"
-
 # Machine-readable signal emitters cannot regress to the retired causal copy.
 repo = Path(__file__).resolve().parent
 signal_source = "\n".join(
@@ -112,4 +165,4 @@ for banned in ("buyers panicking for delivery", "gamma squeeze", "potential buy"
 watcher_source = (repo / "agents/watcher_agent.py").read_text(encoding="utf-8")
 assert "VOLUME_ALERT_MULT" not in watcher_source
 assert "above 20-day avg — UNUSUAL" not in watcher_source
-print("v2.6 pipeline hygiene checks passed")
+print("v2.6.3 pipeline hygiene checks passed")

@@ -27,6 +27,7 @@ from agents.research_agent import ResearchAgent
 from agents.twitter_agent import TwitterAgent
 from agents.sec_agent import SECAgent
 from config import ALL_TICKERS
+from openinsider_agent import OpenInsiderAgent
 
 
 def parse_source_from_string(text):
@@ -42,12 +43,15 @@ def export_ticker_deep_dive(ticker):
     
     print(f"Generating deep dive for {ticker}...")
     
+    # Social context and cluster detection derive from one canonical 60-day
+    # OpenInsider acquisition for this deep-dive run.
+    openinsider = OpenInsiderAgent(run_days_back=60, run_limit=500)
     news_agent = NewsAgent()
-    social_agent = SocialAgent()
+    social_agent = SocialAgent(openinsider=openinsider)
     watcher_agent = WatcherAgent()
     research_agent = ResearchAgent()
     twitter_agent = TwitterAgent()
-    sec_agent = SECAgent()
+    sec_agent = SECAgent(openinsider=openinsider)
     
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     iso_timestamp = datetime.now().isoformat()
@@ -275,6 +279,7 @@ def export_ticker_deep_dive(ticker):
     print(f"  Social mentions: {len(ticker_whispers)}")
     print(f"  Twitter indicators: {len(ticker_twitter)}")
     
+    openinsider.close()
     return filename_txt, filename_json
 
 

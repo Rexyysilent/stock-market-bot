@@ -12,10 +12,18 @@ import tempfile
 sys.path.insert(0, ".")
 
 import signals
+from config import EDITORIAL_ONLY_TICKERS, PIPELINE_VERSION
 
 tmpdir = tempfile.mkdtemp(prefix="sniper_test_")
+assert os.path.basename(signals.SOCIAL_HISTORY_FILE) == (
+    f"social_history_{PIPELINE_VERSION}.json"
+)
+assert os.path.basename(signals.CTGOV_SNAPSHOT_FILE) == (
+    f"ctgov_snapshot_{PIPELINE_VERSION}.json"
+)
 signals.SOCIAL_HISTORY_FILE = os.path.join(tmpdir, "social_history.json")
 signals.MCAP_CACHE_FILE = os.path.join(tmpdir, "mcap_cache.json")
+BLOCKED_TICKERS = tuple(EDITORIAL_ONLY_TICKERS) + ("OUTSIDE",)
 
 
 def universe_row(ticker, mentions, upvotes=0):
@@ -57,6 +65,22 @@ try:
     assert "burst_ratio" not in rows[0] and "burst_ratio" not in rows[1]
     assert alerts == []
 
+    # Editorial-only and arbitrary outside names cannot enter alert state even
+    # when an upstream adapter incorrectly labels them universe members.
+    blocked_rows = [universe_row(ticker, 500) for ticker in BLOCKED_TICKERS]
+    blocked_top200 = [
+        {"ticker": ticker, "rank": rank + 1, "mentions": 500}
+        for rank, ticker in enumerate(BLOCKED_TICKERS)
+    ]
+    alerts = signals.update_social_signals(
+        blocked_rows, blocked_top200, "2026-07-06", mcap_lookup=no_mcap,
+    )
+    assert alerts == []
+    with open(signals.SOCIAL_HISTORY_FILE, encoding="utf-8") as handle:
+        social_state = json.load(handle)
+    assert not (set(BLOCKED_TICKERS) & set(social_state["tickers"]))
+    assert not (set(BLOCKED_TICKERS) & set(social_state["top200_history"][-1]["tickers"]))
+
     # --- same-date rerun is idempotent: replaces, doesn't append -------------
     rows = [universe_row("TSLA", 12)]
     signals.update_social_signals(rows, [], "2026-07-06", mcap_lookup=no_mcap)
@@ -71,20 +95,20 @@ try:
     # --- 1c entrances: warm after 5 prior runs of top-200 history ------------
     # The 7 runs above each stored an (empty) top-200 set, so history is warm.
     top200 = [
-        {"ticker": "ABCD", "rank": 150, "mentions": 12},   # small cap -> alert
-        {"ticker": "MEGA", "rank": 10, "mentions": 900},   # mega cap -> gated out
-        {"ticker": "NOPE", "rank": 60, "mentions": 5},     # mcap unknown -> gated out
+        {"ticker": "DNN", "rank": 150, "mentions": 12},    # core small cap -> alert
+        {"ticker": "TSLA", "rank": 10, "mentions": 900},   # core mega cap -> gated out
+        {"ticker": "RGNX", "rank": 60, "mentions": 5},     # core unknown mcap -> gated out
     ]
-    mcaps = {"ABCD": 850.0, "MEGA": 50_000.0, "NOPE": None}
+    mcaps = {"DNN": 850.0, "TSLA": 50_000.0, "RGNX": None}
     alerts = signals.update_social_signals([], top200, "2026-07-07",
                                            mcap_lookup=lambda t, now=None: mcaps[t])
-    assert [a["ticker"] for a in alerts] == ["ABCD"], alerts
+    assert [a["ticker"] for a in alerts] == ["DNN"], alerts
     birth = alerts[0]
     assert birth["tag"] == "ATTENTION_BIRTH"
     assert birth["rank"] == 150 and birth["mentions"] == 12
     assert birth["market_cap_musd"] == 850.0
 
-    # Next run: ABCD was in yesterday's top-200 -> no longer an entrance
+    # Next run: DNN was in yesterday's top-200 -> no longer an entrance
     alerts = signals.update_social_signals([], top200, "2026-07-08",
                                            mcap_lookup=lambda t, now=None: mcaps[t])
     assert alerts == [], alerts
@@ -140,6 +164,9 @@ try:
          "agenda": "BLA 125842 from Capricor, Inc. for deramiocel",
          "ticker": "CAPR", "as_of": "2026-07-16T00:00:00Z",
          "link": "https://www.fda.gov/z"},
+        {"date": "2026-08-20", "title": "Editorial-only issuer meeting",
+         "ticker": "MRNA", "as_of": "2026-07-16T00:00:00Z",
+         "link": "https://www.fda.gov/z"},
     ]
 
     recs = signals.mine_fda_catalysts(sec, news, ceo, RUN, adcom_meetings=adcom)
@@ -168,17 +195,15 @@ try:
     ntla_adcom = by_key[("NTLA", "ADCOM")]
     assert ntla_adcom["source"] == "fda_calendar" and ntla_adcom["event_date"] == "2026-09-10"
 
-    capr_adcom = by_key[("CAPR", "ADCOM")]
-    assert capr_adcom["event_date"] == "2026-07-29"
-    assert capr_adcom["as_of"] == "2026-07-16T00:00:00Z"
-    assert "Capricor" in capr_adcom["headline"]
+    assert ("CAPR", "ADCOM") not in by_key
+    assert ("MRNA", "ADCOM") not in by_key
 
     # Word-bounded CRL: "MacroLendingCRLtd" must NOT create a CCJ CRL record
     assert ("CCJ", "CRL") not in by_key
     # No-universe-ticker headline and SECTOR channel produce nothing
     tickers_seen = {r["ticker"] for r in recs}
     assert "SECTOR" not in tickers_seen
-    assert len(recs) == 7, [(r["ticker"], r["event_type"]) for r in recs]
+    assert len(recs) == 6, [(r["ticker"], r["event_type"]) for r in recs]
 
     # Dedupe on (ticker, event_type, event_date): same event via two sources
     dup_news = [{"title": "Vanda complete response letter follow-up", "link": "n://9"}]
@@ -198,7 +223,12 @@ try:
         return {"nct_id": nct, "status": status, "primary_completion_date": pcd,
                 "enrollment": enroll, "ticker": ticker, "title": f"Trial {nct}"}
 
-    day1 = [trial("NCT001"), trial("NCT002", ticker=None), trial("NCT003")]
+    blocked_trials = [
+        trial(f"NCTBLOCK{index:02d}", ticker=ticker)
+        for index, ticker in enumerate(BLOCKED_TICKERS)
+    ]
+    day1 = ([trial("NCT001"), trial("NCT002", ticker=None), trial("NCT003")]
+            + blocked_trials)
     assert signals.diff_registry(day1, "2026-07-06T09:00:00") == [], \
         "first run seeds and emits [] — no fake diffs against nothing"
 
@@ -242,6 +272,7 @@ try:
         snap = json.load(f)["trials"]
     assert set(snap) == {"NCT001", "NCT002", "NCT003", "NCT004"}
     assert snap["NCT001"]["status"] == "TERMINATED"
+    assert not any(nct_id.startswith("NCTBLOCK") for nct_id in snap)
 
     # ===== Task 3b: fragility join ============================================
     financials = {
@@ -343,6 +374,53 @@ try:
     assert "SRPT" not in by_fam                   # non-universe ticker dropped
     assert "PLTR" not in by_fam
     assert "NOC" not in by_fam                    # sell cluster = context, no event
+
+    # Every structured family independently rejects editorial-only and unknown
+    # tickers even if malformed upstream data marks them as eligible.
+    blocked_events = signals.collect_alert_events(
+        social_alerts=[{"ticker": ticker, "tag": "SOCIAL_BURST", "observed_at": event_at}
+                       for ticker in BLOCKED_TICKERS],
+        baseline_alerts=[{"ticker": ticker, "metric": "put_call_vol_ratio",
+                          "signal": "BEARISH_VS_BASELINE", "as_of": event_at}
+                         for ticker in BLOCKED_TICKERS],
+        options_flow={ticker: {"option_contract_volume_oi_anomaly": [
+                          {"strike": 1, "as_of": event_at}], "observed_at": event_at}
+                      for ticker in BLOCKED_TICKERS},
+        insider_clusters=[{"ticker": ticker, "cluster_direction": "buy",
+                           "buyers": 3, "period_days": 30,
+                           "alert_level": "HIGH", "as_of": event_at}
+                          for ticker in BLOCKED_TICKERS],
+        technicals={ticker: {"rsi_divergence": "BULLISH", "as_of": event_at}
+                    for ticker in BLOCKED_TICKERS},
+        fda_catalysts=[{"ticker": ticker, "alert": "FDA_CATALYST_NEAR",
+                        "event_type": "ADCOM", "as_of": event_at}
+                       for ticker in BLOCKED_TICKERS],
+        clinical_catalysts=[{"ticker": ticker, "fragile_alert": "FRAGILE_CATALYST",
+                             "days_until": 5, "as_of": event_at}
+                            for ticker in BLOCKED_TICKERS],
+        registry_changes=[{"ticker": ticker, "severity": "high",
+                           "change_type": "STATUS_FLIP", "as_of": event_at}
+                          for ticker in BLOCKED_TICKERS],
+    )
+    assert blocked_events == []
+
+    signals.ALERT_HISTORY_FILE = os.path.join(tmpdir, "blocked_alert_history.json")
+    direct_events = [
+        {
+            "ticker": ticker,
+            "family": family,
+            "tag": family.upper(),
+            "detail": "blocked",
+            "event_at": event_at,
+        }
+        for ticker in BLOCKED_TICKERS for family in ("social", "options")
+    ]
+    assert signals.build_confluence(
+        direct_events, event_at, pipeline_version=PIPELINE_VERSION,
+    ) == []
+    with open(signals.ALERT_HISTORY_FILE, encoding="utf-8") as handle:
+        blocked_state = json.load(handle)
+    assert blocked_state["versions"][PIPELINE_VERSION]["tickers"] == {}
 
     # build_confluence: >=2 families gate + exact 48h + event idempotency
     def ev(ticker, family, tag, stamp):

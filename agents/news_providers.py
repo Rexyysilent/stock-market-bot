@@ -27,6 +27,8 @@ import xml.etree.ElementTree as ET
 
 import requests
 
+from coverage_policy import fmp_coverage_contract
+
 
 RequestGet = Callable[..., Any]
 
@@ -104,6 +106,7 @@ class ProviderResult:
     error: Optional[str] = None
     configured: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
+    intake_records: Optional[list[dict[str, Any]]] = None
 
     def health(self) -> dict[str, Any]:
         """Return a JSON-safe provider-health summary."""
@@ -301,6 +304,7 @@ def _record_unchecked(
     source_class: str,
     source_record_id: Optional[str] = None,
     tickers: Any = None,
+    ticker_metadata_kind: str = "subject",
     summary: Any = None,
 ) -> Optional[dict[str, Any]]:
     clean_title = _clean_text(title)
@@ -311,6 +315,9 @@ def _record_unchecked(
     publisher_name, publisher_domain = normalize_publisher(
         publisher, publisher_url or canonical_url, clean_title
     )
+    clean_ticker_metadata_kind = str(ticker_metadata_kind).strip().casefold()
+    if clean_ticker_metadata_kind not in {"subject", "related"}:
+        raise ValueError("unsupported ticker metadata kind")
     clean_published = _clean_text(published) or None
     return {
         "title": clean_title,
@@ -331,6 +338,7 @@ def _record_unchecked(
             raw_id=source_record_id,
         ),
         "tickers": _tickers(tickers),
+        "ticker_metadata_kind": clean_ticker_metadata_kind,
         "summary": _clean_text(summary) or None,
     }
 
@@ -592,6 +600,8 @@ class OfficialFeedProvider:
                     "publisher": publisher,
                     "status": "ok" if parsed else "empty",
                     "record_count": len(parsed),
+                    "result_limit": parser_limit,
+                    "result_limit_reached": len(parsed) >= parser_limit,
                     "error": None,
                 })
             except Exception as exc:  # isolated per official feed
@@ -620,6 +630,7 @@ class OfficialFeedProvider:
                 "fetched_at": _utc_z(self.now),
                 "feeds": feed_health,
                 "partial_failures": len(failures),
+                "result_limit_reached": any(f.get("result_limit_reached") for f in feed_health),
             },
         )
 
@@ -746,11 +757,20 @@ class FMPNewsProvider:
                 metadata={
                     "fetched_at": _utc_z(self.now),
                     "malformed_record_count": sum(isinstance(row, dict) for row in payload) - len(records),
+                    "result_limit": self.limit,
+                    "result_limit_reached": len(payload) >= self.limit,
                     "fallback_used": fallback_used,
                     "coverage": (
                         "fmp_articles" if fallback_used else "ticker_stock_news"
                     ),
                     "primary_status_code": primary_status_code,
+                    "request_scope_fingerprint": hashlib.sha256(json.dumps({
+                        "symbols": self.tickers, "limit": self.limit,
+                        "coverage": "fmp_articles" if fallback_used else "ticker_stock_news",
+                    }, sort_keys=True).encode()).hexdigest(),
+                    "coverage_contract": fmp_coverage_contract(
+                        "fmp_articles" if fallback_used else "ticker_stock_news"
+                    ),
                 },
             )
         except Exception as exc:
@@ -856,6 +876,7 @@ class AlphaVantageNewsProvider:
                     source_class="api_news_discovery",
                     source_record_id=row.get("url"),
                     tickers=row_tickers,
+                    ticker_metadata_kind="related",
                     summary=row.get("summary"),
                 )
                 if rec:
@@ -868,6 +889,8 @@ class AlphaVantageNewsProvider:
                     "fetched_at": _utc_z(self.now),
                     "items_reported": payload.get("items"),
                     "malformed_record_count": sum(isinstance(row, dict) for row in feed) - len(records),
+                    "result_limit": self.limit,
+                    "result_limit_reached": len(feed) >= self.limit,
                 },
             )
         except Exception as exc:
@@ -996,6 +1019,8 @@ class GDELTNewsProvider:
                     "attempt_count": attempt_count,
                     "transient_retries": transient_retries,
                     "malformed_record_count": sum(isinstance(row, dict) for row in articles) - len(records),
+                    "result_limit": self.limit,
+                    "result_limit_reached": len(articles) >= self.limit,
                 },
             )
         except Exception as exc:
@@ -1056,6 +1081,7 @@ class BatchedGDELTNewsProvider:
 
         records = []
         seen = set()
+        intake_records = []
         batches = []
         total_attempts = 0
         total_retries = 0
@@ -1076,6 +1102,7 @@ class BatchedGDELTNewsProvider:
                 limit=self.limit,
             ).fetch()
             metadata = result.metadata or {}
+            intake_records.extend(result.records)
             total_attempts += int(metadata.get("attempt_count", 0) or 0)
             total_retries += int(metadata.get("transient_retries", 0) or 0)
             total_malformed += int(
@@ -1087,6 +1114,7 @@ class BatchedGDELTNewsProvider:
             batches.append({
                 "index": index,
                 "query_length": len(query),
+                "result_limit_reached": bool(metadata.get("result_limit_reached")),
                 "status": result.status,
                 "record_count": len(result.records),
                 "error": result.error,
@@ -1132,7 +1160,10 @@ class BatchedGDELTNewsProvider:
                 "malformed_record_count": total_malformed,
                 "partial_failures": partial_failures,
                 "batches": batches,
+                "result_limit": self.limit,
+                "result_limit_reached": any(b.get("result_limit_reached") for b in batches),
             },
+            intake_records=intake_records,
         )
 
 
@@ -1234,6 +1265,8 @@ class GoogleNewsProvider:
                 "query": selected_query,
                 "fallback_used": fallback_used,
                 "attempts": attempts,
+                "result_limit": self.limit,
+                "result_limit_reached": any(a.get("record_count", 0) >= self.limit for a in attempts),
             },
         )
 

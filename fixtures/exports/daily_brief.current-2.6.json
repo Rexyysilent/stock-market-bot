@@ -1,0 +1,219 @@
+{
+  "generated_at": "2026-08-17T15:34:26Z",
+  "schema_version": "2.6",
+  "pipeline_version": "2.6.2",
+  "run_context": {
+    "started_at": "2026-08-17T15:32:36Z",
+    "utc_date": "2026-08-17",
+    "market_state": "open",
+    "latest_completed_session": "2026-08-14"
+  },
+  "pipeline_time_seconds": 1.25,
+  "health": {
+    "status": "OK",
+    "warnings": [],
+    "errors": [],
+    "sources": {}
+  },
+  "summary": {
+    "total_headlines": 2,
+    "editorial_focus": {
+      "status": "selected",
+      "ticker": "NXE",
+      "selection_mode": "dynamic",
+      "eligible_candidate_count": 1
+    }
+  },
+  "universe": {
+    "tickers": ["NXE", "ROKU"],
+    "focus_ticker": "NXE",
+    "configured_focus_ticker": null,
+    "focus_selection_mode": "dynamic"
+  },
+  "sections": {
+    "headlines": [
+      {
+        "text": "Federal Reserve holds rates (https://www.federalreserve.gov/example)",
+        "title": "Federal Reserve holds rates",
+        "link": "https://www.federalreserve.gov/example",
+        "canonical_url": "https://www.federalreserve.gov/example",
+        "published": "2026-08-17T14:00:00Z",
+        "as_of": "2026-08-17T14:00:00Z",
+        "observed_at": "2026-08-17T15:32:36Z",
+        "source_time_kind": "published",
+        "relevance": 1,
+        "lane": "macro",
+        "universe_tickers": [],
+        "score_components": {
+          "issuer_relevance": 0,
+          "macro_relevance": 1,
+          "vertical_relevance": 0,
+          "authority": 3,
+          "novelty": 0,
+          "impact": 0
+        },
+        "provider": "Official Feeds",
+        "publisher": "Federal Reserve",
+        "publisher_domain": "federalreserve.gov",
+        "source_class": "official_central_bank",
+        "source_record_id": "fixture:fed",
+        "tickers": [],
+        "summary": null,
+        "duplicate_providers": [],
+        "duplicate_publishers": [],
+        "source": "Official Feeds",
+        "record_id": "0123456789abcdef"
+      },
+      {
+        "text": "NexGen Energy announces strategic financing (https://www.reuters.com/markets/deals/example-nexgen)",
+        "title": "NexGen Energy announces strategic financing",
+        "link": "https://www.reuters.com/markets/deals/example-nexgen",
+        "canonical_url": "https://www.reuters.com/markets/deals/example-nexgen",
+        "published": "2026-08-17T15:00:00Z",
+        "as_of": "2026-08-17T15:00:00Z",
+        "observed_at": "2026-08-17T15:32:36Z",
+        "source_time_kind": "published",
+        "relevance": 3,
+        "lane": "universe",
+        "universe_tickers": ["NXE"],
+        "score_components": {
+          "issuer_relevance": 2,
+          "macro_relevance": 0,
+          "vertical_relevance": 1,
+          "authority": 2,
+          "novelty": 1,
+          "impact": 2
+        },
+        "provider": "GDELT",
+        "publisher": "Reuters",
+        "publisher_domain": "reuters.com",
+        "source_class": "aggregator",
+        "source_record_id": "fixture:nxe",
+        "ticker_metadata_kind": "subject",
+        "tickers": ["NXE"],
+        "summary": "Strategic financing announcement",
+        "duplicate_providers": [],
+        "duplicate_publishers": [],
+        "source": "GDELT",
+        "record_id": "fedcba9876543210"
+      }
+    ],
+    "deep_dive": {
+      "status": "selected",
+      "selection_mode": "dynamic",
+      "ticker": "NXE",
+      "entity_ids": ["ticker:NXE"],
+      "requested_ticker": null,
+      "pin_rejection_reason": null,
+      "reason": "highest_ranked_supported_candidate",
+      "eligible_candidate_count": 1,
+      "score_components": {
+        "impact": 2,
+        "confidence": 2,
+        "novelty": 1,
+        "source_authority": 2,
+        "audience_relevance": 2,
+        "timeliness": 3,
+        "independent_corroboration": 0,
+        "unresolved_contradiction_penalty": 0
+      },
+      "headline": "NexGen Energy announces strategic financing",
+      "what_changed": {
+        "text": "NexGen Energy announces strategic financing",
+        "evidence_ids": ["fixture:nxe"]
+      },
+      "why_it_matters": {
+        "text": "NXE is the highest-ranked mapped issuer under the deterministic editorial materiality rubric; this is not an investment recommendation.",
+        "evidence_ids": ["fixture:nxe"]
+      },
+      "evidence_grade": "single_source_secondary",
+      "market_reaction": null,
+      "next_checkpoint": null,
+      "contradictions_assessed": false,
+      "contradictions": [],
+      "as_of": "2026-08-17T15:00:00Z",
+      "observed_at": "2026-08-17T15:32:36Z",
+      "evidence": [
+        {
+          "evidence_id": "fixture:nxe",
+          "source_record_id": "fixture:nxe",
+          "ticker": "NXE",
+          "title": "NexGen Energy announces strategic financing",
+          "link": "https://www.reuters.com/markets/deals/example-nexgen",
+          "canonical_url": "https://www.reuters.com/markets/deals/example-nexgen",
+          "provider": "GDELT",
+          "publisher": "Reuters",
+          "publisher_domain": "reuters.com",
+          "source_class": "aggregator",
+          "as_of": "2026-08-17T15:00:00Z",
+          "observed_at": "2026-08-17T15:32:36Z",
+          "source_time_kind": "published",
+          "duplicate_providers": [],
+          "duplicate_publishers": [],
+          "impact": 2,
+          "confidence": 2,
+          "novelty": 1,
+          "source_authority": 2,
+          "audience_relevance": 2,
+          "timeliness": 3,
+          "independent_corroboration": 0,
+          "contradiction_count": 0
+        }
+      ],
+      "note": "Dynamic editorial focus selected from fresh mapped headline evidence; numeric records remain in their canonical sections.",
+      "sec_filing_accessions": [],
+      "has_insider_cluster": false,
+      "social_mentions": [],
+      "news_headlines": ["NexGen Energy announces strategic financing"],
+      "twitter_signals": []
+    }
+  },
+  "data_quality": {
+    "headline_contract_version": "2.6-headline-lanes-1",
+    "focus_contract_version": "2.6-editorial-focus-1",
+    "headlines_dropped": [
+      {
+        "text": null,
+        "title": "Outside-universe company announces quarterly dividend",
+        "link": "https://example.com/dropped",
+        "canonical_url": "https://example.com/dropped",
+        "published": "2026-08-17T13:30:00Z",
+        "as_of": "2026-08-17T13:30:00Z",
+        "observed_at": "2026-08-17T15:32:36Z",
+        "source_time_kind": "published",
+        "relevance": 0,
+        "reason": "no_approved_lane",
+        "lane": null,
+        "universe_tickers": [],
+        "score_components": {
+          "issuer_relevance": 0,
+          "macro_relevance": 0,
+          "vertical_relevance": 0,
+          "authority": 0,
+          "novelty": 0,
+          "impact": 0
+        },
+        "provider": "GDELT",
+        "publisher": "Example News",
+        "publisher_domain": "example.com",
+        "source_class": "aggregator",
+        "source_record_id": "fixture:dropped:one",
+        "tickers": [],
+        "summary": "Quarterly dividend announcement",
+        "duplicate_providers": [],
+        "duplicate_publishers": [],
+        "kept_source_record_id": null
+      }
+    ],
+    "headline_pool": {
+      "fetched_count": 3,
+      "fresh_before_relevance": 3,
+      "selected_count": 2,
+      "accounted_candidate_count": 3,
+      "selected_lane_counts": {
+        "macro": 1,
+        "universe": 1
+      }
+    }
+  }
+}

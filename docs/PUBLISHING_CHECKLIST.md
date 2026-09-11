@@ -15,15 +15,22 @@ Use this before publishing a release or sample artifact.
 
 ```powershell
 python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger
-python test_pipeline_hygiene.py
-python test_temporal_integrity.py
-python test_headline_providers.py
-python test_headlines_relevance.py
-python test_headline_export_contract.py
-python test_signal_ledger.py
-python test_sniper_signals.py
-python test_timestamp_policy.py
+python scripts/validate_export_schema.py
+python scripts/run_offline_checks.py
+python test_dashboard_security.py
+pip-audit --strict --require-hashes -r requirements.lock
+python scripts/run_secret_scan.py
 ```
+
+The secret-scan command first verifies that every `.secrets.baseline` finding
+has an explicit `is_secret: false` review decision, then scans the files listed
+by `git ls-files`. A real secret must be removed and rotated, not baselined.
+
+The required CI matrix repeats compile, schema, offline checks, and a separate
+loopback-only dashboard test on Python 3.11 and 3.12. The dashboard test uses an
+ephemeral local listener and synthetic temporary data; it is excluded from the
+network-free runner and inherits any caller-installed network restrictions.
+Live external-source checks remain manual.
 
 Live network checks should be run manually with reviewed credentials. Do not commit their generated output.
 

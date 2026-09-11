@@ -8,6 +8,7 @@ import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from config import EDITORIAL_ONLY_TICKERS
 from ledger.db import connect
 from ledger.ingest import ingest_file
 from ledger.outcomes import mature_outcomes
@@ -125,6 +126,59 @@ with tempfile.TemporaryDirectory() as tmpdir:
     assert before == after, "same brief must be an immutable no-op"
     ingest_file(second, conn)
 
+    # From pipeline 2.6.3 onward, the ledger independently rejects all
+    # editorial-only tickers and arbitrary outsiders from every extractor.
+    blocked = tuple(EDITORIAL_ONLY_TICKERS) + ("OUTSIDE",)
+    strict_path = root / "2026-07-07_150000Z.json"
+    strict_path.write_text(json.dumps({
+        "schema_version": "2.7",
+        "pipeline_version": "2.6.3",
+        "generated_at": "2026-07-07T15:00:00Z",
+        "sections": {
+            "regime": {"regime": "RISK_ON"},
+            "insider_clusters": [
+                {"ticker": ticker, "cluster_direction": "buy", "record_id": f"i-{ticker}"}
+                for ticker in blocked
+            ],
+            "confluence": [
+                {"ticker": ticker, "families": ["social", "options"],
+                 "confluence_score": 2, "record_id": f"c-{ticker}"}
+                for ticker in blocked
+            ],
+            "baseline_alerts": [
+                {"ticker": ticker, "metric": "put_call_vol_ratio",
+                 "signal": "BEARISH_VS_BASELINE", "z_score": 3.0,
+                 "record_id": f"b-{ticker}"}
+                for ticker in blocked
+            ],
+            "options_flow": {
+                ticker: {"option_contract_volume_oi_anomaly": [
+                    {"ticker": ticker, "type": "CALL", "premium": 200000,
+                     "as_of": "2026-07-07T15:00:00Z"}]}
+                for ticker in blocked
+            },
+            "social_alerts": [
+                {"ticker": ticker, "tag": "ATTENTION_BIRTH", "record_id": f"s-{ticker}"}
+                for ticker in blocked
+            ],
+            "social_attention": [
+                {"ticker": ticker, "burst_ratio": 8.0, "mentions": 50,
+                 "universe_member": True, "filter": "all-stocks",
+                 "is_low_volume": False, "record_id": f"a-{ticker}"}
+                for ticker in blocked
+            ],
+            "fda_catalysts": [{"ticker": ticker, "alert": "FDA_CATALYST_NEAR"}
+                              for ticker in blocked],
+            "clinical_catalysts": [{"ticker": ticker, "fragile_alert": "FRAGILE_CATALYST"}
+                                   for ticker in blocked],
+        },
+    }), encoding="utf-8")
+    ingest_file(strict_path, conn)
+    placeholders = ",".join("?" for _ in blocked)
+    assert conn.execute(
+        f"SELECT COUNT(*) AS n FROM signals WHERE ticker IN ({placeholders})", blocked
+    ).fetchone()["n"] == 0
+
     malformed = root / "2026-07-08_140000Z.json"
     malformed_payload = {
         "schema_version": "2.5",
@@ -239,7 +293,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     rebuilt_db = root / "rebuilt.db"
     rebuilt_conn = connect(rebuilt_db)
-    for source in (first, second, malformed):
+    for source in (first, second, strict_path, malformed):
         ingest_file(source, rebuilt_conn)
     rebuilt_conn.close()
     mature_outcomes(

@@ -12,7 +12,7 @@ from openinsider_agent import OpenInsiderAgent
 from timeutil import utc_now_z
 
 from config import (
-    SUBREDDITS_NARRATIVE, ALL_TICKERS,
+    SUBREDDITS_NARRATIVE, SIGNAL_ELIGIBLE_TICKERS,
     CONTRARIAN_SUBREDDITS, CONTRARIAN_EUPHORIA_KEYWORDS, CONTRARIAN_EUPHORIA_THRESHOLD,
     APEWISDOM_ENABLED, APEWISDOM_FILTERS, APEWISDOM_LOW_VOLUME_MENTIONS,
     APEWISDOM_NO_UPVOTE_FILTERS, APEWISDOM_UNIVERSE_PAGES
@@ -30,12 +30,16 @@ except ImportError:
 
 
 class SocialAgent:
-    def __init__(self, now=None):
+    def __init__(self, now=None, openinsider=None):
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.4472.124 Safari/537.36'
         }
 
-        self.openinsider = OpenInsiderAgent(now=now)
+        self.openinsider = (
+            openinsider
+            if openinsider is not None
+            else OpenInsiderAgent(now=now)
+        )
         self._health_lock = Lock()
         self.health = self._empty_health()
         # Initialize PRAW if credentials are available
@@ -159,7 +163,10 @@ class SocialAgent:
         return whispers
 
     # Universe tickers ApeWisdom can never track: futures ("=") and indices ("^")
-    SOCIAL_UNIVERSE = [t for t in ALL_TICKERS if "^" not in t and "=" not in t]
+    SOCIAL_UNIVERSE = tuple(
+        ticker for ticker in SIGNAL_ELIGIBLE_TICKERS
+        if "^" not in ticker and "=" not in ticker
+    )
 
     def _build_social_attention(self):
         """Universe-first social_attention assembly.
@@ -440,7 +447,9 @@ class SocialAgent:
         is_openinsider = 'openinsider' in url
         if is_openinsider:
             logger.info("OpenInsider RSS URL serves HTML; using table scraper directly")
-            return self.openinsider.format_for_whispers(days_back=7, limit=limit)
+            return self.openinsider.format_for_whispers(
+                days_back=7, limit=limit, allow_stale=True
+            )
 
         try:
             # Determine source label based on URL

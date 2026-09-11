@@ -60,6 +60,7 @@ EXPECTED_FIELDS = {
     "source_class",
     "source_record_id",
     "tickers",
+    "ticker_metadata_kind",
     "summary",
 }
 
@@ -282,6 +283,7 @@ assert fmp_fallback.metadata["coverage"] == "fmp_articles"
 assert fmp_fallback.metadata["primary_status_code"] == 402
 assert fmp_fallback.records[0]["published"] == "2026-08-13 11:15:03"
 assert fmp_fallback.records[0]["tickers"] == ["ROKU"]
+assert fmp_fallback.records[0]["ticker_metadata_kind"] == "subject"
 assert fmp_fallback.records[0]["publisher"] == "Financial Modeling Prep"
 assert fmp_fallback.records[0]["summary"] == "Roku quarterly earnings analysis."
 assert all(
@@ -329,6 +331,7 @@ assert av.metadata["malformed_record_count"] == 1
 assert av.records[0]["publisher"] == "Reuters"
 assert av.records[0]["publisher_domain"] == "reuters.com"
 assert av.records[0]["tickers"] == ["AMAT", "VRT"]
+assert av.records[0]["ticker_metadata_kind"] == "related"
 assert av.records[0]["published"] == "2026-08-13T10:45:00Z"
 assert av.records[0]["source_class"] == "api_news_discovery"
 
