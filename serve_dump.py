@@ -16,6 +16,7 @@ import os
 import io
 import json
 import mimetypes
+import ntpath
 import socketserver
 import threading
 import time
@@ -50,7 +51,7 @@ def resolve_dashboard_path(request_target, dashboard_root=None):
         or "\x00" in relative
         or "\\" in relative
         or os.path.isabs(relative)
-        or os.path.splitdrive(relative)[0]
+        or ntpath.splitdrive(relative)[0]
     ):
         return None
 
