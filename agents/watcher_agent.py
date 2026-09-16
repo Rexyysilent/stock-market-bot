@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from timeutil import build_run_context, newest, oldest, to_utc_z, utc_now_z
 from yfinance_util import configure_yfinance_cache
+from session_returns import aligned_return, basket_return, comparison_sessions
 from config import (
     WATCHLIST_STOCKS, WATCHLIST_COMMODITIES, WATCHLIST_URANIUM,
     WATCHLIST_GAUGES, WATCHLIST_VULTURE, WATCHLIST_DEFENSE,
@@ -23,7 +24,7 @@ configure_yfinance_cache(yf)
 
 class WatcherAgent:
     def __init__(self, run_context=None):
-        self.watchlist = WATCHLIST_STOCKS + WATCHLIST_COMMODITIES + WATCHLIST_URANIUM + WATCHLIST_DEFENSE + WATCHLIST_VULTURE
+        self.watchlist = list(dict.fromkeys(WATCHLIST_STOCKS + WATCHLIST_COMMODITIES + WATCHLIST_URANIUM + WATCHLIST_DEFENSE + WATCHLIST_VULTURE))
         self.vulture_list = WATCHLIST_VULTURE
         self.gauges = WATCHLIST_GAUGES
         self.run_context = run_context or build_run_context()
@@ -577,77 +578,40 @@ class WatcherAgent:
     # ═══════════════════════════════════════════════════════════════════
 
     def check_instrument_relative_return_spread(self):
-        """
-        Compare physical commodity proxies vs paper ETF proxies.
-        Reports a threshold crossing without inferring buyer intent or cause.
-        
-        Pairs:
-          - Uranium: SRUUF (Sprott Physical Trust) vs URA (ETF)
-          - Silver:  SI=F (futures near-month) vs SLV (ETF)
-        """
-        results = {"pairs": [], "alerts": []}
-
+        """Compare exact five-session windows; exclude incomplete or stale legs."""
+        results = {"pairs": [], "alerts": [], "excluded_pairs": [], "comparison_calendar": "NYSE"}
+        sessions = comparison_sessions(self.run_context.latest_completed_session, 5)
+        histories = self._comparison_histories(
+            [symbol for pair in INSTRUMENT_RELATIVE_RETURN_PAIRS
+             for symbol in (pair["physical"], pair["paper"])])
         for pair in INSTRUMENT_RELATIVE_RETURN_PAIRS:
-            phys_ticker = pair["physical"]
-            paper_ticker = pair["paper"]
-            commodity = pair["commodity"]
-
-            try:
-                phys = yf.Ticker(phys_ticker)
-                paper = yf.Ticker(paper_ticker)
-
-                phys_hist = self._completed_daily_history(
-                    phys.history(period="10d")
-                )
-                paper_hist = self._completed_daily_history(
-                    paper.history(period="10d")
-                )
-
-                if phys_hist.empty or paper_hist.empty:
-                    continue
-
-                phys_price = phys_hist['Close'].iloc[-1]
-                paper_price = paper_hist['Close'].iloc[-1]
-
-                # Normalize: compute 5-day % change for both
-                if len(phys_hist) >= 2 and len(paper_hist) >= 2:
-                    phys_5d_chg = ((phys_hist['Close'].iloc[-1] - phys_hist['Close'].iloc[0]) / phys_hist['Close'].iloc[0]) * 100
-                    paper_5d_chg = ((paper_hist['Close'].iloc[-1] - paper_hist['Close'].iloc[0]) / paper_hist['Close'].iloc[0]) * 100
-                else:
-                    phys_5d_chg = 0
-                    paper_5d_chg = 0
-
-                # Divergence: physical outperforming paper
-                spread = phys_5d_chg - paper_5d_chg
-
-                entry = {
-                    "commodity": commodity,
-                    "physical_ticker": phys_ticker,
-                    "paper_ticker": paper_ticker,
-                    "physical_price": round(phys_price, 2),
-                    "paper_price": round(paper_price, 2),
-                    "physical_5d_chg": round(phys_5d_chg, 2),
-                    "paper_5d_chg": round(paper_5d_chg, 2),
-                    "spread": round(spread, 2),
-                    "threshold_crossed": spread > INSTRUMENT_RELATIVE_RETURN_THRESHOLD_PCT,
-                    # a spread is only as fresh as its stalest leg
-                    "as_of": oldest(to_utc_z(phys_hist.index[-1]),
-                                    to_utc_z(paper_hist.index[-1])),
-                }
-                results["pairs"].append(entry)
-
-                if entry["threshold_crossed"]:
-                    results["alerts"].append(
-                        f"🚨 INSTRUMENT RELATIVE-RETURN SPREAD — {commodity}: "
-                        f"{phys_ticker} outpacing {paper_ticker} by {spread:+.1f}% over 5d."
-                    )
-
-            except Exception as e:
-                logger.error(f"Instrument relative-return spread failed for {commodity}: {e}")
-
-        results["as_of"] = oldest(*(p["as_of"] for p in results["pairs"])) if results["pairs"] else None
-        logger.info(f"Instrument spreads checked for {len(results['pairs'])} pairs, "
-                    f"{len(results['alerts'])} threshold notes")
+            physical = aligned_return(histories.get(pair["physical"]), sessions)
+            paper = aligned_return(histories.get(pair["paper"]), sessions)
+            if not physical["eligible"] or not paper["eligible"]:
+                results["excluded_pairs"].append({
+                    "physical_ticker": pair["physical"], "paper_ticker": pair["paper"],
+                    "physical_reason": physical["reason"], "paper_reason": paper["reason"],
+                })
+                continue
+            spread = physical["return_pct"] - paper["return_pct"]
+            entry = {
+                "commodity": pair["commodity"], "physical_ticker": pair["physical"],
+                "paper_ticker": pair["paper"], "physical_price": round(physical["end_price"], 2),
+                "paper_price": round(paper["end_price"], 2),
+                "physical_5d_chg": round(physical["return_pct"], 2),
+                "paper_5d_chg": round(paper["return_pct"], 2), "spread": round(spread, 2),
+                "threshold_crossed": spread > INSTRUMENT_RELATIVE_RETURN_THRESHOLD_PCT,
+                "as_of": oldest(physical["as_of"], paper["as_of"]),
+                "start_session": sessions[0], "end_session": sessions[-1],
+                "horizon_sessions": 5, "eligible": True,
+            }
+            results["pairs"].append(entry)
+            if entry["threshold_crossed"]:
+                results["alerts"].append(
+                    f"Instrument return spread: {pair['commodity']}: "
+                    f"{pair['physical']} minus {pair['paper']} = {spread:+.1f} percentage points "
+                    "over five NYSE comparison sessions; no causal interpretation.")
+        results["as_of"] = oldest(*(pair["as_of"] for pair in results["pairs"])) if results["pairs"] else None
         return results
 
     # ═══════════════════════════════════════════════════════════════════
@@ -873,75 +837,58 @@ class WatcherAgent:
             result["error"] = str(e)
         return result
 
+    def _comparison_histories(self, tickers):
+        """Acquire one adjusted history per unique member for both horizons."""
+        histories = {}
+        for ticker in dict.fromkeys(tickers):
+            try:
+                histories[ticker] = self._completed_daily_history(
+                    yf.Ticker(ticker).history(period="3mo", auto_adjust=True))
+            except Exception as exc:
+                logger.warning("Comparison history unavailable for %s: %s", ticker, exc)
+                histories[ticker] = None
+        return histories
+
     def get_sector_rotation(self):
-        """
-        Compare growth vs defensive basket performance.
-        Produces a descriptive risk-regime label from relative basket returns.
-        """
-        result = {"alerts": []}
-        bar_times = []
-
-        def _get_basket_perf(tickers, period_days):
-            """Get average performance for a basket of tickers."""
-            perfs = []
-            for ticker in tickers:
-                try:
-                    stock = yf.Ticker(ticker)
-                    hist = self._completed_daily_history(
-                        stock.history(period=f"{period_days + 10}d")
-                    )
-                    if len(hist) >= period_days:
-                        start_price = hist['Close'].iloc[-period_days]
-                        end_price = hist['Close'].iloc[-1]
-                        pct = ((end_price - start_price) / start_price) * 100
-                        perfs.append(pct)
-                        bar_times.append(to_utc_z(hist.index[-1]))
-                except Exception:
-                    continue
-            return round(sum(perfs) / len(perfs), 2) if perfs else 0
-
-        # 5-day performance
-        growth_5d = _get_basket_perf(GROWTH_BASKET, 5)
-        defensive_5d = _get_basket_perf(DEFENSIVE_BASKET, 5)
-        spread_5d = defensive_5d - growth_5d
-
-        # 20-day performance
-        growth_20d = _get_basket_perf(GROWTH_BASKET, 20)
-        defensive_20d = _get_basket_perf(DEFENSIVE_BASKET, 20)
-        spread_20d = defensive_20d - growth_20d
-
-        result["growth_5d"] = growth_5d
-        result["defensive_5d"] = defensive_5d
-        result["spread_5d"] = spread_5d
-        result["growth_20d"] = growth_20d
-        result["defensive_20d"] = defensive_20d
-        result["spread_20d"] = spread_20d
-        result["as_of"] = oldest(*bar_times) if bar_times else None
-
-        # Determine rotation signal
-        if spread_5d > 3.0:
+        """Descriptive fixed-basket returns with exact, complete date windows."""
+        histories = self._comparison_histories(GROWTH_BASKET + DEFENSIVE_BASKET)
+        result = {"alerts": [], "coverage": {}, "comparison_calendar": "NYSE", "as_of": None}
+        times = []
+        for horizon in (5, 20):
+            sessions = comparison_sessions(self.run_context.latest_completed_session, horizon)
+            growth = basket_return(histories, GROWTH_BASKET, sessions)
+            defensive = basket_return(histories, DEFENSIVE_BASKET, sessions)
+            result["coverage"][str(horizon)] = {"growth": growth, "defensive": defensive}
+            for name, measurement in (("growth", growth), ("defensive", defensive)):
+                value = measurement["return_pct"]
+                result[f"{name}_{horizon}d"] = round(value, 2) if value is not None else None
+            complete = growth["eligible"] and defensive["eligible"]
+            result[f"spread_{horizon}d"] = (round(defensive["return_pct"] - growth["return_pct"], 2)
+                                              if complete else None)
+            if complete:
+                times.extend((growth["as_of"], defensive["as_of"]))
+        result["as_of"] = oldest(*times) if times else None
+        spread = result["spread_5d"]
+        if spread is None:
+            result["signal"] = "UNAVAILABLE"
+            result["alerts"].append("Basket comparison unavailable: complete aligned five-session coverage is required.")
+        elif spread > 3.0:
             result["signal"] = "RISK_OFF"
-            result["alerts"].append(
-                f"🚨 RISK-OFF ROTATION — Defensives beating growth by {spread_5d:+.1f}% (5d)"
-            )
-        elif spread_5d > 1.5:
+        elif spread > 1.5:
             result["signal"] = "CAUTIOUS"
-            result["alerts"].append(
-                f"⚠️ CAUTIOUS — Defensives outperforming growth by {spread_5d:+.1f}% (5d)"
-            )
-        elif spread_5d < -3.0:
+        elif spread < -3.0:
             result["signal"] = "RISK_ON"
-            result["alerts"].append(
-                f"🟢 RISK-ON — Growth leading defensives by {abs(spread_5d):.1f}% (5d)"
-            )
         else:
             result["signal"] = "NEUTRAL"
-
-        # 20-day trend for context
-        if spread_20d > 5.0:
+        if spread is not None and result["signal"] != "NEUTRAL":
             result["alerts"].append(
-                f"📊 20-day trend confirms: defensives +{spread_20d:.1f}% vs growth (sustained risk-off)"
-            )
-
-        logger.info(f"Sector rotation: Growth 5d={growth_5d:+.1f}% Def 5d={defensive_5d:+.1f}% Spread={spread_5d:+.1f}%")
+                f"{result['signal']}: defensive minus growth fixed-basket return "
+                f"{spread:+.2f} percentage points over five completed comparison sessions.")
+        spread_20 = result["spread_20d"]
+        if spread_20 is not None and spread_20 > 5.0:
+            result["alerts"].append(
+                f"Twenty-session context: defensive minus growth fixed-basket return "
+                f"{spread_20:+.2f} percentage points; not independent confirmation.")
+        result["interpretation"] = ("Legacy regime labels describe relative fixed-basket performance, not a forecast. "
+                                    "A spread is in percentage points. Cross-asset closes are not synchronous.")
         return result

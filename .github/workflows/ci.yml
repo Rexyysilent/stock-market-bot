@@ -11,6 +11,7 @@ jobs:
   offline-regressions:
     name: Python ${{ matrix.python-version }} offline checks
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -32,15 +33,27 @@ jobs:
         run: >-
           python -m compileall -q
           export_for_gemini.py openinsider_agent.py signals.py timeutil.py
-          stateutil.py agents ledger scripts
+          stateutil.py marketbot.py universe_profile.py brief_tools.py
+          session_returns.py serve_dump.py agents ledger scripts
       - name: Validate synthetic export schema
         run: python scripts/validate_export_schema.py
       - name: Run deterministic offline regressions
-        run: python scripts/run_offline_checks.py
+        run: python scripts/run_offline_checks.py --report review-results/offline.json
+      - name: Check dashboard JavaScript syntax
+        run: node --check dashboard/app.js
+      - name: Retain deterministic check results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: offline-checks-py${{ matrix.python-version }}
+          path: review-results/offline.json
+          retention-days: 14
+          if-no-files-found: ignore
 
   security:
     name: Dependency and secret scans
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

@@ -26,7 +26,7 @@ def _optional_positive_int_env(name):
 # Release identity. schema_version describes the public JSON contract.
 # Bump pipeline_version when signal, event, or ledger eligibility/populations
 # change; editorial-only headline ranking does not start a new era.
-PIPELINE_VERSION = "2.6.2"
+PIPELINE_VERSION = "2.6.3"
 SCHEMA_VERSION = "2.6"
 BRIEF_ARCHIVE_DIR = os.getenv("BRIEF_ARCHIVE_DIR", os.path.join("archive", "briefs"))
 BRIEF_ARCHIVE_MIRROR_DIR = os.getenv("BRIEF_ARCHIVE_MIRROR_DIR") or None

@@ -64,3 +64,8 @@ groky/
 CURRENTSTATE.md
 PROJECTS.md
 analysis/
+
+# Named profile state and CI evidence are local, never public raw data.
+workspaces/
+review-results/
+profiles/*.local.json

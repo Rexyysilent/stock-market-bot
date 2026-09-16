@@ -2,10 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>MarketBot — Daily Brief Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketBot | Evidence and coverage</title>
     <link rel="stylesheet" href="/dashboard/style.css">
 </head>
 <body>
@@ -19,6 +17,27 @@
             <span class="pipeline-badge" id="pipeline-time">—</span>
         </div>
     </header>
+
+    <section class="quality-shell" aria-label="Data quality and coverage">
+        <div id="quality-status" class="quality-banner" role="status">Loading saved brief...</div>
+        <p id="quality-explanation"></p>
+        <div id="load-status" role="status" aria-live="polite"></div>
+        <button id="refresh-btn" class="copy-btn" type="button">Reload server snapshot</button>
+        <div id="brief-drop" class="local-file-box">
+            <label for="brief-file">Open a saved brief JSON, or drop it here. It stays in your browser.</label>
+            <input id="brief-file" type="file" accept=".json,application/json">
+        </div>
+        <details open>
+            <summary>Coverage and source health</summary>
+            <div id="quality-summary" class="info-card"></div>
+            <div id="quality-issues"></div>
+            <div id="source-health"></div>
+        </details>
+        <details>
+            <summary>Cross-family confluence (not a probability)</summary>
+            <div id="confluence-list" class="alert-list"></div>
+        </details>
+    </section>
 
     <!-- Tab Navigation -->
     <nav id="tab-nav">
@@ -42,12 +61,15 @@
 
     <!-- Content Panels -->
     <main id="content">
+        <p class="record-meta">Saved observations only. No execution, financial advice, or predictive probabilities. Quote units are not FX-converted.</p>
         <!-- PRICES TAB -->
         <section class="panel active" id="panel-prices">
             <div class="section-header">
                 <h2>Asset Prices</h2>
                 <span class="badge" id="ticker-count">0 tickers</span>
             </div>
+            <label for="ticker-filter">Filter market cards by ticker</label>
+            <input id="ticker-filter" type="search" placeholder="For example: AAA" autocomplete="off" maxlength="30">
             <div class="card-grid" id="price-grid"></div>
 
             <div class="section-header mt">
@@ -57,7 +79,7 @@
             <div id="tech-alerts-list" class="alert-list"></div>
 
             <div class="section-header mt">
-                <h2>Sector Rotation</h2>
+                <h2>Fixed-basket comparison</h2>
             </div>
             <div id="sector-rotation" class="info-card"></div>
         </section>

@@ -22,10 +22,10 @@ The neutral scope is a product-design constraint, not legal advice or a represen
 
 A successful export writes:
 
-- `daily_brief.json` — typed schema 2.6 data for scripts, dashboards, and LLM-assisted review
-- `daily_brief.txt` — human-readable rendering of the same run
-- `briefs/YYYY-MM-DD/` — point-in-time snapshots
-- `archive/briefs/` — append-only canonical JSON copies
+- `daily_brief.json` : typed schema 2.6 data for scripts, dashboards, and LLM-assisted review
+- `daily_brief.txt` : human-readable rendering of the same run
+- `briefs/YYYY-MM-DD/` : point-in-time snapshots
+- `archive/briefs/` : append-only canonical JSON copies
 
 An optional independent archive mirror can be configured with `BRIEF_ARCHIVE_MIRROR_DIR`. Generated artifacts, state, logs, databases, and credentials are ignored by Git.
 
@@ -33,7 +33,7 @@ The JSON includes source health, run context, timestamps, coverage gaps, retries
 
 ## Current pipeline
 
-This repository tracks the current v2.6 collection pipeline (`schema_version=2.6`, `pipeline_version=2.6.2`):
+This repository tracks the current v2.6 collection pipeline (`schema_version=2.6`, `pipeline_version=2.6.3`):
 
 - publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill; and explicit universe, macro, and impact-gated discovery lanes
 - watchlist prices and completed-session technical measurements via yfinance
@@ -56,6 +56,18 @@ cluster lookback before they can become cluster evidence. Cached rows are
 explicitly stale and may supply narrative context only; they never enter
 insider clusters or confluence. When live OpenInsider rows cannot produce a
 cluster, SEC EDGAR Form 4 remains the cluster fallback.
+
+## Try the synthetic demo first
+
+```sh
+python marketbot.py demo
+```
+
+Open the loopback address printed by the command. This path needs only Python,
+uses fictional fixture values, and does not contact market-data providers. The
+viewer accepts a saved brief through the file chooser or drag-and-drop; the file
+is read inside the browser, not uploaded. Health, missing measurements, source
+timestamps, and baseline maturity remain visible.
 
 ## Quickstart
 
@@ -86,19 +98,50 @@ Serve the local dashboard:
 python serve_dump.py
 ```
 
+## Optional isolated universe profiles
+
+The existing `config.py` path still works. A new profile starts a separate local
+workspace rather than changing the sample configuration or mixing its history.
+
+```sh
+python marketbot.py plan --universe profiles/us-core.example.json
+python marketbot.py run --universe profiles/us-core.example.json --workspace workspaces/core
+python marketbot.py ledger update --universe profiles/us-core.example.json --workspace workspaces/core
+python serve_dump.py --data-dir workspaces/core
+```
+
+`plan` makes no network requests. The 45-symbol example is an illustrative input,
+not a verified coverage list or a selection recommendation. Profiles are capped
+at 64 active symbols for this pilot; this is not a measured throughput guarantee.
+Live runs still require the locked dependencies and a real `SEC_USER_AGENT`.
+
+Inspect or compare local briefs without loading provider libraries:
+
+```sh
+python marketbot.py inspect workspaces/core/daily_brief.json
+python marketbot.py diff previous.json current.json
+```
+
+Different pipeline/schema/universe identifiers are flagged as non-comparable.
+A disappearing warning is not proof that its source recovered. These commands
+are read-only summaries, not schema or market-validity certificates.
+
+See [the workspace guide](docs/WORKSPACES.md) for migration, immutable profile
+fingerprints, scheduler boundaries, and explicit trusted-LAN viewing.
+
 ## Configuration
 
 `config.py` contains a sample U.S.-market universe, aliases, source lists, and descriptive thresholds. Forks should replace the sample universe with their own neutral configuration. Do not commit private watchlists, sizing, holdings, broker data, or credentials.
 
 Key environment variables:
 
-- `SEC_USER_AGENT` — required SEC EDGAR identification
-- `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` — optional PRAW credentials
-- `FMP_API_KEY` / `ALPHA_VANTAGE_API_KEY` — optional headline providers
-- `HEADLINE_GDELT_ENABLED` / `HEADLINE_GOOGLE_FALLBACK_ENABLED` — headline source controls
-- `BRIEF_ARCHIVE_DIR` — canonical append-only archive
-- `BRIEF_ARCHIVE_MIRROR_DIR` — optional independent mirror; blank disables it
-- Discord variables — optional local bot surface
+- `SEC_USER_AGENT` : required SEC EDGAR identification
+- `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` : optional PRAW credentials
+- `FMP_API_KEY` / `ALPHA_VANTAGE_API_KEY` : optional headline providers
+- `HEADLINE_GDELT_ENABLED` / `HEADLINE_GOOGLE_FALLBACK_ENABLED` : headline source controls
+- `BRIEF_ARCHIVE_DIR` : canonical append-only archive
+- `BRIEF_ARCHIVE_MIRROR_DIR` : optional independent mirror; blank disables it
+- Discord variables : optional local bot surface
 
 ## Timestamp and failure policy
 
@@ -109,6 +152,10 @@ Unexpected stage, archive, or mutable-state failures produce a diagnostic `ERROR
 See [docs/EXPORT_SCHEMA.md](docs/EXPORT_SCHEMA.md) for the contract and [docs/ROADMAP.md](docs/ROADMAP.md) for public development priorities.
 
 ## Scheduler and outcome ledger
+
+The existing Windows scheduler is for the legacy `config.py` path, not the new
+profile launcher. Do not point a legacy ledger command at a profile workspace;
+use `marketbot.py ledger` with the same profile instead.
 
 Windows users can install the UTC-gated current-user task:
 
@@ -131,17 +178,27 @@ python -m ledger import-legacy
 Run the same deterministic, network-free suite used by CI:
 
 ```powershell
-python scripts/run_offline_checks.py
+python scripts/run_offline_checks.py --report review-results/offline.json
 python scripts/validate_export_schema.py
 ```
 
 Syntax check:
 
 ```powershell
-python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger scripts
+python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py marketbot.py universe_profile.py brief_tools.py session_returns.py serve_dump.py agents ledger scripts
+node --check dashboard/app.js
 ```
 
 CI repeats those checks on Python 3.11 and 3.12, installs only from hash-locked dependency files, audits runtime dependencies, and scans tracked files for secrets. `requirements.txt` and `requirements-ci.txt` remain the readable dependency inputs.
+
+## Review and release notes
+
+[The 2.6.3 review](docs/HARDENING_REVIEW.md) maps repaired behavior to tests and
+states the remaining limitations. [The research register](docs/RESEARCH_REGISTER.md)
+links primary sources to concrete implementation decisions. The
+[roadmap](docs/ROADMAP.md) separates release gates from unimplemented proposals.
+The changes improve observability and reproducibility; they do not establish
+predictive performance or certify a public production service.
 
 ## Responsible use
 

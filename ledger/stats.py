@@ -90,6 +90,11 @@ def _cell(rows, seed_key, min_n, bootstrap_samples):
         "n": n,
         "n_rows": n_rows,
         "n_directional": len(signed),
+        "n_entry_sessions": len({row["entry_session"] for row in filled}),
+        "directional_status": "ready" if len(signed) >= min_n else "accumulating",
+        "ci_method": "iid_ticker_entry_session_cluster_bootstrap",
+        "dependence_warning": ("Descriptive interval only: same-session market dependence "
+                               "and overlapping forward windows are not corrected."),
         "n_unpriceable": unpriceable,
         "hit_rate": None,
         "mean_signed_excess": None,
@@ -107,7 +112,7 @@ def _cell(rows, seed_key, min_n, bootstrap_samples):
     if n < min_n:
         return result
 
-    if signed:
+    if len(signed) >= min_n:
         result.update({
             "hit_rate": _round(sum(value > 0 for value in signed) / len(signed)),
             "mean_signed_excess": _round(statistics.fmean(signed)),
@@ -198,6 +203,8 @@ def render_markdown(stats):
                     result = f"n={cell['n']} (accumulating)"
                 else:
                     pieces = []
+                    if cell.get("directional_status") == "accumulating":
+                        pieces.append(f"directional n={cell['n_directional']} (accumulating)")
                     if cell["hit_rate"] is not None:
                         pieces.append(f"hit {cell['hit_rate']:.1%}")
                         pieces.append(f"mean excess {cell['mean_signed_excess']:.2%}")
@@ -217,6 +224,9 @@ def render_markdown(stats):
         "",
         "- Evolving insider clusters can create more than one source record.",
         "- The watchlist baseline has survivorship bias.",
+        "- Directional statistics have their own minimum sample gate.",
+        "- Bootstrap intervals are descriptive IID ticker/session-cluster intervals, not evidence of independent trials or predictive validity.",
+        "- Same-session market dependence and overlapping horizons require a separate blocked, forward-held-out evaluation.",
         "- This measures signals; it is not a strategy backtest and includes no costs, sizing, or fills.",
         "- Option anomalies are directionless until timestamped trade/NBBO classification exists.",
         "",

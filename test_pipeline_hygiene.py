@@ -10,7 +10,7 @@ import export_for_gemini as exporter
 from timeutil import split_fresh_records
 
 
-CURRENT_PIPELINE_VERSION = "2.6.2"
+CURRENT_PIPELINE_VERSION = "2.6.3"
 assert exporter.SCHEMA_VERSION == "2.6"
 assert exporter.PIPELINE_VERSION == CURRENT_PIPELINE_VERSION
 assert ledger.__version__ == CURRENT_PIPELINE_VERSION

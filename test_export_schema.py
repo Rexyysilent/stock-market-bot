@@ -16,7 +16,7 @@ from scripts.validate_export_schema import (
 schema = load_json(DEFAULT_SCHEMA)
 valid = load_json(DEFAULT_FIXTURE)
 assert validation_errors(valid, schema) == []
-assert valid["pipeline_version"] == "2.6.2"
+assert valid["pipeline_version"] == "2.6.3"
 assert (
     valid["data_quality"]["headline_contract_version"]
     == "2.6-headline-lanes-1"
@@ -130,7 +130,7 @@ assert any(
 )
 
 future_pipeline = deepcopy(valid)
-future_pipeline["pipeline_version"] = "2.6.3"
+future_pipeline["pipeline_version"] = "2.6.4"
 errors = validation_errors(future_pipeline, schema)
 assert any(
     error.validator == "enum" and list(error.absolute_path) == ["pipeline_version"]

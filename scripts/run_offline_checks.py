@@ -1,5 +1,8 @@
 """Run the deterministic, network-free regression suite used by CI."""
 
+import argparse
+import json
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -16,6 +19,14 @@ CHECKS = (
     "test_headline_export_contract.py",
     "test_export_schema.py",
     "test_signal_ledger.py",
+    "test_ledger_price_cache.py",
+    "test_ledger_statistics.py",
+    "test_session_returns.py",
+    "test_watcher_comparisons.py",
+    "test_universe_profile.py",
+    "test_brief_tools.py",
+    "test_dashboard_server.py",
+    "test_dashboard_contract.py",
     "test_sniper_signals.py",
     "test_timestamp_policy.py",
     "test_twitter_health.py",
@@ -33,21 +44,42 @@ CHECKS = (
 
 
 def main() -> int:
-    for relative_path in CHECKS:
-        path = ROOT / relative_path
-        if not path.is_file():
-            print(f"missing offline check: {relative_path}", file=sys.stderr)
-            return 2
-        print(f"RUN {relative_path}", flush=True)
-        result = subprocess.run(
-            [sys.executable, str(path)],
-            cwd=ROOT,
-            check=False,
-        )
-        if result.returncode:
-            return result.returncode
-    print(f"ALL {len(CHECKS)} OFFLINE CHECKS PASSED")
-    return 0
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--report", type=Path)
+    args = parser.parse_args()
+    results = []
+    code = 0
+    try:
+        for relative_path in CHECKS:
+            path = ROOT / relative_path
+            if not path.is_file():
+                results.append({"test": relative_path, "status": "missing", "returncode": 2})
+                code = 2
+                break
+            print(f"RUN {relative_path}", flush=True)
+            started = time.monotonic()
+            try:
+                result = subprocess.run([sys.executable, str(path)], cwd=ROOT,
+                                        check=False, timeout=180)
+                code = result.returncode
+                status = "passed" if code == 0 else "failed"
+            except subprocess.TimeoutExpired:
+                code, status = 124, "timeout"
+            results.append({"test": relative_path, "status": status, "returncode": code,
+                            "duration_seconds": round(time.monotonic() - started, 3)})
+            if code:
+                break
+    finally:
+        if args.report:
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(json.dumps({
+                "python": sys.version, "configured_checks": len(CHECKS),
+                "executed_checks": len(results), "returncode": code, "results": results,
+                "scope": "deterministic fixtures and local-loopback server checks; no live-provider certification",
+            }, indent=2) + "\n", encoding="utf-8")
+    if not code:
+        print(f"ALL {len(CHECKS)} OFFLINE CHECKS PASSED")
+    return code
 
 
 if __name__ == "__main__":

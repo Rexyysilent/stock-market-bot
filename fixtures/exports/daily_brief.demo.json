@@ -1,0 +1,164 @@
+{
+  "generated_at": "2026-09-15T22:00:00Z",
+  "schema_version": "2.6",
+  "pipeline_version": "2.6.3",
+  "run_context": {
+    "started_at": "2026-09-15T21:59:59Z",
+    "utc_date": "2026-09-15",
+    "market_state": "closed",
+    "latest_completed_session": "2026-09-15"
+  },
+  "pipeline_time_seconds": 1.25,
+  "health": {
+    "status": "WARN",
+    "warnings": [
+      "SYNTHETIC DEMO. All issuers, prices and events below are fabricated test data.",
+      "BBB price intentionally missing; AAA RSI intentionally missing."
+    ],
+    "errors": [],
+    "sources": {
+      "prices": {
+        "status": "partial",
+        "expected": 2,
+        "numeric_received": 1,
+        "provider": "synthetic-fixture"
+      },
+      "headlines": {
+        "status": "fixture",
+        "selected": 1,
+        "network_requests": 0
+      }
+    }
+  },
+  "summary": {
+    "total_headlines": 1
+  },
+  "sections": {
+    "headlines": [
+      {
+        "text": "Synthetic event only. This is not an actual market announcement.",
+        "title": "Demo event: Example Co publishes a sample filing",
+        "link": "https://example.invalid/demo",
+        "canonical_url": "https://example.invalid/demo",
+        "published": "2026-09-15T19:00:00Z",
+        "as_of": "2026-09-15T19:00:00Z",
+        "observed_at": "2026-09-15T21:59:59Z",
+        "source_time_kind": "published",
+        "relevance": 1,
+        "lane": "universe",
+        "universe_tickers": [
+          "AAA"
+        ],
+        "score_components": {
+          "issuer_relevance": 1,
+          "macro_relevance": 0,
+          "vertical_relevance": 0,
+          "authority": 3,
+          "novelty": 0,
+          "impact": 0
+        },
+        "provider": "synthetic-fixture",
+        "publisher": "Fictional Example Co",
+        "publisher_domain": "example.invalid",
+        "source_class": "synthetic",
+        "source_record_id": "fixture:demo:one",
+        "tickers": [
+          "AAA"
+        ],
+        "summary": null,
+        "duplicate_providers": [],
+        "duplicate_publishers": [],
+        "source": "synthetic-fixture",
+        "record_id": "0000000000000001"
+      }
+    ],
+    "prices": [
+      {
+        "ticker": "AAA",
+        "price": 42.5,
+        "change_pct": 2.41,
+        "as_of": "2026-09-15T13:30:00Z",
+        "observed_at": "2026-09-15T21:59:59Z",
+        "source_session": "2026-09-15",
+        "session_complete": true,
+        "source": "synthetic-fixture"
+      },
+      {
+        "ticker": "BBB",
+        "price": null,
+        "change_pct": null,
+        "as_of": null,
+        "observed_at": "2026-09-15T21:59:59Z",
+        "source_session": null,
+        "session_complete": null,
+        "source": "synthetic-fixture"
+      }
+    ],
+    "technicals": [
+      {
+        "ticker": "AAA",
+        "rsi": null,
+        "trend": "Unavailable",
+        "volume_ratio_baseline_n": 4,
+        "volume_ratio_baseline_immature": true,
+        "alerts": [],
+        "error": "Synthetic missing RSI example"
+      },
+      {
+        "ticker": "BBB",
+        "rsi": 0,
+        "trend": "Synthetic zero edge case",
+        "volume_ratio_baseline_n": 20,
+        "volume_ratio_baseline_immature": false,
+        "alerts": []
+      }
+    ],
+    "options_flow": {},
+    "confluence": [],
+    "sector_rotation": {
+      "signal": "UNAVAILABLE",
+      "growth_5d": null,
+      "defensive_5d": null,
+      "spread_5d": null,
+      "growth_20d": null,
+      "defensive_20d": null,
+      "spread_20d": null,
+      "alerts": [],
+      "interpretation": "Synthetic incomplete basket. Missing coverage must not appear NEUTRAL."
+    },
+    "insider_clusters": [
+      {
+        "ticker": "AAA",
+        "cluster_direction": "buy",
+        "insider_count": 2,
+        "filing_count": 3,
+        "period_days": 30,
+        "source": "synthetic-fixture",
+        "as_of": "2026-09-15T19:00:00Z"
+      }
+    ]
+  },
+  "data_quality": {
+    "headline_contract_version": "2.6-headline-lanes-1",
+    "headlines_dropped": [],
+    "headline_pool": {
+      "fetched_count": 1,
+      "fresh_before_relevance": 1,
+      "selected_count": 1,
+      "accounted_candidate_count": 1,
+      "selected_lane_counts": {
+        "universe": 1
+      }
+    }
+  },
+  "demo": true,
+  "universe": {
+    "name": "synthetic-demo",
+    "version": "demo",
+    "tickers": [
+      "AAA",
+      "BBB"
+    ],
+    "focus_ticker": "AAA"
+  }
+}

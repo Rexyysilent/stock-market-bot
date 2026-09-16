@@ -1,3 +1,4 @@
+from session_returns import format_percent
 import asyncio
 import discord
 from discord.ext import commands
@@ -562,23 +563,23 @@ async def dip_scanner(ctx):
         color=0x2196f3
     )
     embed_rot.add_field(
-        name="Growth Basket (5d)",
-        value=f"{rotation.get('growth_5d', 0):+.1f}%",
+        name="Growth Basket (5 sessions)",
+        value=f"{format_percent(rotation.get('growth_5d'))}",
         inline=True
     )
     embed_rot.add_field(
-        name="Defensive Basket (5d)",
-        value=f"{rotation.get('defensive_5d', 0):+.1f}%",
+        name="Defensive Basket (5 sessions)",
+        value=f"{format_percent(rotation.get('defensive_5d'))}",
         inline=True
     )
     embed_rot.add_field(
         name="Spread (Def-Growth)",
-        value=f"{rotation.get('spread_5d', 0):+.1f}%",
+        value=f"{format_percent(rotation.get('spread_5d')).replace('%', ' percentage points')}",
         inline=True
     )
     embed_rot.add_field(
-        name="20-day Trend",
-        value=f"Growth: {rotation.get('growth_20d', 0):+.1f}% | Def: {rotation.get('defensive_20d', 0):+.1f}% | Spread: {rotation.get('spread_20d', 0):+.1f}%",
+        name="20-session Context",
+        value=f"Growth: {format_percent(rotation.get('growth_20d'))} | Def: {format_percent(rotation.get('defensive_20d'))} | Spread: {format_percent(rotation.get('spread_20d')).replace('%', ' percentage points')}",
         inline=False
     )
     if rotation.get('alerts'):

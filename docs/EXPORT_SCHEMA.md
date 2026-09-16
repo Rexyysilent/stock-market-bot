@@ -9,7 +9,7 @@ Top-level fields:
 
 - `generated_at` - ISO timestamp for the export
 - `schema_version` - public JSON contract (`2.6`)
-- `pipeline_version` - upstream logic era (`2.6.2`); ledger statistics never pool eras
+- `pipeline_version` - upstream logic era (`2.6.3`); ledger statistics never pool eras
 - `run_context` - immutable UTC/NYSE clock shared by all stages, including
   market state and the latest completed/settled session
 - `pipeline_time_seconds` - total runtime
@@ -76,7 +76,7 @@ reasons include `connection_refused`, `connection_error`, `timeout`,
 The single acquisition record is exported under `health.sources.openinsider`.
 Its transport/run fields include `failure_reason`, `attempts`, `retries`,
 `retry_delays_seconds`, `live`, `run_origin`, and `scope`. `undated_rows`
-counts missing source dates without deleting those canonical rows. In pipeline
+counts missing source dates without deleting those canonical rows. Since pipeline
 2.6.2, `future_rows_dropped` and `out_of_window_rows_dropped` remain zero:
 the acquisition deliberately preserves dated rows so the SEC consumer can
 apply and audit cluster eligibility in one place. They are reserved
@@ -294,8 +294,9 @@ Generated exports are ignored by git because they are time-sensitive and may con
   provider and publisher for stale, duplicate, and cap-excluded rows.
 - These are narrative-context and additive-provenance changes. Schema remains
   `2.6`. The headline work itself did not require an era change; the current
-  pipeline is `2.6.2` because the later OpenInsider cluster-constituent
-  eligibility change affects confluence and ledger populations.
+  OpenInsider change introduced pipeline `2.6.2` because cluster-constituent
+  eligibility affects confluence and ledger populations. Pipeline `2.6.3`
+  separately changes session-return definitions, as described below.
 
 
 ## Headline sub-contract compatibility
@@ -306,7 +307,7 @@ schema uses that additive discriminator to enforce the current contract without
 retroactively invalidating stored schema-2.6 artifacts. For an unmarked brief:
 
 - stored `pipeline_version` 2.6.0 and 2.6.1 artifacts remain valid; the schema
-  also recognizes 2.6.2, while newly emitted 2.6.2 briefs always carry the
+  also recognizes 2.6.2 and 2.6.3, while newly emitted briefs carry the
   headline contract marker;
 - an early `2.6.0` brief may omit `data_quality.headline_pool`, and an early
   pool requires only `fetched_count` and `fresh_before_relevance`;
@@ -316,8 +317,8 @@ retroactively invalidating stored schema-2.6 artifacts. For an unmarked brief:
   while any declared fields still receive their normal type and integrity
   validation. The accounting pair is likewise validated as a group when used.
 
-For a marked brief, `pipeline_version` may be `2.6.1` or `2.6.2`; this preserves
-stored marked 2.6.1 output while admitting the new pipeline era. The pool and
+For a marked brief, `pipeline_version` may be `2.6.1`, `2.6.2`, or `2.6.3`; this
+preserves stored marked output while admitting the current pipeline era. The pool and
 all selected-count, lane-histogram, and candidate-accounting fields are
 required. Every selected row must contain the complete normalized shape emitted
 by `build_headline_export_records`: canonical URL, nullable publication and
@@ -374,3 +375,31 @@ satisfy the marked contract.
   cached, undated, future-dated, and out-of-window cluster constituents; that
   changes possible confluence and ledger membership and must not be pooled with
   2.6.1 statistics.
+
+
+## Pipeline 2.6.3 additive contracts
+
+The JSON schema remains 2.6. Pipeline 2.6.3 is a separate measurement era because
+session-return definitions changed. Do not pool its outcomes with 2.6.2.
+
+`sector_rotation` now requires the exact latest completed NYSE comparison date
+and all intervening bars for each configured member. Five sessions means six
+closes; twenty sessions means twenty-one closes. A fixed basket is not
+renormalized around missing members. Missing coverage produces null returns and
+`signal: "UNAVAILABLE"`, with per-horizon `coverage` and exclusion reasons.
+Spreads are differences in percentage returns, measured in percentage points.
+The comparison is not synchronized cross-asset pricing or a native futures
+calendar. Empty configured baskets are unavailable, not a zero return.
+
+`instrument_relative_return_spread` uses matching five-session endpoints for both
+legs. Eligible pair records include start/end dates and horizon. Missing legs
+move to `excluded_pairs` instead of becoming zero or a differently dated return.
+
+A profile-launched brief encodes the complete validated profile fingerprint in
+`universe.name`. The corresponding immutable configuration is stored separately
+as `workspace/universe.json`. The old default-config path retains its existing
+universe identifier. Changing a profile requires a new workspace.
+
+The synthetic viewer fixture has `demo: true`; this is presentation context,
+not a claim that any provider produced its values. The viewer and inspect/diff
+commands do not rewrite saved briefs or certify the underlying observations.
