@@ -9,7 +9,10 @@ Use this before publishing a release or sample artifact.
 - Confirm `.env.example` contains placeholders only and no machine-specific archive path.
 - Review the diff for private watchlists, holdings, sizing, broker data, account identifiers, and local absolute paths.
 - Confirm user-facing text describes measurements and source evidence, not buy/sell/hold instructions, return promises, or personalized recommendations.
+- Confirm the release does not advertise paid or free signal tiers, target prices, security rankings, position sizing, execution access, guaranteed outcomes, or regulatory approval.
+- Confirm default operation and offline verification do not require a commercial market-data subscription; document optional provider adapters honestly.
 - Confirm the README retains the non-advisory/no-order-placement scope and the MIT license reference.
+- Confirm regulatory wording is presented as a scope limitation, not a claim of registration, exemption, or compliance.
 
 ## Verification
 

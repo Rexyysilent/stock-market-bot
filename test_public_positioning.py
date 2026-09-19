@@ -29,6 +29,7 @@ runtime = "\n".join(
     for path in (
         "agents/analyst_agent.py",
         "agents/research_agent.py",
+        "agents/watcher_agent.py",
         "bot.py",
         "signals.py",
     )
@@ -36,6 +37,7 @@ runtime = "\n".join(
 for retired_authored_phrase in (
     "THE VERDICT",
     "structural alpha",
+    "dip signal",
     "potential reversal",
     "Sniper-layer signal derivations",
     "CEO.CA / URANIUM INTELLIGENCE",
@@ -48,5 +50,6 @@ assert "Legacy public keys containing ``signal`` or ``alert``" in runtime
 bot = read("bot.py")
 assert "format_percent(rotation.get('growth_5d'))" in bot
 assert "format_percent(rotation.get('spread_5d')).replace('%', ' percentage points')" in bot
+assert "PAPER_PORTFOLIO" not in read("config.py")
 
 print("Public neutral-research runtime wording checks passed")

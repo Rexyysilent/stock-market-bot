@@ -42,8 +42,16 @@ jobs:
       - name: Check dashboard JavaScript syntax
         run: node --check dashboard/app.js
       - name: Check dashboard transport on loopback with synthetic data
-        run: python test_dashboard_security.py
+        run: python -m unittest -v test_dashboard_server test_dashboard_security
         timeout-minutes: 2
+      - name: Retain offline check receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: offline-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: review-results/offline.json
+          if-no-files-found: warn
+          retention-days: 14
 
   security:
     name: Dependency and secret scans

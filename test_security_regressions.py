@@ -50,6 +50,8 @@ with tempfile.TemporaryDirectory(prefix="dashboard-path-test-") as temp_dir:
         "/dashboard/..%2fsecret.txt",
         "/dashboard/..\\secret.txt",
         "/dashboard/C:/Windows/win.ini",
+        "/dashboard/c:/Windows/win.ini",
+        "/dashboard/C%3A/Windows/win.ini",
         "/dashboard//Windows/win.ini",
     ):
         assert resolve_dashboard_path(attack_path, dashboard_root) is None, attack_path
