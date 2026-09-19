@@ -12,6 +12,18 @@ from diagnostics import diagnose
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_runtime_install_does_not_require_optional_validation_tools(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("diagnostics.importlib.util.find_spec",
+                       side_effect=lambda name: None if name == "jsonschema" else object()):
+                result = diagnose(Path(directory))
+            checks = {item["check"]: item for item in result["checks"]}
+            self.assertEqual(result["missing_dependencies"], [])
+            self.assertEqual(checks["provider_dependencies"]["status"], "ok")
+            self.assertEqual(checks["schema_validation_tool"]["status"], "optional_missing")
+            self.assertIn("requirements-ci.lock", checks["schema_validation_tool"]["next_action"])
+            self.assertEqual(list(Path(directory).iterdir()), [])
+
     def test_secrets_and_source_errors_are_not_printed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

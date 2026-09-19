@@ -20,9 +20,13 @@ def diagnose(root, workspace=None, profile=None):
 
     supported = sys.version_info[:2] in ((3, 11), (3, 12))
     add("python", "ok" if supported else "warning", "Use Python 3.11 or 3.12 for the supported collection environment.")
-    required = ("dotenv", "requests", "pandas", "numpy", "yfinance", "jsonschema", "pandas_market_calendars")
+    required = ("dotenv", "requests", "pandas", "numpy", "yfinance", "pandas_market_calendars")
     missing = [name for name in required if importlib.util.find_spec(name) is None]
     add("provider_dependencies", "missing" if missing else "ok", "Install requirements.lock with --require-hashes." if missing else "Collection dependencies are installed; availability was not tested.")
+    validation_missing = importlib.util.find_spec("jsonschema") is None
+    add("schema_validation_tool", "optional_missing" if validation_missing else "ok",
+        "Optional export validation needs requirements-ci.lock installed with --require-hashes; collection does not require it."
+        if validation_missing else "Schema validation tooling is installed; no export was validated by doctor.")
 
     values = dict(os.environ)
     env_path = root / ".env"
