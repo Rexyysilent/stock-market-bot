@@ -1,3 +1,3 @@
-"""Append-only outcome ledger for versioned deterministic classifications."""
+"""Append-only, lookahead-free signal measurement ledger."""
 
-__version__ = "2.6.2"
+__version__ = "2.6.4"

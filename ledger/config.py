@@ -1,7 +1,10 @@
 """Central configuration for the Signal Ledger."""
 from pathlib import Path
 
-from config import ALL_TICKERS, BRIEF_ARCHIVE_DIR, ETF_TICKERS
+from config import (
+    BRIEF_ARCHIVE_DIR, ETF_TICKERS,
+    SIGNAL_ELIGIBLE_TICKERS, SIGNAL_ELIGIBLE_TICKER_SET,
+)
 
 HORIZONS = (1, 5, 20)
 BENCHMARK = "SPY"
@@ -18,5 +21,6 @@ ARCHIVE_DIR = Path(BRIEF_ARCHIVE_DIR)
 DB_PATH = Path("ledger") / "ledger.db"
 STATS_JSON_PATH = Path("ledger") / "stats.json"
 STATS_MD_PATH = Path("ledger") / "stats.md"
-UNIVERSE_TICKERS = tuple(ALL_TICKERS)
+UNIVERSE_TICKERS = tuple(SIGNAL_ELIGIBLE_TICKERS)
+UNIVERSE_TICKER_SET = SIGNAL_ELIGIBLE_TICKER_SET
 FUND_TICKERS = frozenset(ETF_TICKERS)

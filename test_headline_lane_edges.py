@@ -325,6 +325,61 @@ assert NewsAgent._matched_universe_tickers(
     {"title": "Volatility update", "tickers": ["VIX"]}
 ) == ["^VIX"]
 
+# Alpha Vantage's broad financial_markets ticker_sentiment values are related
+# entities, not a claim that every tagged company is the headline's subject.
+# The live GM row must therefore not inherit TSLA universe identity from a peer
+# tag, even though the tags remain available as normalized provenance.
+live_gm = {
+    "title": "Q4 EPS Estimates for General Motors Lifted by Zacks Research",
+    "tickers": ["GM", "F", "TSLA"],
+    "ticker_metadata_kind": "related",
+}
+assert NewsAgent._matched_universe_tickers(live_gm) == []
+live_gm_score = NewsAgent._score_components(live_gm)
+assert live_gm_score["issuer_relevance"] == 0
+assert NewsAgent._assign_lane(live_gm, live_gm_score) is None
+
+high_impact_gm = {
+    **live_gm,
+    "title": "General Motors raises guidance after quarterly results",
+}
+high_impact_gm_score = NewsAgent._score_components(high_impact_gm)
+assert high_impact_gm_score["impact"] >= 1
+assert high_impact_gm_score["issuer_relevance"] == 0
+assert NewsAgent._assign_lane(
+    high_impact_gm, high_impact_gm_score
+) is None
+
+# Related tags cannot create identity, but strict title/entity mapping still
+# recognizes a genuine Tesla or Shopify subject.
+related_tesla = {
+    **live_gm,
+    "title": "Tesla raises guidance after quarterly results",
+}
+assert NewsAgent._matched_universe_tickers(related_tesla) == ["TSLA"]
+assert NewsAgent._assign_lane(related_tesla) == "universe"
+assert NewsAgent._matched_universe_tickers({
+    **live_gm,
+    "title": "Shopify shares rise after earnings",
+}) == ["SHOP"]
+
+# Missing metadata preserves the legacy subject-tag contract. Unknown values
+# fail closed for provider-tag identity while title mapping remains available.
+assert NewsAgent._matched_universe_tickers({
+    "title": "Quarterly issuer update",
+    "tickers": ["TSLA"],
+}) == ["TSLA"]
+assert NewsAgent._matched_universe_tickers({
+    "title": "Quarterly issuer update",
+    "tickers": ["TSLA"],
+    "ticker_metadata_kind": "unexpected",
+}) == []
+assert NewsAgent._matched_universe_tickers({
+    "title": "Tesla raises guidance",
+    "tickers": ["GM"],
+    "ticker_metadata_kind": "unexpected",
+}) == ["TSLA"]
+
 for title in (
     "US MINT UNVEILS NEW COIN DESIGNS",
     "SMALL BUSINESSES URGE CONSUMERS TO SHOP LOCAL",
@@ -372,8 +427,8 @@ def story_row(
     }
 
 
-# An authoritative representative must inherit universe mappings and the
-# strongest component evidence from provider duplicates.
+# An authoritative representative may retain duplicate provenance, but lower-
+# trust provider copies must not alter its classification fields.
 duplicate_rows = NewsAgent._select_relevant(
     [
         story_row(
@@ -468,14 +523,43 @@ assert [row["source_record_id"] for row in transitive_dropped] == [
     row["source_record_id"] for row in reverse_dropped
 ]
 
-assert merged["lane"] == "universe"
-assert merged["universe_tickers"] == ["AMAT"]
-assert merged["score_components"]["issuer_relevance"] == 2
+assert merged["lane"] == "discovery"
+assert merged["universe_tickers"] == []
+assert merged["score_components"]["issuer_relevance"] == 0
 assert merged["score_components"]["authority"] == 3
 assert merged["score_components"]["impact"] == 3
 assert merged["duplicate_providers"] == ["Market API", "Official Feeds"]
 assert len(duplicate_drops) == 1
 assert duplicate_drops[0]["drop_reason"] == "duplicate"
+
+# Same-trust copies can still enrich the chosen representative. Google News is
+# deliberately deprioritized as the representative, so this proves that its
+# ticker survives only because both records have aggregator trust.
+same_trust_input = [
+    story_row(
+        source_record_id="market-copy",
+        provider="Market API",
+        publisher="Market Wire",
+        source_class="aggregator",
+        tickers=[],
+    ),
+    story_row(
+        source_record_id="google-copy",
+        provider="Google News",
+        publisher="Indexed Publisher",
+        source_class="aggregator",
+        tickers=["AMAT"],
+    ),
+]
+for row in same_trust_input:
+    row["title"] = "Semiconductor project wins financing approval"
+same_trust_rows = NewsAgent._select_relevant(same_trust_input, top_n=None)
+same_trust_deduped, _ = NewsAgent._deduplicate(same_trust_rows)
+assert len(same_trust_deduped) == 1
+same_trust_merged = same_trust_deduped[0]
+assert same_trust_merged["source_record_id"] == "market-copy"
+assert same_trust_merged["lane"] == "universe"
+assert same_trust_merged["universe_tickers"] == ["AMAT"]
 
 
 def card(index, provider, lane):
@@ -712,3 +796,4 @@ assert {
 }
 
 print("Headline lane edge, mapping, dedupe, and provider diversity checks passed")
+

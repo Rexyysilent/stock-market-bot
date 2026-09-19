@@ -1,3 +1,4 @@
+from session_returns import format_percent
 import asyncio
 import discord
 from discord.ext import commands
@@ -328,8 +329,7 @@ async def full_debate(ctx, ticker: str):
     )
     await ctx.send(embed=embed_bear)
 
-    # Neutral evidence-balance embed. The internal result key remains
-    # `verdict` for backward compatibility with the local agent API.
+    # Neutral evidence balance; the `verdict` key remains for compatibility.
     embed_verdict = discord.Embed(
         title=f"⚖️ EVIDENCE BALANCE — {ticker}",
         description=result['verdict'][:4000],
@@ -563,22 +563,24 @@ async def dip_scanner(ctx):
     )
     embed_rot.add_field(
         name="Growth Basket (5d)",
-        value=f"{rotation.get('growth_5d', 0):+.1f}%",
+        value=format_percent(rotation.get('growth_5d')),
         inline=True
     )
     embed_rot.add_field(
         name="Defensive Basket (5d)",
-        value=f"{rotation.get('defensive_5d', 0):+.1f}%",
+        value=format_percent(rotation.get('defensive_5d')),
         inline=True
     )
     embed_rot.add_field(
         name="Spread (Def-Growth)",
-        value=f"{rotation.get('spread_5d', 0):+.1f}%",
+        value=format_percent(rotation.get('spread_5d')).replace('%', ' percentage points'),
         inline=True
     )
     embed_rot.add_field(
         name="20-day Trend",
-        value=f"Growth: {rotation.get('growth_20d', 0):+.1f}% | Def: {rotation.get('defensive_20d', 0):+.1f}% | Spread: {rotation.get('spread_20d', 0):+.1f}%",
+        value=(f"Growth: {format_percent(rotation.get('growth_20d'))} | "
+               f"Def: {format_percent(rotation.get('defensive_20d'))} | "
+               f"Spread: {format_percent(rotation.get('spread_20d')).replace('%', ' percentage points')}"),
         inline=False
     )
     if rotation.get('alerts'):

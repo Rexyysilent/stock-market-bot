@@ -2,6 +2,12 @@
 venv/
 .venv/
 .lock-venv/
+.venv311/
+workspaces/
+profiles/*.local.json
+review-results/
+.playwright-cli/
+output/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -64,3 +70,4 @@ groky/
 CURRENTSTATE.md
 PROJECTS.md
 analysis/
+Roadmap/

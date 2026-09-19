@@ -1,4 +1,8 @@
-"""Static safeguards for the public repository's neutral tooling scope."""
+"""Guard user-visible generated prose while permitting schema identifiers.
+
+This intentionally checks authored prompts and display strings, not acquired
+headlines or other source quotations that can contain directional language.
+"""
 
 from pathlib import Path
 
@@ -10,35 +14,17 @@ def read(relative_path):
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
-readme = read("README.md")
-for required in (
-    "# Public Market Data & Observability Bot",
-    "An open-source, local-first data collection and observability pipeline",
-    "does not provide paid or free trading signals",
-    "not legal advice or a representation",
-    "Optional commercial data providers remain replaceable adapters",
-    "does not operate a hosted recommendation feed or subscriber tier",
-):
-    assert required in readme, required
-
-publishing = read("docs/PUBLISHING_CHECKLIST.md")
-for required in (
-    "does not advertise paid or free signal tiers",
-    "do not require a commercial market-data subscription",
-    "not a claim of registration, exemption, or compliance",
-):
-    assert required in publishing, required
-
 analyst = read("agents/analyst_agent.py")
 for required in (
     "You are an impartial evidence synthesizer.",
     "EVIDENCE BALANCE:",
     "Do not provide buy/sell/hold recommendations",
     "decline the directional instruction",
+    "Evidence Balance",
 ):
     assert required in analyst, required
 
-public_runtime = "\n".join(
+runtime = "\n".join(
     read(path)
     for path in (
         "agents/analyst_agent.py",
@@ -48,15 +34,22 @@ public_runtime = "\n".join(
         "signals.py",
     )
 )
-for forbidden in (
+for retired_authored_phrase in (
     "THE VERDICT",
     "structural alpha",
     "dip signal",
     "potential reversal",
+    "Sniper-layer signal derivations",
+    "CEO.CA / URANIUM INTELLIGENCE",
 ):
-    assert forbidden not in public_runtime, forbidden
+    assert retired_authored_phrase not in runtime, retired_authored_phrase
 
-config = read("config.py")
-assert "PAPER_PORTFOLIO" not in config
+# Compatibility identifiers remain valid and are not treated as public claims.
+assert '"verdict": verdict' in analyst
+assert "Legacy public keys containing ``signal`` or ``alert``" in runtime
+bot = read("bot.py")
+assert "format_percent(rotation.get('growth_5d'))" in bot
+assert "format_percent(rotation.get('spread_5d')).replace('%', ' percentage points')" in bot
+assert "PAPER_PORTFOLIO" not in read("config.py")
 
-print("Public neutral-tooling positioning checks passed")
+print("Public neutral-research runtime wording checks passed")

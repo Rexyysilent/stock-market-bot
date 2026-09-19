@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from html import unescape
 import logging
+import math
 
 from bs4 import BeautifulSoup
 
@@ -328,11 +329,19 @@ class ResearchAgent:
     # ═══════════════════════════════════════════════════════════════════
 
     # Regex patterns for actual geological data (not promotional fluff)
+    # Bound untrusted source material before applying the shared expression.
+    # Rejecting (rather than truncating) prevents a suffix from being
+    # reinterpreted as a complete numeric token at the boundary.
+    MAX_GRADE_SOURCE_CHARS = 100_000
+    # Only standalone unsigned ASCII decimal tokens are supported. Do not
+    # interpret a suffix of a signed, grouped, exponent, or Unicode token.
+    # Unit expressions supply the suffix boundary, including compact "6m @".
+    _GRADE_NUMBER = r'(?<![\w.,+\-\u2212\u2010-\u2015])((?>[0-9]+(?:\.[0-9]*)?))(?![0-9.,])'
     GRADE_PATTERN = re.compile(
-        r'(\d+\.?\d*)\s*%\s*U3O8'             # Uranium grade: "1.5% U3O8"
-        r'|(\d+\.?\d*)\s*g/t\s*(?:Au|Ag)'     # Gold/Silver grade: "10.2 g/t Au"
-        r'|(\d+\.?\d*)\s*m\s*@'               # Intercept length: "5.4 m @"
-        r'|(\d+\.?\d*)\s*(?:metres?|meters?)\s*(?:of|@|grading)'  # "12 metres of"
+        _GRADE_NUMBER + r'\s*%\s*U3O8'  # "1.5% U3O8"
+        + r'|' + _GRADE_NUMBER + r'\s*g/t\s*(?:Au|Ag)'
+        + r'|' + _GRADE_NUMBER + r'\s*m\s*@'
+        + r'|' + _GRADE_NUMBER + r'\s*(?:metres?|meters?)\s*(?:of|@|grading)'
     , re.IGNORECASE)
 
     # A direct channel post can be authentic CEO.ca data while still being
@@ -362,23 +371,26 @@ class ResearchAgent:
         Extract geological grade values from text using regex.
         Returns dict with extracted values or None if no match.
         """
-        if not text:
+        if not text or not isinstance(text, str):
             return None
-
-        matches = self.GRADE_PATTERN.findall(text)
-        if not matches:
+        if len(text) > self.MAX_GRADE_SOURCE_CHARS:
             return None
 
         grades = {"uranium_pct": [], "gold_gpt": [], "intercept_m": []}
-        for m in matches:
-            if m[0]:  # U3O8 %
-                grades["uranium_pct"].append(float(m[0]))
-            if m[1]:  # g/t Au/Ag
-                grades["gold_gpt"].append(float(m[1]))
-            if m[2]:  # m @ intercept
-                grades["intercept_m"].append(float(m[2]))
-            if m[3]:  # metres of/grading
-                grades["intercept_m"].append(float(m[3]))
+        fields = ("uranium_pct", "gold_gpt", "intercept_m", "intercept_m")
+        for match in self.GRADE_PATTERN.finditer(text):
+            preceding = match.start() - 1
+            while preceding >= 0 and text[preceding].isspace():
+                preceding -= 1
+            if preceding >= 0 and text[preceding] in "+-\u2212\u2010\u2011\u2012\u2013\u2014\u2015":
+                continue
+            for field, token in zip(fields, match.groups()):
+                if token:
+                    value = float(token)
+                    # Source text is unverified, but every emitted measurement
+                    # must fit a finite, nonnegative JSON number.
+                    if math.isfinite(value) and value >= 0:
+                        grades[field].append(value)
 
         return grades if any(grades.values()) else None
 

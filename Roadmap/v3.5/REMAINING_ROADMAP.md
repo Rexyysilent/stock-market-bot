@@ -1,5 +1,10 @@
 # v3.5 Remaining Roadmap Reminder
 
+> Historical checkpoint from August 18, 2026. Its unchecked boxes describe the
+> state at that date, not the integrated release. Current implementation and
+> remaining-boundary mappings are in
+> [`docs/RELEASE_NOTES.md`](../../docs/RELEASE_NOTES.md).
+
 Last updated: 2026-08-18
 
 ## Current checkpoint

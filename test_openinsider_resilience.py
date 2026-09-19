@@ -205,6 +205,7 @@ def test_retry_cache_and_stale_separation(temp_dir):
         cache_path,
         failed_session,
         sleep=sleeps.append,
+        allow_insecure_http_fallback=False,
     )
 
     stale_rows = agent.get_run_trades(
@@ -256,6 +257,72 @@ def test_retry_cache_and_stale_separation(temp_dir):
     assert len(failed_session.calls) == 4
 
 
+def test_connection_refusal_uses_narrative_only_http(temp_dir):
+    OpenInsiderAgent._reset_source_request_gate_for_tests()
+    cache_path = temp_dir / "http-narrative-only.json"
+    sleeps = []
+    failure = requests.exceptions.ConnectionError(
+        "[WinError 10061] target machine actively refused it"
+    )
+    session = FakeSession([
+        failure,
+        failure,
+        failure,
+        failure,
+        Response(url="http://openinsider.com/screener"),
+    ])
+    agent = make_agent(cache_path, session, sleep=sleeps.append)
+
+    rows = agent.acquire_run_trades()
+    assert rows
+    assert len(session.calls) == 5
+    assert [call[0] for call in session.calls[:4]] == [
+        OpenInsiderAgent.SECURE_BASE_URL
+    ] * 4
+    assert session.calls[4][0] == OpenInsiderAgent.INSECURE_FALLBACK_URL
+    assert sleeps == [2.0, 5.0, 10.0]
+    assert all(row["source_transport_scheme"] == "http" for row in rows)
+    assert all(row["source_transport_secure"] is False for row in rows)
+    assert all(row["signal_eligible"] is False for row in rows)
+    assert all(row["link"].startswith("http://") for row in rows)
+    assert agent.get_run_trades(
+        days_back=30, limit=500, allow_stale=False
+    ) == []
+    assert len(session.calls) == 5
+
+    health = agent.get_health()
+    assert health["status"] == "WARN"
+    assert health["failure_reason"] == "connection_refused"
+    assert health["https_failure_reason"] == "connection_refused"
+    assert health["https_error"]
+    assert health["attempts"] == 5
+    assert health["retries"] == 3
+    assert health["http_fallback_attempted"] is True
+    assert health["http_fallback_used"] is True
+    assert health["http_fallback_attempts"] == 1
+    assert health["transport_scheme"] == "http"
+    assert health["transport_secure"] is False
+    assert health["run_origin"] == "insecure_http"
+    assert health["live"] is False
+    assert health["cache_used"] is False
+    assert health["cache_status"] == "not_written_insecure_transport"
+    assert not cache_path.exists()
+    assert agent.run_uses_insecure_http is True
+    assert agent.run_uses_stale_cache is False
+    assert agent.has_live_run_data is False
+
+    rendered = agent.format_for_whispers(
+        days_back=7, limit=5, allow_stale=True
+    )
+    assert rendered[0].startswith("[OpenInsider/WARN]")
+    assert any(
+        item.startswith("[OpenInsider/HTTP-INSECURE]")
+        for item in rendered
+    )
+    assert agent.get_health()["status"] == "WARN"
+    assert len(session.calls) == 5
+
+
 def test_retry_only_transport_errors(temp_dir):
     OpenInsiderAgent._reset_source_request_gate_for_tests()
     cache_path = temp_dir / "retry-success.json"
@@ -305,6 +372,18 @@ def test_retry_only_transport_errors(temp_dir):
 
 def test_parser_and_redirect_reasons(temp_dir):
     OpenInsiderAgent._reset_source_request_gate_for_tests()
+    assert OpenInsiderAgent._trusted_response_url(
+        "https://openinsider.com:443/screener"
+    )
+    assert not OpenInsiderAgent._trusted_response_url(
+        "https://openinsider.com:444/screener"
+    )
+    assert OpenInsiderAgent._trusted_response_url(
+        "http://openinsider.com:80/screener", expected_scheme="http"
+    )
+    assert not OpenInsiderAgent._trusted_response_url(
+        "http://openinsider.com:8080/screener", expected_scheme="http"
+    )
     fallback_session = FakeSession([Response()])
     fallback = make_agent(
         temp_dir / "parser-fallback.json",
@@ -550,6 +629,7 @@ def main():
         temp_dir = Path(temp)
         test_single_flight_and_local_views(temp_dir)
         test_retry_cache_and_stale_separation(temp_dir)
+        test_connection_refusal_uses_narrative_only_http(temp_dir)
         test_retry_only_transport_errors(temp_dir)
         test_parser_and_redirect_reasons(temp_dir)
         test_cache_scope_and_soft_diagnostics(temp_dir)

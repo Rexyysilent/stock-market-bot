@@ -11,13 +11,14 @@
     "pipeline_time_seconds",
     "health",
     "summary",
+    "universe",
     "sections",
     "data_quality"
   ],
   "properties": {
     "generated_at": {"type": "string", "format": "date-time"},
-    "schema_version": {"type": "string", "const": "2.6"},
-    "pipeline_version": {"type": "string", "enum": ["2.6.0", "2.6.1", "2.6.2"]},
+    "schema_version": {"type": "string", "const": "2.8"},
+    "pipeline_version": {"type": "string", "enum": ["2.6.3", "2.6.4"]},
     "run_context": {
       "type": "object",
       "required": [
@@ -47,6 +48,7 @@
       "additionalProperties": true
     },
     "summary": {"type": "object"},
+    "universe": {"$ref": "#/$defs/tieredUniverse"},
     "sections": {
       "type": "object",
       "required": ["headlines"],
@@ -55,23 +57,41 @@
           "type": "array",
           "maxItems": 5,
           "items": {"$ref": "#/$defs/headline"}
-        }
+        },
+        "deep_dive": {"type": "object"}
       },
       "additionalProperties": true
     },
     "data_quality": {
       "type": "object",
-      "required": ["headlines_dropped"],
+      "required": [
+        "universe_contract_version",
+        "headline_contract_version",
+        "focus_contract_version",
+        "signal_eligibility_audit_version",
+        "headlines_dropped",
+        "headline_pool"
+      ],
       "properties": {
+        "universe_contract_version": {
+          "type": "string", "const": "2.8-tiered-universe-1"
+        },
         "headline_contract_version": {
-          "type": "string", "const": "2.6-headline-lanes-1"
+          "type": "string", "const": "2.7-headline-lanes-1"
+        },
+        "focus_contract_version": {
+          "type": "string", "const": "2.7-editorial-focus-1"
+        },
+        "signal_eligibility_audit_version": {
+          "type": "string", "const": "2.7-signal-eligibility-1"
         },
         "headlines_dropped": {"type": "array"},
         "headline_pool": {
           "type": "object",
           "required": [
             "fetched_count",
-            "fresh_before_relevance"
+            "fresh_before_relevance",
+            "editorial_shadow"
           ],
           "properties": {
             "fetched_count": {"type": "integer", "minimum": 0},
@@ -80,7 +100,8 @@
             "accounted_candidate_count": {"type": "integer", "minimum": 0},
             "selected_lane_counts": {
               "$ref": "#/$defs/laneCounts"
-            }
+            },
+            "editorial_shadow": {"$ref": "#/$defs/editorialShadow"}
           },
           "dependentRequired": {
             "accounted_candidate_count": ["selected_lane_counts"],
@@ -104,7 +125,7 @@
       },
       "then": {
         "properties": {
-          "pipeline_version": {"enum": ["2.6.1", "2.6.2"]},
+          "pipeline_version": {"enum": ["2.6.3", "2.6.4"]},
           "sections": {
             "properties": {
               "headlines": {
@@ -129,9 +150,223 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "data_quality": {
+            "type": "object",
+            "required": ["focus_contract_version"]
+          }
+        }
+      },
+      "then": {
+        "required": ["universe"],
+        "properties": {
+          "generated_at": {"$ref": "#/$defs/requiredFocusDateTime"},
+          "pipeline_version": {"enum": ["2.6.3", "2.6.4"]},
+          "data_quality": {
+            "required": ["headline_contract_version"]
+          },
+          "universe": {
+            "type": "object",
+            "required": [
+              "tickers",
+              "focus_ticker",
+              "configured_focus_ticker",
+              "focus_selection_mode"
+            ],
+            "properties": {
+              "tickers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"$ref": "#/$defs/focusTicker"},
+                "uniqueItems": true
+              },
+              "focus_ticker": {"$ref": "#/$defs/nullableFocusTicker"},
+              "configured_focus_ticker": {"$ref": "#/$defs/nullableFocusTicker"},
+              "focus_selection_mode": {
+                "enum": ["configured", "dynamic", "none"]
+              }
+            },
+            "additionalProperties": true
+          },
+          "sections": {
+            "required": ["deep_dive"],
+            "properties": {
+              "deep_dive": {"$ref": "#/$defs/currentEditorialFocus"}
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
+    "coverageTier": {
+      "enum": ["instrumented", "editorial_only", "mixed", null]
+    },
+    "signalEligibilityReason": {
+      "enum": [
+        "instrumented_universe",
+        "editorial_only_coverage",
+        "mixed_coverage_requires_ticker_filter",
+        "no_mapped_ticker"
+      ]
+    },
+    "focusSignalEligibilityReason": {
+      "enum": [
+        "instrumented_universe",
+        "editorial_only_coverage",
+        "no_focus"
+      ]
+    },
+    "tickerArray": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/focusTicker"},
+      "uniqueItems": true
+    },
+    "tieredUniverse": {
+      "type": "object",
+      "required": [
+        "name", "version", "tickers", "instrumented_version",
+        "instrumented_tickers", "editorial_only_tickers",
+        "focus_eligible_tickers", "editorial_coverage_mode",
+        "focus_ticker", "focus_coverage_tier", "focus_signal_eligible",
+        "focus_signal_eligibility_reason", "configured_focus_ticker",
+        "focus_selection_mode", "coverage_policy"
+      ],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "pattern": "^[0-9a-f]{8}$"},
+        "tickers": {
+          "allOf": [
+            {"$ref": "#/$defs/tickerArray"},
+            {"minItems": 42, "maxItems": 42}
+          ]
+        },
+        "instrumented_version": {
+          "type": "string", "pattern": "^[0-9a-f]{8}$"
+        },
+        "instrumented_tickers": {
+          "allOf": [
+            {"$ref": "#/$defs/tickerArray"},
+            {"minItems": 29, "maxItems": 29}
+          ]
+        },
+        "editorial_only_tickers": {
+          "allOf": [
+            {"$ref": "#/$defs/tickerArray"},
+            {"minItems": 13, "maxItems": 13}
+          ]
+        },
+        "focus_eligible_tickers": {
+          "allOf": [
+            {"$ref": "#/$defs/tickerArray"},
+            {"minItems": 29, "maxItems": 42}
+          ]
+        },
+        "coverage_policy": {"$ref": "#/$defs/coveragePolicy"},
+        "editorial_coverage_mode": {"enum": ["off", "shadow", "active"]},
+        "focus_ticker": {"$ref": "#/$defs/nullableFocusTicker"},
+        "focus_coverage_tier": {
+          "enum": ["instrumented", "editorial_only", null]
+        },
+        "focus_signal_eligible": {"type": ["boolean", "null"]},
+        "focus_signal_eligibility_reason": {
+          "$ref": "#/$defs/focusSignalEligibilityReason"
+        },
+        "configured_focus_ticker": {"$ref": "#/$defs/nullableFocusTicker"},
+        "focus_selection_mode": {"enum": ["configured", "dynamic", "none"]}
+      },
+      "additionalProperties": true
+    },
+    "coveragePolicy": {
+      "type": "object",
+      "required": [
+        "cohort_version", "registry_version", "source_policy_version",
+        "mapping_version", "mode", "activation", "cloud_model_budget_usd",
+        "license_attestation", "registry_fingerprint", "source_policy_fingerprint",
+        "unapproved_uses", "collector_targets", "fingerprint"
+      ],
+      "properties": {
+        "cohort_version": {"const": "editorial-42-v2"},
+        "registry_version": {"const": "issuer-capabilities-1"},
+        "source_policy_version": {"const": "source-purpose-1"},
+        "mapping_version": {"const": "issuer-mapping-2"},
+        "mode": {"enum": ["off", "shadow", "active"]},
+        "activation": {"const": "manual"},
+        "cloud_model_budget_usd": {"type": "number", "const": 0},
+        "license_attestation": {"type": "boolean", "const": false},
+        "registry_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_policy_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "unapproved_uses": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "collector_targets": {"type": "object"},
+        "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "editorialShadowRecord": {
+      "type": "object",
+      "required": [
+        "source_record_id", "tickers", "title", "link", "as_of", "lane",
+        "score_components", "disposition", "reason"
+      ],
+      "properties": {
+        "source_record_id": {"type": "string", "minLength": 1},
+        "tickers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/focusTicker"},
+          "uniqueItems": true
+        },
+        "title": {"type": "string", "minLength": 1},
+        "link": {"$ref": "#/$defs/requiredFocusWebUrl"},
+        "as_of": {"$ref": "#/$defs/requiredFocusDateTime"},
+        "lane": {"const": "universe"},
+        "score_components": {"$ref": "#/$defs/scoreComponents"},
+        "disposition": {"enum": ["suppressed", "core_projection", "legacy_projection"]},
+        "reason": {
+          "enum": [
+            "editorial_coverage_shadow_mode",
+            "editorial_mapping_shadowed"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"disposition": {"const": "suppressed"}}},
+          "then": {
+            "properties": {
+              "reason": {"const": "editorial_coverage_shadow_mode"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"disposition": {"enum": ["core_projection", "legacy_projection"]}}},
+          "then": {
+            "properties": {"reason": {"const": "editorial_mapping_shadowed"}}
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "editorialShadow": {
+      "type": "object",
+      "required": [
+        "mode", "candidate_count", "fresh_candidate_count", "records"
+      ],
+      "properties": {
+        "mode": {"enum": ["off", "shadow", "active"]},
+        "candidate_count": {"type": "integer", "minimum": 0},
+        "fresh_candidate_count": {"type": "integer", "minimum": 0},
+        "records": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {"$ref": "#/$defs/editorialShadowRecord"}
+        }
+      },
+      "additionalProperties": false
+    },
     "currentWebUrl": {
       "type": ["string", "null"],
       "format": "uri",
@@ -141,6 +376,290 @@
       "type": ["string", "null"],
       "format": "date-time",
       "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]+)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$"
+    },
+    "focusTicker": {
+      "type": "string",
+      "pattern": "^[A-Z^][A-Z0-9.^=-]*$"
+    },
+    "nullableFocusTicker": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z^][A-Z0-9.^=-]*$"
+    },
+    "requiredFocusWebUrl": {
+      "allOf": [
+        {"$ref": "#/$defs/currentWebUrl"},
+        {"type": "string"}
+      ]
+    },
+    "requiredFocusDateTime": {
+      "allOf": [
+        {"$ref": "#/$defs/currentDateTime"},
+        {"type": "string"}
+      ]
+    },
+    "focusScoreComponents": {
+      "type": "object",
+      "required": [
+        "impact",
+        "confidence",
+        "novelty",
+        "source_authority",
+        "audience_relevance",
+        "timeliness",
+        "independent_corroboration",
+        "unresolved_contradiction_penalty"
+      ],
+      "properties": {
+        "impact": {"type": "integer", "minimum": 0, "maximum": 3},
+        "confidence": {"type": "integer", "minimum": 0, "maximum": 3},
+        "novelty": {"type": "integer", "minimum": 0, "maximum": 3},
+        "source_authority": {"type": "integer", "minimum": 0, "maximum": 3},
+        "audience_relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+        "timeliness": {"type": "integer", "minimum": 0, "maximum": 3},
+        "independent_corroboration": {
+          "type": "integer", "minimum": 0, "maximum": 3
+        },
+        "unresolved_contradiction_penalty": {
+          "type": "integer", "minimum": 0, "maximum": 3
+        }
+      },
+      "additionalProperties": false
+    },
+    "focusClaim": {
+      "type": "object",
+      "required": ["text", "evidence_ids"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "focusEvidence": {
+      "type": "object",
+      "required": [
+        "evidence_id",
+        "source_record_id",
+        "ticker",
+        "title",
+        "link",
+        "canonical_url",
+        "provider",
+        "publisher",
+        "publisher_domain",
+        "source_class",
+        "as_of",
+        "observed_at",
+        "source_time_kind",
+        "impact",
+        "confidence",
+        "novelty",
+        "source_authority",
+        "audience_relevance",
+        "timeliness",
+        "independent_corroboration",
+        "contradiction_count"
+      ],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1},
+        "source_record_id": {"type": "string", "minLength": 1},
+        "ticker": {"$ref": "#/$defs/focusTicker"},
+        "title": {"type": "string", "minLength": 1},
+        "link": {"$ref": "#/$defs/requiredFocusWebUrl"},
+        "canonical_url": {"$ref": "#/$defs/currentWebUrl"},
+        "provider": {"type": "string", "minLength": 1},
+        "publisher": {"type": ["string", "null"]},
+        "publisher_domain": {"type": ["string", "null"]},
+        "source_class": {"type": "string", "minLength": 1},
+        "as_of": {"$ref": "#/$defs/requiredFocusDateTime"},
+        "observed_at": {"$ref": "#/$defs/currentDateTime"},
+        "source_time_kind": {
+          "enum": ["published", "event_time", "provider_seen"]
+        },
+        "duplicate_providers": {"$ref": "#/$defs/focusStringArray"},
+        "duplicate_publishers": {"$ref": "#/$defs/focusStringArray"},
+        "impact": {"type": "integer", "minimum": 0, "maximum": 3},
+        "confidence": {"type": "integer", "minimum": 0, "maximum": 3},
+        "novelty": {"type": "integer", "minimum": 0, "maximum": 3},
+        "source_authority": {"type": "integer", "minimum": 0, "maximum": 3},
+        "audience_relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+        "timeliness": {"type": "integer", "minimum": 0, "maximum": 3},
+        "independent_corroboration": {
+          "type": "integer", "minimum": 0, "maximum": 3
+        },
+        "contradiction_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "focusStringArray": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "selectedEditorialFocus": {
+      "type": "object",
+      "required": [
+        "status",
+        "selection_mode",
+        "ticker",
+        "coverage_tier",
+        "signal_eligible",
+        "signal_eligibility_reason",
+        "entity_ids",
+        "requested_ticker",
+        "pin_rejection_reason",
+        "reason",
+        "eligible_candidate_count",
+        "score_components",
+        "headline",
+        "what_changed",
+        "why_it_matters",
+        "evidence_grade",
+        "market_reaction",
+        "next_checkpoint",
+        "contradictions_assessed",
+        "contradictions",
+        "as_of",
+        "observed_at",
+        "evidence",
+        "note",
+        "sec_filing_accessions",
+        "has_insider_cluster",
+        "social_mentions",
+        "news_headlines",
+        "twitter_signals"
+      ],
+      "properties": {
+        "status": {"const": "selected"},
+        "selection_mode": {"enum": ["configured", "dynamic"]},
+        "ticker": {"$ref": "#/$defs/focusTicker"},
+        "coverage_tier": {"enum": ["instrumented", "editorial_only"]},
+        "signal_eligible": {"type": "boolean"},
+        "signal_eligibility_reason": {"$ref": "#/$defs/focusSignalEligibilityReason"},
+        "entity_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "pattern": "^ticker:[A-Z^][A-Z0-9.^=-]*$"},
+          "uniqueItems": true
+        },
+        "requested_ticker": {"$ref": "#/$defs/nullableFocusTicker"},
+        "pin_rejection_reason": {
+          "enum": [null, "unmapped_or_outside_universe", "no_usable_fresh_evidence", "editorial_coverage_not_active"]
+        },
+        "reason": {
+          "enum": ["configured_focus_supported", "highest_ranked_supported_candidate"]
+        },
+        "eligible_candidate_count": {"type": "integer", "minimum": 1},
+        "score_components": {"$ref": "#/$defs/focusScoreComponents"},
+        "headline": {"type": "string", "minLength": 1},
+        "what_changed": {"$ref": "#/$defs/focusClaim"},
+        "why_it_matters": {"$ref": "#/$defs/focusClaim"},
+        "evidence_grade": {
+          "enum": [
+            "multiple_selected_sources",
+            "official_source",
+            "single_source_secondary",
+            "limited_source"
+          ]
+        },
+        "market_reaction": {"type": "null"},
+        "next_checkpoint": {"type": "null"},
+        "contradictions_assessed": {"const": false},
+        "contradictions": {"type": "array", "maxItems": 0},
+        "as_of": {"$ref": "#/$defs/requiredFocusDateTime"},
+        "observed_at": {"$ref": "#/$defs/currentDateTime"},
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/focusEvidence"},
+          "uniqueItems": true
+        },
+        "note": {"type": "string", "minLength": 1},
+        "sec_filing_accessions": {"$ref": "#/$defs/focusStringArray"},
+        "has_insider_cluster": {"type": "boolean"},
+        "social_mentions": {"$ref": "#/$defs/focusStringArray"},
+        "news_headlines": {"$ref": "#/$defs/focusStringArray"},
+        "twitter_signals": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": false
+    },
+    "noEditorialFocus": {
+      "type": "object",
+      "required": [
+        "status",
+        "selection_mode",
+        "ticker",
+        "coverage_tier",
+        "signal_eligible",
+        "signal_eligibility_reason",
+        "entity_ids",
+        "requested_ticker",
+        "pin_rejection_reason",
+        "reason",
+        "eligible_candidate_count",
+        "score_components",
+        "headline",
+        "what_changed",
+        "why_it_matters",
+        "evidence_grade",
+        "market_reaction",
+        "next_checkpoint",
+        "contradictions_assessed",
+        "contradictions",
+        "as_of",
+        "observed_at",
+        "evidence",
+        "note",
+        "sec_filing_accessions",
+        "has_insider_cluster",
+        "social_mentions",
+        "news_headlines",
+        "twitter_signals"
+      ],
+      "properties": {
+        "status": {"const": "no_focus"},
+        "selection_mode": {"const": "none"},
+        "ticker": {"type": "null"},
+        "coverage_tier": {"type": "null"},
+        "signal_eligible": {"type": "null"},
+        "signal_eligibility_reason": {"const": "no_focus"},
+        "entity_ids": {"type": "array", "maxItems": 0},
+        "requested_ticker": {"$ref": "#/$defs/nullableFocusTicker"},
+        "pin_rejection_reason": {
+          "enum": [null, "unmapped_or_outside_universe", "no_usable_fresh_evidence", "editorial_coverage_not_active"]
+        },
+        "reason": {"const": "insufficient_supported_evidence"},
+        "eligible_candidate_count": {"const": 0},
+        "score_components": {"type": "null"},
+        "headline": {"type": "null"},
+        "what_changed": {"type": "null"},
+        "why_it_matters": {"type": "null"},
+        "evidence_grade": {"type": "null"},
+        "market_reaction": {"type": "null"},
+        "next_checkpoint": {"type": "null"},
+        "contradictions_assessed": {"const": false},
+        "contradictions": {"type": "array", "maxItems": 0},
+        "as_of": {"type": "null"},
+        "observed_at": {"type": "null"},
+        "evidence": {"type": "array", "maxItems": 0},
+        "note": {"type": "string", "minLength": 1},
+        "sec_filing_accessions": {"type": "array", "maxItems": 0},
+        "has_insider_cluster": {"const": false},
+        "social_mentions": {"type": "array", "maxItems": 0},
+        "news_headlines": {"type": "array", "maxItems": 0},
+        "twitter_signals": {"type": "array", "maxItems": 0}
+      },
+      "additionalProperties": false
+    },
+    "currentEditorialFocus": {
+      "oneOf": [
+        {"$ref": "#/$defs/selectedEditorialFocus"},
+        {"$ref": "#/$defs/noEditorialFocus"}
+      ]
     },
     "laneCounts": {
       "type": "object",
@@ -302,6 +821,9 @@
         "source_time_kind",
         "lane",
         "universe_tickers",
+        "coverage_tier",
+        "signal_eligible",
+        "signal_eligibility_reason",
         "score_components",
         "provider",
         "publisher",
@@ -324,10 +846,14 @@
           "enum": ["published", "event_time", "provider_seen"]
         },
         "provider": {"type": "string", "minLength": 1},
+        "coverage_tier": {"$ref": "#/$defs/coverageTier"},
+        "signal_eligible": {"type": "boolean"},
+        "signal_eligibility_reason": {"$ref": "#/$defs/signalEligibilityReason"},
         "publisher": {"type": ["string", "null"]},
         "publisher_domain": {"type": ["string", "null"]},
         "source_class": {"type": "string", "minLength": 1},
         "source_record_id": {"type": "string", "minLength": 1},
+        "ticker_metadata_kind": {"enum": ["subject", "related"]},
         "tickers": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},
@@ -366,6 +892,9 @@
         "reason",
         "lane",
         "universe_tickers",
+        "coverage_tier",
+        "signal_eligible",
+        "signal_eligibility_reason",
         "score_components",
         "provider",
         "publisher",
@@ -399,10 +928,14 @@
         },
         "score_components": {"$ref": "#/$defs/scoreComponents"},
         "provider": {"type": "string", "minLength": 1},
+        "coverage_tier": {"$ref": "#/$defs/coverageTier"},
+        "signal_eligible": {"type": "boolean"},
+        "signal_eligibility_reason": {"$ref": "#/$defs/signalEligibilityReason"},
         "publisher": {"type": ["string", "null"]},
         "publisher_domain": {"type": ["string", "null"]},
         "source_class": {"type": "string", "minLength": 1},
         "source_record_id": {"type": "string", "minLength": 1},
+        "ticker_metadata_kind": {"enum": ["subject", "related"]},
         "tickers": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},

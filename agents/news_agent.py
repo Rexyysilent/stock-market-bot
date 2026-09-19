@@ -7,6 +7,7 @@ owns relevance, freshness, syndication dedupe and deterministic selection.
 """
 
 from collections import Counter
+from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import logging
@@ -14,9 +15,13 @@ import re
 import unicodedata
 
 from config import (
-    ALL_TICKERS,
     ALPHA_VANTAGE_API_KEY,
+    EDITORIAL_COVERAGE_MODE,
+    EVIDENCE_INTAKE_MODE,
+    EDITORIAL_COVERAGE_TICKERS,
+    EDITORIAL_ONLY_TICKER_SET,
     FMP_API_KEY,
+    GDELT_TICKER_ALIASES,
     HEADLINE_GDELT_ENABLED,
     HEADLINE_GOOGLE_FALLBACK_ENABLED,
     HEADLINE_GOOGLE_MAX_SELECTED,
@@ -25,6 +30,8 @@ from config import (
     HEADLINE_REQUEST_TIMEOUT_SECONDS,
     HEADLINE_TARGET_COUNT,
     MACRO_KEYWORDS,
+    SIGNAL_ELIGIBLE_TICKER_SET,
+    SIGNAL_ELIGIBLE_TICKERS,
     TICKER_ALIASES,
 )
 from agents.news_providers import (
@@ -48,6 +55,7 @@ class NewsAgent:
         "stock market today OR S&P 500 OR Nasdaq OR Dow",
     )
     TARGET_COUNT = HEADLINE_TARGET_COUNT
+    SHADOW_AUDIT_LIMIT = 10
     MAX_PER_PUBLISHER = HEADLINE_MAX_PER_PUBLISHER
     GOOGLE_MAX_SELECTED = HEADLINE_GOOGLE_MAX_SELECTED
     MAX_PER_PROVIDER = 3
@@ -96,7 +104,9 @@ class NewsAgent:
         "SYSTEMS", "TRADING", "UPDATE",
     }
     DISPLAY_TICKER_ALIASES = {"^VIX": ("VIX",)}
-    AMBIGUOUS_TITLE_TICKERS = {"COIN", "SHOP", "ITA"}
+    AMBIGUOUS_TITLE_TICKERS = {
+        "COIN", "SHOP", "ITA", "MRNA", "BEAM", "RARE", "MP", "HOOD", "MRK",
+    }
     EXCHANGE_PREFIX_MACRO_SUBJECT_PATTERN = re.compile(
         r"^(?:the\s+)?(?:"
         r"(?:trading|trade)\s+(?:halts?|halted|resumes?|resumed|opens?|"
@@ -506,6 +516,31 @@ class NewsAgent:
         "global_discovery": 1,
         "press_release": 1,
     }
+    # A result must state an occurred clinical outcome. Planned readouts,
+    # historical quotations, and competitor outcomes fail closed so this
+    # remains a narrow materiality rule rather than a broad biotech classifier.
+    CLINICAL_OUTCOME_CONTEXT_PATTERN = re.compile(
+        r"\b(?:phase\s*(?:2|3)|clinical trial|pivotal trial)\b"
+    )
+    CLINICAL_OUTCOME_OCCURRED_PATTERN = re.compile(
+        r"\b(?:"
+        r"met\s+(?:the\s+)?(?:primary|key secondary)\s+endpoints?|"
+        r"met\s+(?:the\s+)?(?:primary and key secondary|primary and secondary)\s+endpoints|"
+        r"met\s+endpoints?\s+of\s+[a-z0-9][a-z0-9 /+.-]{0,40}|"
+        r"positive\s+(?:phase\s*(?:2|3)\s+)?top-?line\s+results?|"
+        r"(?:did not meet|failed to meet|missed)\s+(?:the\s+)?"
+        r"(?:primary|key secondary)\s+endpoints?"
+        r")\b"
+    )
+    CLINICAL_OUTCOME_PREFIX_EXCLUSION_PATTERN = re.compile(
+        r"\b(?:expects?|expecting|anticipates?|anticipated|plans?|planned|"
+        r"scheduled|upcoming|will|could|may|might|aims?|designed to|"
+        r"competitor(?:'s)?|rival(?:'s)?|previously|historical|history|"
+        r"recalls?|recalled)\b"
+    )
+    CLINICAL_OUTCOME_SUFFIX_HISTORY_PATTERN = re.compile(
+        r"\b(?:last year|previously|historically)\b"
+    )
     IMPACT_PATTERNS = (
         (r"\b(?:bankrupt(?:cy)?|merger|takeover|acquisition)\b", 2),
         (r"\b(?:financing|offering|strategic investor|project equity)\b", 2),
@@ -517,11 +552,15 @@ class NewsAgent:
         (r"\b(?:strategic shift|earnings preview|quarterly results)\b", 1),
     )
 
-    def __init__(self, now=None, providers=None, google_provider=None):
+    def __init__(self, now=None, providers=None, google_provider=None, evidence_intake_mode=None):
         now = now or datetime.now(timezone.utc)
         if now.tzinfo is None:
             now = now.replace(tzinfo=timezone.utc)
         self.now_utc = now.astimezone(timezone.utc)
+        self._intake_mode = evidence_intake_mode or EVIDENCE_INTAKE_MODE
+        if self._intake_mode not in ("off", "shadow"):
+            raise ValueError("evidence intake mode must be off or shadow")
+        self._evidence_snapshot = None
         self.base_url = (
             "https://news.google.com/rss/search?q={query}"
             "&hl=en-US&gl=US&ceid=US:en"
@@ -547,6 +586,12 @@ class NewsAgent:
         self._pool_diagnostics = self._summarize_raw_pool(
             [], query="multi-provider", now=self.now_utc
         )
+        self._pool_diagnostics["editorial_shadow"] = {
+            "mode": EDITORIAL_COVERAGE_MODE,
+            "candidate_count": 0,
+            "fresh_candidate_count": 0,
+            "records": [],
+        }
 
     @staticmethod
     def _build_gdelt_queries(max_query_chars=190):
@@ -561,7 +606,9 @@ class NewsAgent:
             "bitcoin",
             "oil",
         ]
-        terms += [aliases[0] for aliases in TICKER_ALIASES.values() if aliases]
+        terms += [
+            aliases[0] for aliases in GDELT_TICKER_ALIASES.values() if aliases
+        ]
         unique = list(dict.fromkeys(term.casefold() for term in terms))
         rendered = [
             f'"{term}"' if " " in term else term for term in unique
@@ -589,6 +636,7 @@ class NewsAgent:
         return tuple(batches)
 
     def _default_providers(self):
+        from coverage_policy import fmp_acquisition_tickers
         feeds = []
         for item in HEADLINE_OFFICIAL_FEEDS:
             spec = dict(item)
@@ -606,10 +654,7 @@ class NewsAgent:
             ),
             FMPNewsProvider(
                 FMP_API_KEY,
-                tickers=[
-                    ticker for ticker in ALL_TICKERS
-                    if not ticker.startswith("^") and not ticker.endswith("=F")
-                ],
+                tickers=fmp_acquisition_tickers(EDITORIAL_COVERAGE_MODE),
                 now=self.now_utc,
                 timeout=HEADLINE_REQUEST_TIMEOUT_SECONDS,
             ),
@@ -677,8 +722,10 @@ class NewsAgent:
         return [indexed[idx] for idx in sorted(indexed)]
 
     def get_global_headlines(self):
+        self._evidence_snapshot = None
         primary_results = self._fetch_primary_results()
         results = list(primary_results)
+        self._capture_evidence(results)
         raw_primary = [
             dict(row)
             for result in primary_results
@@ -709,6 +756,7 @@ class NewsAgent:
                     ),
                 )
             results.append(google_result)
+            self._capture_evidence(results)
             if google_result.records:
                 raw = [
                     dict(row)
@@ -750,11 +798,13 @@ class NewsAgent:
                     },
                 )
                 raw = [dict(row) for result in results for row in result.records]
+                self._capture_evidence(results)
                 processed = self._process_pool(raw)
             else:
                 results[-1].metadata["attempts"] = attempts
                 results[-1].metadata["eligibility_fallback_used"] = True
         self._scored_headlines = processed["selected"]
+        self._finish_evidence(processed, google_fallback_used)
         self._dropped_headlines = (
             processed["relevance_dropped"]
             + processed["stale_dropped"]
@@ -875,6 +925,7 @@ class NewsAgent:
                 row.get("provider") == "Google News"
                 for row in self._scored_headlines
             ),
+            "editorial_shadow": processed["editorial_shadow"],
         })
         logger.info(
             "Headline pool: fetched=%s fresh=%s selected=%s providers=%s "
@@ -901,6 +952,8 @@ class NewsAgent:
 
     def get_pool_diagnostics(self):
         diagnostics = dict(self._pool_diagnostics)
+        if self._evidence_snapshot is not None:
+            diagnostics["evidence_intake"] = deepcopy(self._evidence_snapshot)
         for key in (
             "fresh_relevance_zero_examples",
             "attempts",
@@ -909,7 +962,45 @@ class NewsAgent:
             diagnostics[key] = [
                 dict(row) for row in diagnostics.get(key, [])
             ]
+        shadow = dict(diagnostics.get("editorial_shadow") or {})
+        shadow["records"] = [
+            dict(row) for row in shadow.get("records", [])
+        ]
+        diagnostics["editorial_shadow"] = shadow
         return diagnostics
+
+    def _capture_evidence(self, results):
+        if self._intake_mode == "off":
+            return
+        import evidence_intake
+        try:
+            self._evidence_snapshot = evidence_intake.capture(
+                results, self.now_utc, EDITORIAL_COVERAGE_MODE)
+        except Exception as exc:
+            self._intake_failed(type(exc).__name__)
+
+    def get_evidence_candidates(self):
+        """Unreviewed pre-display metadata; never input to production focus/signals."""
+        snapshot = self._evidence_snapshot or {}
+        return deepcopy(snapshot.get("records", []))
+
+    def _finish_evidence(self, processed, google_requested):
+        if self._evidence_snapshot is None or self._evidence_snapshot.get("status") != "ok":
+            return
+        import evidence_intake
+        try:
+            self._evidence_snapshot = evidence_intake.finish(
+                self._evidence_snapshot, processed, google_requested)
+        except Exception as exc:
+            self._intake_failed(type(exc).__name__)
+
+    def _intake_failed(self, reason):
+        from evidence_intake import VERSION
+        logger.warning("Shadow evidence intake failed: %s", reason)
+        self._evidence_snapshot = {
+            "version": VERSION, "mode": "shadow", "status": "error",
+            "signal_eligible": False, "reason": "intake_failed:" + reason,
+        }
 
     @classmethod
     def _record_time(cls, item):
@@ -1082,12 +1173,125 @@ class NewsAgent:
         )
 
     @classmethod
+    def _mapping_universe(cls):
+        return (
+            SIGNAL_ELIGIBLE_TICKER_SET
+            if EDITORIAL_COVERAGE_MODE == "off"
+            else frozenset(EDITORIAL_COVERAGE_TICKERS)
+        )
+
+    @classmethod
+    def _coverage_metadata(cls, tickers):
+        mapped = {
+            str(ticker).strip().upper()
+            for ticker in (tickers or [])
+            if str(ticker).strip()
+        }
+        core = mapped & SIGNAL_ELIGIBLE_TICKER_SET
+        editorial = mapped & EDITORIAL_ONLY_TICKER_SET
+        if core and editorial:
+            return {
+                "coverage_tier": "mixed",
+                "signal_eligible": False,
+                "signal_eligibility_reason": (
+                    "mixed_coverage_requires_ticker_filter"
+                ),
+            }
+        if core:
+            return {
+                "coverage_tier": "instrumented",
+                "signal_eligible": True,
+                "signal_eligibility_reason": "instrumented_universe",
+            }
+        if editorial:
+            return {
+                "coverage_tier": "editorial_only",
+                "signal_eligible": False,
+                "signal_eligibility_reason": "editorial_only_coverage",
+            }
+        return {
+            "coverage_tier": None,
+            "signal_eligible": False,
+            "signal_eligibility_reason": "no_mapped_ticker",
+        }
+
+    @classmethod
+    def _editorial_tickers(cls, row):
+        return sorted({
+            str(ticker).strip().upper()
+            for ticker in (row.get("universe_tickers") or [])
+            if str(ticker).strip().upper() in EDITORIAL_ONLY_TICKER_SET
+        })
+
+    @classmethod
+    def _project_shadow_row_to_core(cls, row):
+        core_tickers = sorted(
+            set(row.get("universe_tickers") or [])
+            & SIGNAL_ELIGIBLE_TICKER_SET
+        )
+        if not core_tickers:
+            return None
+        projected = dict(row)
+        components = dict(projected.get("score_components") or {})
+        components["issuer_relevance"] = 2 * len(core_tickers)
+        projected.update({
+            "universe_tickers": core_tickers,
+            "score_components": components,
+            "relevance": cls._compatibility_relevance(components),
+            **cls._coverage_metadata(core_tickers),
+        })
+        projected["lane"] = cls._assign_lane(projected, components)
+        return projected
+
+    @classmethod
+    def _editorial_shadow_diagnostics(cls, candidates, fresh_candidates):
+
+        records = []
+        for row in sorted(fresh_candidates, key=cls._selection_key):
+            editorial_tickers = cls._editorial_tickers(row)
+            core_tickers = (
+                set(row.get("universe_tickers") or [])
+                & SIGNAL_ELIGIBLE_TICKER_SET
+            )
+            records.append({
+                "source_record_id": row.get("source_record_id"),
+                "tickers": editorial_tickers,
+                "title": row.get("title"),
+                "link": row.get("link"),
+                "as_of": to_utc_z(cls._record_time(row)),
+                "lane": row.get("lane"),
+                "score_components": dict(
+                    row.get("score_components") or {}
+                ),
+                "disposition": (
+                    "core_projection" if core_tickers else "suppressed"
+                ),
+                "reason": (
+                    "editorial_mapping_shadowed" if core_tickers
+                    else "editorial_coverage_shadow_mode"
+                ),
+            })
+        return {
+            "mode": EDITORIAL_COVERAGE_MODE,
+            "candidate_count": len(candidates),
+            "fresh_candidate_count": len(fresh_candidates),
+            "records": records[:cls.SHADOW_AUDIT_LIMIT],
+        }
+
+    @classmethod
     def _matched_universe_tickers(cls, item):
         title = item.get("title") or ""
         normalized = cls._strip_exchange_listing_metadata(title)
         normalized_lower = normalized.casefold()
-        universe = set(ALL_TICKERS)
-        raw_tickers = item.get("tickers") or []
+        universe = cls._mapping_universe()
+        metadata_kind = str(
+            item.get("ticker_metadata_kind", "subject") or ""
+        ).strip().casefold()
+        raw_tickers = (
+            item.get("tickers") or []
+            if metadata_kind == "subject"
+            else []
+        )
         if isinstance(raw_tickers, str):
             raw_tickers = re.split(r"[,\s]+", raw_tickers)
         explicit_symbols = {
@@ -1099,11 +1303,13 @@ class NewsAgent:
 
         matched = explicit_symbols & universe
         for ticker, aliases in cls.DISPLAY_TICKER_ALIASES.items():
+            if ticker not in universe:
+                continue
             display_symbols = {alias.upper() for alias in aliases}
             if explicit_symbols & display_symbols:
                 matched.add(ticker)
 
-        for ticker in ALL_TICKERS:
+        for ticker in sorted(universe):
             symbol_match = re.search(
                 rf"(?<![A-Za-z0-9]){re.escape(ticker)}(?![A-Za-z0-9])",
                 normalized,
@@ -1117,6 +1323,8 @@ class NewsAgent:
                 continue
             matched.add(ticker)
         for ticker, aliases in cls.DISPLAY_TICKER_ALIASES.items():
+            if ticker not in universe:
+                continue
             if any(
                 re.search(
                     rf"(?<![A-Za-z0-9]){re.escape(alias)}"
@@ -1127,12 +1335,52 @@ class NewsAgent:
             ):
                 matched.add(ticker)
         for ticker, aliases in TICKER_ALIASES.items():
+            if ticker not in universe:
+                continue
             if any(
                 re.search(rf"\b{re.escape(alias)}\b", normalized_lower)
                 for alias in aliases
             ):
                 matched.add(ticker)
+
+        # German Merck also uses MRK on some venues. Neither a provider tag
+        # nor ticker-context prose may override explicit conflicting identity.
+        if "MRK" in matched and re.search(
+            r"\b(?:merck\s+kgaa|darmstadt|xetra|frankfurt)\b|\b(?:etr|fra)\s*:\s*mrk\b",
+            title, re.IGNORECASE,
+        ):
+            us_identity = re.search(
+                r"\bmerck\s+(?:&|and)\s+co\b|\bnyse\s*:\s*mrk\b",
+                title, re.IGNORECASE,
+            )
+            if not us_identity:
+                matched.discard("MRK")
         return sorted(matched)
+    @classmethod
+    def _has_current_clinical_outcome(cls, text):
+        """Return true only for a locally current, occurred trial outcome."""
+        for outcome in cls.CLINICAL_OUTCOME_OCCURRED_PATTERN.finditer(text):
+            context_start = max(0, outcome.start() - 80)
+            context_end = min(len(text), outcome.end() + 24)
+            if not cls.CLINICAL_OUTCOME_CONTEXT_PATTERN.search(
+                text[context_start:context_end]
+            ):
+                continue
+
+            # Only modifiers before the result change its semantics. A genuine
+            # result may say it "will present data" or "beat a rival" later.
+            prefix = text[max(0, outcome.start() - 120):outcome.start()]
+            if cls.CLINICAL_OUTCOME_PREFIX_EXCLUSION_PATTERN.search(prefix):
+                continue
+
+            # Historical suffixes describe an old result even when the quote
+            # lacks a leading verb such as "recalled".
+            suffix = text[outcome.end():min(len(text), outcome.end() + 48)]
+            if cls.CLINICAL_OUTCOME_SUFFIX_HISTORY_PATTERN.search(suffix):
+                continue
+            return True
+        return False
+
 
     @classmethod
     def _macro_subject_text(cls, text):
@@ -1222,7 +1470,7 @@ class NewsAgent:
         subject_text = cls._macro_subject_text(normalized_lower)
         universe_tickers = cls._matched_universe_tickers(item)
         outside_listing = bool(
-            set(cls._listing_symbols(title)) - set(ALL_TICKERS)
+            set(cls._listing_symbols(title)) - cls._mapping_universe()
         ) and not universe_tickers
 
         excluded_keywords = (
@@ -1295,11 +1543,14 @@ class NewsAgent:
             for terms in cls.VERTICAL_KEYWORDS.values()
             if any(cls._has_keyword(normalized_lower, term) for term in terms)
         )
+        clinical_outcome_impact = 0
+        if cls._has_current_clinical_outcome(normalized_lower):
+            clinical_outcome_impact = 2
         impact = min(3, sum(
             weight
             for pattern, weight in cls.IMPACT_PATTERNS
             if re.search(pattern, normalized_lower)
-        ))
+        ) + clinical_outcome_impact)
         return {
             "issuer_relevance": 2 * len(universe_tickers),
             "macro_relevance": macro_hits,
@@ -1471,6 +1722,7 @@ class NewsAgent:
                 continue
             link = item.get("link")
             record = dict(item)
+            universe_tickers = cls._matched_universe_tickers(item)
             record.update({
                 "text": f"{title} ({link})" if link else title,
                 "title": title,
@@ -1478,9 +1730,10 @@ class NewsAgent:
                 "published": item.get("published"),
                 "relevance": cls._compatibility_relevance(components),
                 "lane": lane,
-                "universe_tickers": cls._matched_universe_tickers(item),
+                "universe_tickers": universe_tickers,
                 "score_components": components,
                 "_story_group_id": story_group_ids[idx],
+                **cls._coverage_metadata(universe_tickers),
             })
             scored.append((cls._selection_key(record, idx), record))
         scored.sort(key=lambda row: row[0])
@@ -1546,6 +1799,15 @@ class NewsAgent:
     def _merge_duplicate_group(cls, group):
         group.sort(key=cls._representative_key)
         representative = dict(group[0])
+        representative_priority = cls.SOURCE_PRIORITY.get(
+            representative.get("source_class") or "aggregator", 4
+        )
+        classification_group = [
+            row for row in group
+            if cls.SOURCE_PRIORITY.get(
+                row.get("source_class") or "aggregator", 4
+            ) == representative_priority
+        ]
         component_names = (
             "issuer_relevance",
             "macro_relevance",
@@ -1557,13 +1819,13 @@ class NewsAgent:
         merged_components = {
             name: max(
                 (row.get("score_components") or {}).get(name, 0)
-                for row in group
+                for row in classification_group
             )
             for name in component_names
         }
         universe_tickers = sorted({
             ticker
-            for row in group
+            for row in classification_group
             for ticker in (row.get("universe_tickers") or [])
         })
         merged_components["issuer_relevance"] = max(
@@ -1574,6 +1836,7 @@ class NewsAgent:
             "universe_tickers": universe_tickers,
             "score_components": merged_components,
             "relevance": cls._compatibility_relevance(merged_components),
+            **cls._coverage_metadata(universe_tickers),
         })
         representative["lane"] = cls._assign_lane(
             representative, merged_components
@@ -1732,23 +1995,52 @@ class NewsAgent:
             for row in records
         ]
 
-    def _process_pool(self, raw):
+    def _process_pool(self, raw, *, shadow_projection=True):
         raw = list(raw)
         story_group_ids = self._story_group_ids(raw)
         pool_components = self._score_pool_components(
             raw, story_group_ids=story_group_ids
         )
-        relevant = self._select_relevant(
+        all_relevant = self._select_relevant(
             raw,
             top_n=None,
             pool_components=pool_components,
             story_group_ids=story_group_ids,
+        )
+        shadow_candidates = []
+        shadow_suppressed = []
+        relevant = []
+        for row in all_relevant:
+            editorial_tickers = self._editorial_tickers(row)
+            if shadow_projection and EDITORIAL_COVERAGE_MODE == "shadow" and editorial_tickers:
+                shadow_candidates.append(row)
+                projected = self._project_shadow_row_to_core(row)
+                if projected is None:
+                    shadow_suppressed.append(row)
+                else:
+                    relevant.append(projected)
+                continue
+            relevant.append(row)
+        shadow_fresh, _shadow_stale = self._drop_stale(
+            shadow_candidates, now=self.now_utc
+        )
+        suppressed_fresh, suppressed_stale = self._drop_stale(
+            shadow_suppressed, now=self.now_utc
+        )
+        editorial_shadow = self._editorial_shadow_diagnostics(
+            shadow_candidates, shadow_fresh
         )
         cutoff = to_utc_z(
             self.now_utc - timedelta(days=self.HEADLINES_MAX_AGE_DAYS)
         )
         relevance_dropped = []
         fresh_zero = []
+        for row in suppressed_fresh:
+            relevance_dropped.append({
+                **row,
+                "as_of": to_utc_z(self._record_time(row)),
+                "drop_reason": "editorial_shadow_suppressed",
+            })
         for item, components in zip(raw, pool_components):
             stamp = to_utc_z(self._record_time(item))
             relevance = self._compatibility_relevance(components)
@@ -1778,13 +2070,14 @@ class NewsAgent:
         fresh, stale_dropped = self._drop_stale(
             relevant, now=self.now_utc
         )
+        stale_dropped.extend(suppressed_stale)
         deduped, duplicate_dropped = self._deduplicate(fresh)
         selected, cap_dropped = self._select_diverse(deduped)
-        for cohort in (relevant, fresh, stale_dropped):
+        for cohort in (all_relevant, fresh, stale_dropped):
             for row in cohort:
                 row.pop("_story_group_id", None)
-        return {
-            "relevant": relevant,
+        result = {
+            "relevant": all_relevant,
             "fresh": fresh,
             "fresh_zero": fresh_zero,
             "relevance_dropped": relevance_dropped,
@@ -1793,4 +2086,62 @@ class NewsAgent:
             "duplicate_dropped": duplicate_dropped,
             "selected": selected,
             "cap_dropped": cap_dropped,
+            "editorial_shadow": editorial_shadow,
         }
+        if shadow_projection and EDITORIAL_COVERAGE_MODE == "shadow":
+            # Separate interpretations of the SAME acquisition, without
+            # mutating module globals (news collection can run concurrently).
+            # Merely deleting editorial tickers after scoring is insufficient:
+            # it can erase legacy discovery stories or change novelty/ranking.
+            legacy = _LegacyHeadlineProjection(now=self.now_utc, providers=[])
+            result = legacy._process_pool(raw, shadow_projection=False)
+            shadow_rejections = {
+                row.get("source_record_id"): row for row in relevance_dropped
+                if row.get("drop_reason") == "editorial_shadow_suppressed"
+            }
+            shadow_rejections.update({
+                row.get("source_record_id"): row for row in stale_dropped
+                if self._editorial_tickers(row)
+            })
+            relevance_rows = []
+            for row in result["relevance_dropped"]:
+                if row.get("drop_reason") == "no_approved_lane":
+                    row = shadow_rejections.get(row.get("source_record_id"), row)
+                if row.get("drop_reason") in ("stale", "undated", "future"):
+                    result["stale_dropped"].append(row)
+                else:
+                    relevance_rows.append(row)
+            result["relevance_dropped"] = relevance_rows
+            terminals = {}
+            for key in ("selected", "relevance_dropped", "stale_dropped",
+                        "duplicate_dropped", "cap_dropped"):
+                for row in result[key]:
+                    terminals.setdefault(row.get("source_record_id"), []).append(row)
+            examples = []
+            for row in editorial_shadow["records"]:
+                matches = terminals.get(row.get("source_record_id"), [])
+                # A bounded example must resolve unambiguously. Counts still
+                # include all candidate occurrences; raw terminal rows remain.
+                if len(matches) != 1:
+                    continue
+                terminal = matches[0]
+                if any(row.get(k) != terminal.get(k) for k in ("title", "link")):
+                    continue
+                if terminal.get("drop_reason") == "editorial_shadow_suppressed":
+                    row.update(disposition="suppressed", reason="editorial_coverage_shadow_mode")
+                elif terminal.get("universe_tickers"):
+                    row.update(disposition="core_projection", reason="editorial_mapping_shadowed")
+                else:
+                    row.update(disposition="legacy_projection", reason="editorial_mapping_shadowed")
+                examples.append(row)
+            editorial_shadow["records"] = examples
+            result["editorial_shadow"] = editorial_shadow
+        return result
+
+
+class _LegacyHeadlineProjection(NewsAgent):
+    """Pure off-mode mapping for shadow replay; never fetches another source."""
+
+    @classmethod
+    def _mapping_universe(cls):
+        return SIGNAL_ELIGIBLE_TICKER_SET

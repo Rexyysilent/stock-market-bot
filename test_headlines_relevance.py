@@ -8,7 +8,7 @@ sys.path.insert(0, ".")
 
 from agents.news_agent import NewsAgent
 from agents.news_providers import GoogleNewsProvider, ProviderResult
-from config import TICKER_ALIASES
+from config import GDELT_TICKER_ALIASES
 from timeutil import to_utc_z
 
 
@@ -25,7 +25,7 @@ gdelt_queries = NewsAgent._build_gdelt_queries()
 gdelt_query = " ".join(gdelt_queries).casefold()
 assert all(
     aliases[0].casefold() in gdelt_query
-    for aliases in TICKER_ALIASES.values()
+    for aliases in GDELT_TICKER_ALIASES.values()
     if aliases
 )
 assert all("sourcelang:english" in query for query in gdelt_queries)

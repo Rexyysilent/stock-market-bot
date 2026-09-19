@@ -36,6 +36,8 @@ class OpenInsiderAgent:
     """
 
     TRUSTED_HOSTS = frozenset({"openinsider.com", "www.openinsider.com"})
+    SECURE_BASE_URL = "https://openinsider.com/screener"
+    INSECURE_FALLBACK_URL = "http://openinsider.com/screener"
     CACHE_SCHEMA_VERSION = 1
     DEFAULT_CACHE_PATH = os.path.join("state", "openinsider_last_good.json")
     RETRY_DELAYS_SECONDS = (2.0, 5.0, 10.0)
@@ -55,6 +57,7 @@ class OpenInsiderAgent:
         cache_path=None,
         min_request_interval=1.0,
         request_timeout=15,
+        allow_insecure_http_fallback=True,
     ):
         now = now or datetime.now(timezone.utc)
         if now.tzinfo is None:
@@ -63,7 +66,8 @@ class OpenInsiderAgent:
         self.now_naive_utc = self.now_utc.replace(tzinfo=None)
         self.run_days_back = max(1, int(run_days_back))
         self.run_limit = max(1, int(run_limit))
-        self.base_url = "https://openinsider.com/screener"
+        self.base_url = self.SECURE_BASE_URL
+        self.insecure_fallback_url = self.INSECURE_FALLBACK_URL
         self.headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -86,6 +90,9 @@ class OpenInsiderAgent:
             self.cache_path = Path(cache_path)
         self.min_request_interval = max(0.0, float(min_request_interval))
         self.request_timeout = request_timeout
+        self.allow_insecure_http_fallback = bool(
+            allow_insecure_http_fallback
+        )
 
         self._health_lock = RLock()
         self._run_condition = Condition(Lock())
@@ -112,6 +119,14 @@ class OpenInsiderAgent:
             return self._run_state == "complete" and self._run_origin == "stale_cache"
 
     @property
+    def run_uses_insecure_http(self):
+        with self._run_condition:
+            return (
+                self._run_state == "complete"
+                and self._run_origin == "insecure_http"
+            )
+
+    @property
     def has_live_run_data(self):
         with self._run_condition:
             return (
@@ -125,12 +140,18 @@ class OpenInsiderAgent:
             return deepcopy(self.health)
 
     @classmethod
-    def _trusted_response_url(cls, value):
+    def _trusted_response_url(cls, value, expected_scheme="https"):
         try:
             parsed = urlsplit(str(value))
+            port = parsed.port
         except (TypeError, ValueError):
             return False
-        return parsed.scheme == "https" and parsed.hostname in cls.TRUSTED_HOSTS
+        expected_port = 443 if expected_scheme == "https" else 80
+        return (
+            parsed.scheme == expected_scheme
+            and parsed.hostname in cls.TRUSTED_HOSTS
+            and port in (None, expected_port)
+        )
 
     def _default_cache_path_for_scope(self):
         """Resolve a default cache file unique to the canonical run scope."""
@@ -159,6 +180,13 @@ class OpenInsiderAgent:
             "attempts": 0,
             "retries": 0,
             "retry_delays_seconds": [],
+            "transport_scheme": None,
+            "transport_secure": None,
+            "https_failure_reason": None,
+            "https_error": None,
+            "http_fallback_attempted": False,
+            "http_fallback_used": False,
+            "http_fallback_attempts": 0,
             "live": False,
             "run_origin": "none",
             "cache_used": False,
@@ -255,6 +283,7 @@ class OpenInsiderAgent:
                 return self._copy_rows(
                     self._run_rows,
                     stale=self._run_origin == "stale_cache",
+                    insecure_http=self._run_origin == "insecure_http",
                     cache_fetched_at=self._run_cache_fetched_at,
                 )
             self._run_state = "acquiring"
@@ -280,6 +309,7 @@ class OpenInsiderAgent:
             return self._copy_rows(
                 self._run_rows,
                 stale=self._run_origin == "stale_cache",
+                insecure_http=self._run_origin == "insecure_http",
                 cache_fetched_at=self._run_cache_fetched_at,
             )
 
@@ -292,6 +322,7 @@ class OpenInsiderAgent:
         account for and reject temporal outliers explicitly. Every noncanonical
         view excludes parseable filing dates outside its requested [cutoff,
         now] interval; undated rows remain visible for consumer diagnostics.
+        ``allow_stale=False`` also rejects plaintext narrative-only rows.
         """
         return self._get_run_view(
             days_back=days_back,
@@ -318,7 +349,8 @@ class OpenInsiderAgent:
 
         with self._run_condition:
             stale = self._run_origin == "stale_cache"
-            if stale and not allow_stale:
+            insecure_http = self._run_origin == "insecure_http"
+            if (stale or insecure_http) and not allow_stale:
                 return []
             rows = deepcopy(self._run_rows)
             cache_fetched_at = self._run_cache_fetched_at
@@ -345,15 +377,28 @@ class OpenInsiderAgent:
         return self._copy_rows(
             rows,
             stale=stale,
+            insecure_http=insecure_http,
             cache_fetched_at=cache_fetched_at,
         )
 
-    def _copy_rows(self, rows, stale=False, cache_fetched_at=None):
+    def _copy_rows(
+        self,
+        rows,
+        stale=False,
+        insecure_http=False,
+        cache_fetched_at=None,
+    ):
         copied = deepcopy(list(rows or []))
         if stale:
             for row in copied:
                 row["source_stale"] = True
                 row["source_cache_fetched_at"] = cache_fetched_at
+        if insecure_http:
+            for row in copied:
+                row["link"] = self.insecure_fallback_url
+                row["source_transport_scheme"] = "http"
+                row["source_transport_secure"] = False
+                row["signal_eligible"] = False
         return copied
 
     def _acquire_live_or_cache(self):
@@ -364,6 +409,7 @@ class OpenInsiderAgent:
             limit=self.run_limit,
         )
         response = None
+        transport_scheme = "https"
 
         for attempt_index in range(len(self.RETRY_DELAYS_SECONDS) + 1):
             health["attempts"] += 1
@@ -401,6 +447,38 @@ class OpenInsiderAgent:
             )
             self._sleep(delay)
 
+        if (
+            response is None
+            and health.get("failure_reason") == "connection_refused"
+            and self.allow_insecure_http_fallback
+        ):
+            health["https_failure_reason"] = health.get("failure_reason")
+            health["https_error"] = health.get("error")
+            health["http_fallback_attempted"] = True
+            health["http_fallback_attempts"] = 1
+            health["attempts"] += 1
+            health["transport_scheme"] = "http"
+            health["transport_secure"] = False
+            try:
+                response = self._session_get_with_gate(
+                    self.insecure_fallback_url,
+                    params=params,
+                    headers=self.headers,
+                    timeout=self.request_timeout,
+                )
+            except requests.exceptions.Timeout as exc:
+                health["failure_reason"] = "http_fallback_timeout"
+                health["error"] = self._error_text(exc)
+            except requests.exceptions.ConnectionError as exc:
+                reason = self._connection_failure_reason(exc)
+                health["failure_reason"] = f"http_fallback_{reason}"
+                health["error"] = self._error_text(exc)
+            except Exception as exc:
+                health["failure_reason"] = "http_fallback_unexpected_error"
+                health["error"] = self._error_text(exc)
+            else:
+                transport_scheme = "http"
+
         if response is None:
             health["status"] = "ERROR"
             logger.error(
@@ -410,11 +488,20 @@ class OpenInsiderAgent:
             )
             return self._failure_with_cache(health)
 
+        if transport_scheme == "https":
+            health["transport_scheme"] = "https"
+            health["transport_secure"] = True
         health["request_status"] = getattr(response, "status_code", None)
         final_url = getattr(response, "url", "")
-        if not self._trusted_response_url(final_url):
+        if not self._trusted_response_url(
+            final_url, expected_scheme=transport_scheme
+        ):
             health["status"] = "ERROR"
-            health["failure_reason"] = "untrusted_response_url"
+            health["failure_reason"] = (
+                "http_fallback_untrusted_response_url"
+                if transport_scheme == "http"
+                else "untrusted_response_url"
+            )
             health["error"] = "Untrusted OpenInsider response URL"
             logger.warning(
                 "OpenInsider rejected untrusted response URL: %r", final_url
@@ -424,7 +511,12 @@ class OpenInsiderAgent:
         status_code = getattr(response, "status_code", None)
         if status_code != 200:
             health["status"] = "ERROR"
-            health["failure_reason"] = self._http_failure_reason(status_code)
+            reason = self._http_failure_reason(status_code)
+            health["failure_reason"] = (
+                f"http_fallback_{reason}"
+                if transport_scheme == "http"
+                else reason
+            )
             health["error"] = f"HTTP {status_code}"
             logger.warning("OpenInsider returned %s", status_code)
             return self._failure_with_cache(health)
@@ -446,7 +538,11 @@ class OpenInsiderAgent:
 
         if not trades:
             health["status"] = "ERROR"
-            health["failure_reason"] = "parser_failed"
+            health["failure_reason"] = (
+                "http_fallback_parser_failed"
+                if transport_scheme == "http"
+                else "parser_failed"
+            )
             health["error"] = (
                 health["error"]
                 or "OpenInsider response contained no parseable trade rows"
@@ -470,6 +566,36 @@ class OpenInsiderAgent:
             )
             health["latest_filing_age_days"] = round(age_days, 1)
 
+        if transport_scheme == "http":
+            warning = (
+                "HTTPS connection was refused; using unauthenticated HTTP "
+                "OpenInsider rows for narrative context only. HTTP rows are "
+                "excluded from clusters, signals, confluence, state, and "
+                "the ledger; SEC EDGAR remains the cluster fallback."
+            )
+            health.update({
+                "status": "WARN",
+                "live": False,
+                "run_origin": "insecure_http",
+                "stale": False,
+                "warning": warning,
+                "error": None,
+                "failure_reason": (
+                    health.get("https_failure_reason")
+                    or "connection_refused"
+                ),
+                "transport_scheme": "http",
+                "transport_secure": False,
+                "http_fallback_used": True,
+                "cache_status": "not_written_insecure_transport",
+            })
+            self._replace_health(health)
+            logger.warning(
+                "OpenInsider HTTP fallback parsed %s narrative-only rows",
+                len(rows),
+            )
+            return rows, "insecure_http"
+
         health.update({
             "status": "OK",
             "live": True,
@@ -478,6 +604,8 @@ class OpenInsiderAgent:
             "warning": None,
             "error": None,
             "failure_reason": None,
+            "transport_scheme": "https",
+            "transport_secure": True,
         })
         self._save_cache(rows, health)
         self._replace_health(health)
@@ -604,6 +732,10 @@ class OpenInsiderAgent:
         """Space and serialize physical OpenInsider requests process-wide."""
         with OpenInsiderAgent._SOURCE_REQUEST_GATE_LOCK:
             self._wait_for_request_slot_locked()
+            # Redirect targets must be evaluated before any follow-up request.
+            # Requests otherwise follows Location automatically, bypassing the
+            # final response URL guard for the first off-host hop.
+            kwargs["allow_redirects"] = False
             return self.session.get(url, **kwargs)
 
     def _wait_for_request_slot(self):
@@ -764,6 +896,8 @@ class OpenInsiderAgent:
             source_label = (
                 "OpenInsider/STALE"
                 if trade.get("source_stale")
+                else "OpenInsider/HTTP-INSECURE"
+                if trade.get("source_transport_secure") is False
                 else "OpenInsider"
             )
             items.append(
@@ -774,7 +908,21 @@ class OpenInsiderAgent:
 
     def _freshness_warning(self, trades, max_stale_days=3):
         uses_stale_cache = self.run_uses_stale_cache
+        uses_insecure_http = self.run_uses_insecure_http
         with self._health_lock:
+            if uses_insecure_http:
+                warning = self.health.get("warning") or (
+                    "Using unauthenticated HTTP OpenInsider rows for "
+                    "narrative context only."
+                )
+                self.health.update({
+                    "status": "WARN",
+                    "stale": False,
+                    "warning": warning,
+                    "max_stale_days": max_stale_days,
+                })
+                return f"[OpenInsider/WARN] {warning}"
+
             if uses_stale_cache:
                 warning = self.health.get("warning") or (
                     "Using stale cached OpenInsider rows because live "

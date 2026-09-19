@@ -80,12 +80,11 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
             ticker_pair = get_open_close(conn, row["ticker"], entry_session, exit_session)
             benchmark_pair = get_open_close(conn, BENCHMARK, entry_session, exit_session)
             if ticker_pair is None:
-                if ticker_state == "empty":
-                    conn.execute(
-                        "UPDATE outcomes SET entry_session=?,exit_session=?,status='unpriceable' WHERE record_id=? AND horizon=?",
-                        (entry_session, exit_session, row["record_id"], row["horizon"]),
-                    )
-                    unpriceable += 1
+                # An empty or incomplete provider response does not establish
+                # that an adjusted endpoint can never become available. Keep
+                # the row pending so a later bounded run can retry it. The
+                # current provider contract has no explicit terminal-absence
+                # result; only such a result could justify ``unpriceable``.
                 continue
             if benchmark_pair is None:
                 continue

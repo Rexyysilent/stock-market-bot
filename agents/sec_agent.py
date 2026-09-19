@@ -15,9 +15,12 @@ from collections import Counter
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from threading import Lock
-from config import SEC_USER_AGENT, ALL_TICKERS
+from config import SEC_USER_AGENT, SIGNAL_ELIGIBLE_TICKERS
 from openinsider_agent import OpenInsiderAgent
 from timeutil import to_utc_z, newest
+
+# Compatibility seam for focused tests; acquisition remains the core 29 only.
+ALL_TICKERS = list(SIGNAL_ELIGIBLE_TICKERS)
 
 logger = logging.getLogger("SECAgent")
 
@@ -75,6 +78,7 @@ class SECAgent:
             "openinsider_cluster_rows_dropped": {
                 "not_mapping": 0,
                 "stale": 0,
+                "insecure_transport": 0,
                 "off_watchlist": 0,
                 "undated": 0,
                 "future": 0,
@@ -449,6 +453,7 @@ class SECAgent:
         return {
             "not_mapping": 0,
             "stale": 0,
+            "insecure_transport": 0,
             "off_watchlist": 0,
             "undated": 0,
             "future": 0,
@@ -464,6 +469,12 @@ class SECAgent:
             )
         ):
             return "stale_cache_disallowed"
+        if (
+            getattr(self.openinsider, "run_uses_insecure_http", False)
+            or source_health.get("run_origin") == "insecure_http"
+            or source_health.get("http_fallback_used") is True
+        ):
+            return "insecure_http_disallowed"
         acquisition_status = str(
             source_health.get("acquisition_status") or ""
         ).strip().lower()
@@ -483,6 +494,14 @@ class SECAgent:
                 source_health.get("cache_used")
                 and source_health.get("live") is not True
             )
+        )
+
+    def _openinsider_source_is_insecure(self, source_health):
+        return bool(
+            getattr(self.openinsider, "run_uses_insecure_http", False)
+            or source_health.get("run_origin") == "insecure_http"
+            or source_health.get("transport_secure") is False
+            or source_health.get("http_fallback_used") is True
         )
 
     def _detect_openinsider_clusters(self, days_back=30):
@@ -521,8 +540,8 @@ class SECAgent:
             return []
 
         # Fail closed even if a future adapter violates allow_stale=False and
-        # returns cache-backed rows. Source-level and per-row provenance are
-        # both checked before any constituent can enter a cluster.
+        # returns cache-backed or cleartext rows. Source-level and per-row
+        # provenance are checked before any constituent can enter a cluster.
         if self._openinsider_source_is_stale(source_health):
             drop_counts["stale"] = len(trades)
             self._set_health_value(
@@ -530,6 +549,17 @@ class SECAgent:
             )
             self._set_health_value(
                 "insider_cluster_fallback_reason", "stale_cache_disallowed"
+            )
+            return []
+
+        if self._openinsider_source_is_insecure(source_health):
+            drop_counts["insecure_transport"] = len(trades)
+            self._set_health_value(
+                "openinsider_cluster_rows_dropped", drop_counts
+            )
+            self._set_health_value(
+                "insider_cluster_fallback_reason",
+                "insecure_http_disallowed",
             )
             return []
 
@@ -544,6 +574,14 @@ class SECAgent:
                 continue
             if trade.get("source_stale") not in (None, False):
                 drop_counts["stale"] += 1
+                continue
+            if (
+                trade.get("source_transport_secure") is False
+                or str(trade.get("source_transport_scheme") or "").lower()
+                == "http"
+                or trade.get("signal_eligible") is False
+            ):
+                drop_counts["insecure_transport"] += 1
                 continue
             filing_stamp = to_utc_z(trade.get("filing_date"))
             if filing_stamp is None:
@@ -578,7 +616,9 @@ class SECAgent:
         )
         if not eligible_count:
             reason = (
-                "stale_cache_disallowed"
+                "insecure_http_disallowed"
+                if drop_counts["insecure_transport"]
+                else "stale_cache_disallowed"
                 if drop_counts["stale"] and temporally_eligible_count == 0
                 else "no_temporally_eligible_rows"
                 if temporally_eligible_count == 0

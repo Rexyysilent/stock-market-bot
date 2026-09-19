@@ -6,6 +6,9 @@ from pathlib import Path
 import sys
 import tempfile
 import types
+import io
+from contextlib import redirect_stderr, redirect_stdout
+from unittest import mock
 
 # The transport test replaces the table parser, so keep it independent of the
 # optional heavy pandas runtime used by production parsing.
@@ -156,5 +159,18 @@ index_html = (ROOT / "dashboard" / "index.html").read_text(encoding="utf-8")
 assert "onclick=" not in index_html
 server_source = (ROOT / "serve_dump.py").read_text(encoding="utf-8")
 assert "Content-Security-Policy" in server_source
+
+# Hung checks must report a bounded failure to the offline runner.
+from scripts import run_offline_checks
+with mock.patch.object(run_offline_checks, "CHECKS", ("test_security_regressions.py",)):
+    with mock.patch.object(
+        run_offline_checks.subprocess, "run",
+        side_effect=run_offline_checks.subprocess.TimeoutExpired("check", 120),
+    ) as run_child:
+        captured_error = io.StringIO()
+        with redirect_stderr(captured_error), redirect_stdout(io.StringIO()):
+            assert run_offline_checks.main() == 124
+        assert "TIMEOUT test_security_regressions.py" in captured_error.getvalue()
+        assert 0 < run_child.call_args.kwargs["timeout"] <= 120
 
 print("Security regression checks passed")

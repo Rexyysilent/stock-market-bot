@@ -1,5 +1,10 @@
 # v3.5 Implementation Changelog
 
+> Historical checkpoint from August 18, 2026. Later integrated work supersedes
+> several deferred-status statements below. See
+> [`docs/RELEASE_NOTES.md`](../../docs/RELEASE_NOTES.md) for the current mapping;
+> the original record is retained so the earlier release evidence remains auditable.
+
 ## 2026-08-18 - OpenInsider acquisition hardening
 
 - Replaced two independently timed OpenInsider scrapes with one run-scoped

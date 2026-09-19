@@ -27,6 +27,7 @@ class FakeOpenInsider:
         rows=None,
         *,
         stale=False,
+        insecure_http=False,
         acquisition_status="ok",
         failure_reason=None,
         error=None,
@@ -34,7 +35,10 @@ class FakeOpenInsider:
     ):
         self.rows = list(rows or [])
         self.run_uses_stale_cache = stale
-        self.has_live_run_data = not stale and acquisition_status == "ok"
+        self.run_uses_insecure_http = insecure_http
+        self.has_live_run_data = (
+            not stale and not insecure_http and acquisition_status == "ok"
+        )
         self.exception = exception
         self.run_calls = []
         self.format_calls = []
@@ -42,6 +46,13 @@ class FakeOpenInsider:
             "acquisition_status": acquisition_status,
             "cache_used": stale,
             "cache_stale": stale,
+            "run_origin": (
+                "stale_cache" if stale
+                else "insecure_http" if insecure_http
+                else "live"
+            ),
+            "transport_secure": False if insecure_http else True,
+            "http_fallback_used": insecure_http,
             "failure_reason": failure_reason,
             "error": error,
         }
@@ -53,7 +64,9 @@ class FakeOpenInsider:
         self.run_calls.append((days_back, limit, allow_stale))
         if self.exception is not None:
             raise self.exception
-        if self.run_uses_stale_cache and not allow_stale:
+        if (
+            self.run_uses_stale_cache or self.run_uses_insecure_http
+        ) and not allow_stale:
             return []
         return deepcopy(self.rows[:limit])
 
@@ -68,7 +81,12 @@ class FakeOpenInsider:
             (days_back, limit, max_stale_days, allow_stale)
         )
         rows = self.get_run_trades(days_back, limit, allow_stale)
-        prefix = "OpenInsider/STALE" if self.run_uses_stale_cache else "OpenInsider"
+        prefix = (
+            "OpenInsider/STALE" if self.run_uses_stale_cache
+            else "OpenInsider/HTTP-INSECURE"
+            if self.run_uses_insecure_http
+            else "OpenInsider"
+        )
         return [
             f"[{prefix}] {row.get('ticker', '?')}: "
             f"{row.get('trade_type', 'Trade')}"
@@ -136,6 +154,7 @@ assert fresh_health["openinsider_cluster_rows_eligible"] == 5
 assert fresh_health["openinsider_cluster_rows_dropped"] == {
     "not_mapping": 1,
     "stale": 0,
+    "insecure_transport": 0,
     "off_watchlist": 1,
     "undated": 1,
     "future": 1,
@@ -202,6 +221,28 @@ stale_health = assert_edgar_fallback(
 )
 assert stale_health["openinsider_cluster_rows_considered"] == 0
 
+http_source = FakeOpenInsider(
+    [
+        trade("ROKU", "HTTP Buyer A", "2026-08-18T10:00:00Z"),
+        trade("ROKU", "HTTP Buyer B", "2026-08-18T11:00:00Z"),
+    ],
+    insecure_http=True,
+    acquisition_status="warn",
+    failure_reason="connection_refused",
+)
+http_social = SocialAgent(now=NOW, openinsider=http_source)
+http_whispers = http_social._fetch_rss(
+    "https://openinsider.com/rss", limit=5
+)
+assert all(
+    item.startswith("[OpenInsider/HTTP-INSECURE]")
+    for item in http_whispers
+)
+http_health = assert_edgar_fallback(
+    http_source, "insecure_http_disallowed"
+)
+assert http_health["openinsider_cluster_rows_considered"] == 0
+
 # Defense in depth rejects a source that leaks cache rows despite
 # allow_stale=False, and independently rejects stale provenance on individual
 # rows from an otherwise fresh adapter.
@@ -219,6 +260,24 @@ leaked_health = assert_edgar_fallback(
 )
 assert leaked_health["openinsider_cluster_rows_dropped"]["stale"] == 2
 
+leaked_http_health = assert_edgar_fallback(
+    LeakyStaleOpenInsider(
+        [
+            trade("ROKU", "HTTP Buyer A", "2026-08-18T10:00:00Z"),
+            trade("ROKU", "HTTP Buyer B", "2026-08-18T11:00:00Z"),
+        ],
+        insecure_http=True,
+        acquisition_status="warn",
+        failure_reason="connection_refused",
+    ),
+    "insecure_http_disallowed",
+)
+assert (
+    leaked_http_health["openinsider_cluster_rows_dropped"]
+    ["insecure_transport"]
+    == 2
+)
+
 row_stale_a = trade("ROKU", "Cached Buyer A", "2026-08-18T10:00:00Z")
 row_stale_b = trade("ROKU", "Cached Buyer B", "2026-08-18T11:00:00Z")
 row_stale_a["source_stale"] = True
@@ -228,6 +287,22 @@ row_stale_health = assert_edgar_fallback(
     "stale_cache_disallowed",
 )
 assert row_stale_health["openinsider_cluster_rows_dropped"]["stale"] == 2
+
+row_http_a = trade("ROKU", "HTTP Buyer A", "2026-08-18T10:00:00Z")
+row_http_b = trade("ROKU", "HTTP Buyer B", "2026-08-18T11:00:00Z")
+for row in (row_http_a, row_http_b):
+    row["source_transport_scheme"] = "http"
+    row["source_transport_secure"] = False
+    row["signal_eligible"] = False
+row_http_health = assert_edgar_fallback(
+    FakeOpenInsider([row_http_a, row_http_b]),
+    "insecure_http_disallowed",
+)
+assert (
+    row_http_health["openinsider_cluster_rows_dropped"]
+    ["insecure_transport"]
+    == 2
+)
 
 assert_edgar_fallback(
     FakeOpenInsider(
@@ -255,8 +330,9 @@ mixed_drop_health = assert_edgar_fallback(
     "no_watchlist_rows",
 )
 assert mixed_drop_health["openinsider_cluster_rows_dropped"] == {
-    "not_mapping": 0, "stale": 0, "off_watchlist": 2, "undated": 1,
-    "future": 0, "out_of_window": 0,
+    "not_mapping": 0, "stale": 0, "insecure_transport": 0,
+    "off_watchlist": 2, "undated": 1, "future": 0,
+    "out_of_window": 0,
 }
 assert_edgar_fallback(
     FakeOpenInsider(exception=RuntimeError("fixture acquisition failure")),

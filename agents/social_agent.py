@@ -12,7 +12,7 @@ from openinsider_agent import OpenInsiderAgent
 from timeutil import utc_now_z
 
 from config import (
-    SUBREDDITS_NARRATIVE, ALL_TICKERS,
+    SUBREDDITS_NARRATIVE, SIGNAL_ELIGIBLE_TICKERS,
     CONTRARIAN_SUBREDDITS, CONTRARIAN_EUPHORIA_KEYWORDS, CONTRARIAN_EUPHORIA_THRESHOLD,
     APEWISDOM_ENABLED, APEWISDOM_FILTERS, APEWISDOM_LOW_VOLUME_MENTIONS,
     APEWISDOM_NO_UPVOTE_FILTERS, APEWISDOM_UNIVERSE_PAGES
@@ -163,7 +163,10 @@ class SocialAgent:
         return whispers
 
     # Universe tickers ApeWisdom can never track: futures ("=") and indices ("^")
-    SOCIAL_UNIVERSE = [t for t in ALL_TICKERS if "^" not in t and "=" not in t]
+    SOCIAL_UNIVERSE = tuple(
+        ticker for ticker in SIGNAL_ELIGIBLE_TICKERS
+        if "^" not in ticker and "=" not in ticker
+    )
 
     def _build_social_attention(self):
         """Universe-first social_attention assembly.

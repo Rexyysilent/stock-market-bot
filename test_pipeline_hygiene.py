@@ -10,8 +10,8 @@ import export_for_gemini as exporter
 from timeutil import split_fresh_records
 
 
-CURRENT_PIPELINE_VERSION = "2.6.2"
-assert exporter.SCHEMA_VERSION == "2.6"
+CURRENT_PIPELINE_VERSION = "2.6.4"
+assert exporter.SCHEMA_VERSION == "2.8"
 assert exporter.PIPELINE_VERSION == CURRENT_PIPELINE_VERSION
 assert ledger.__version__ == CURRENT_PIPELINE_VERSION
 
@@ -86,6 +86,40 @@ with tempfile.TemporaryDirectory() as tmpdir:
     assert scores["COIN"]["volume_ratio_z"] > 8
     assert alerts[0]["baseline_immature"] is False
 
+    # Editorial-only and unknown symbols cannot create baseline state even if
+    # a malformed upstream payload reaches this stateful helper directly.
+    leak_tickers = [*exporter.EDITORIAL_ONLY_TICKERS, "OUTSIDE"]
+    clean_state = {
+        "schema_version": 2,
+        "versions": {CURRENT_PIPELINE_VERSION: {}},
+    }
+    with open(exporter.BASELINE_STATE_FILE, "w", encoding="utf-8") as handle:
+        json.dump(clean_state, handle)
+    outside_options = {
+        ticker: {
+            "put_call_vol_ratio": 2.0,
+            "source_session": "2026-07-21",
+            "signal_eligible": True,
+        }
+        for ticker in leak_tickers
+    }
+    outside_technicals = {
+        ticker: {
+            "volume_ratio": 2.0,
+            "source_session": "2026-07-21",
+            "session_complete": True,
+        }
+        for ticker in leak_tickers
+    }
+    _, outside_alerts = exporter.update_baselines_and_score(
+        outside_options, outside_technicals, "2026-07-21"
+    )
+    persisted = json.loads(Path(exporter.BASELINE_STATE_FILE).read_text(
+        encoding="utf-8"
+    ))
+    assert outside_alerts == []
+    blocked = set(leak_tickers)
+    assert not blocked & set(persisted["versions"][CURRENT_PIPELINE_VERSION])
     # Archive copies are byte-identical and never replaced.
     source = os.path.join(tmpdir, "brief.json")
     archive = os.path.join(tmpdir, "archive", "briefs")
@@ -131,4 +165,4 @@ for banned in ("buyers panicking for delivery", "gamma squeeze", "potential buy"
 watcher_source = (repo / "agents/watcher_agent.py").read_text(encoding="utf-8")
 assert "VOLUME_ALERT_MULT" not in watcher_source
 assert "above 20-day avg — UNUSUAL" not in watcher_source
-print("v2.6 pipeline hygiene checks passed")
+print("v2.6.4 pipeline hygiene checks passed")

@@ -18,9 +18,41 @@ if (-not (Test-Path -LiteralPath $pythonPath)) {
 
 Set-Location -LiteralPath $projectRoot
 
+function Invoke-ScheduledPython {
+    param(
+        [string]$Stage,
+        [string[]]$PythonArguments
+    )
+
+    $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd_HHmmss_fffffff")
+    $stdoutPath = Join-Path $logDir ("scheduled-{0}-{1}.stdout.log" -f $stamp, $Stage)
+    $stderrPath = Join-Path $logDir ("scheduled-{0}-{1}.stderr.log" -f $stamp, $Stage)
+    $summaryPath = Join-Path $logDir ("scheduled-{0}.log" -f [DateTime]::UtcNow.ToString("yyyy-MM-dd"))
+    Add-Content -LiteralPath $summaryPath -Encoding UTF8 -Value (
+        "Starting {0}; stdout={1}; stderr={2}" -f $Stage, $stdoutPath, $stderrPath
+    )
+
+    # Windows PowerShell 5.1 turns native stderr into NativeCommandError under
+    # ErrorActionPreference=Stop. Capture it outside PowerShell's error stream;
+    # warnings are data, while the actual process exit code determines success.
+    $process = Start-Process -FilePath $pythonPath -ArgumentList $PythonArguments `
+        -WorkingDirectory $projectRoot -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath `
+        -Wait -PassThru
+    $exitCode = $process.ExitCode
+    Add-Content -LiteralPath $summaryPath -Encoding UTF8 -Value (
+        "Finished {0}; exit_code={1}" -f $Stage, $exitCode
+    )
+    foreach ($capturePath in @($stdoutPath, $stderrPath)) {
+        Get-Content -LiteralPath $capturePath | Add-Content -LiteralPath $summaryPath -Encoding UTF8
+    }
+    if ($null -eq $exitCode -or $exitCode -ne 0) {
+        throw "$Stage failed (exit code $exitCode); see $summaryPath and $stderrPath"
+    }
+}
+
 if ($ValidateOnly) {
-    & $pythonPath -m ledger --help | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Signal Ledger CLI validation failed" }
+    Invoke-ScheduledPython -Stage "validate" -PythonArguments @("-m", "ledger", "--help")
     Write-Output "Scheduler launcher validated: $pythonPath"
     exit 0
 }
@@ -50,11 +82,8 @@ try {
         if ($lastRun -eq $utcDate) { exit 0 }
     }
 
-    $logPath = Join-Path $logDir ("scheduled-{0}.log" -f $utcDate)
-    & $pythonPath export_for_gemini.py *>> $logPath
-    if ($LASTEXITCODE -ne 0) { throw "Daily export failed; see $logPath" }
-    & $pythonPath -m ledger update *>> $logPath
-    if ($LASTEXITCODE -ne 0) { throw "Signal Ledger update failed; see $logPath" }
+    Invoke-ScheduledPython -Stage "export" -PythonArguments @("-u", "export_for_gemini.py")
+    Invoke-ScheduledPython -Stage "ledger" -PythonArguments @("-u", "-m", "ledger", "update")
     Set-Content -LiteralPath $lastRunPath -Value $utcDate -NoNewline
 } finally {
     if ($lockStream) { $lockStream.Dispose() }

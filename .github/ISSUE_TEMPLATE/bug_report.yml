@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible non-security defect
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include secrets, personal briefs, account responses, restricted provider payloads, or vulnerability details. Use the repository Security tab for private vulnerability reporting."
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Provide minimal commands and a synthetic or redistributable fixture.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Python, operating system, schema_version, and pipeline_version when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: health
+    attributes:
+      label: Health and provenance
+      description: Include sanitized health/source status and source-time details. State whether this used offline fixtures or live providers.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data safety
+      options:
+        - label: I removed credentials, personal data, private watchlists, and restricted raw provider content.
+          required: true

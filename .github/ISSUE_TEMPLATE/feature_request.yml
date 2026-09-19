@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a bounded improvement to the research workbench
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What research or observability task is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the output, failure behavior, and user workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Data-contract impact
+      description: Explain effects on timestamps, missing values, provenance, provider rights, schema compatibility, pipeline era, state, archives, and ledger populations.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Deterministic verification
+      description: Suggest synthetic fixtures or offline checks. Keep live-provider smoke checks separate.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This request does not add recommendations, portfolio advice, brokerage connectivity, or order execution.
+          required: true
