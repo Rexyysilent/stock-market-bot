@@ -33,8 +33,9 @@ def _choice_env(name, default, choices):
 # Release identity. schema_version describes the public JSON contract.
 # Bump pipeline_version when signal, event, or ledger eligibility/populations
 # change; editorial-only headline ranking does not start a new era.
-PIPELINE_VERSION = "2.6.3"
+PIPELINE_VERSION = "2.6.4"
 SCHEMA_VERSION = "2.8"
+UNIVERSE_PROFILE = None
 BRIEF_ARCHIVE_DIR = os.getenv("BRIEF_ARCHIVE_DIR", os.path.join("archive", "briefs"))
 BRIEF_ARCHIVE_MIRROR_DIR = os.getenv("BRIEF_ARCHIVE_MIRROR_DIR") or None
 

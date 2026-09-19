@@ -23,6 +23,7 @@ import numpy as np
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 from timeutil import build_run_context, to_utc_z, utc_now_z
+from session_returns import format_percent
 
 
 class NumpySafeEncoder(json.JSONEncoder):
@@ -71,7 +72,7 @@ from config import (
     EDITORIAL_ONLY_TICKERS, EDITORIAL_ONLY_TICKER_SET,
     EDITORIAL_COVERAGE_TICKERS, EDITORIAL_COVERAGE_MODE,
     PIPELINE_VERSION, SCHEMA_VERSION, BRIEF_ARCHIVE_DIR,
-    BRIEF_ARCHIVE_MIRROR_DIR,
+    BRIEF_ARCHIVE_MIRROR_DIR, UNIVERSE_PROFILE,
 )
 
 # P2-8: entity linking for social whispers
@@ -123,7 +124,8 @@ BASELINE_MATURE_POINTS = 20
 BASELINE_IMMATURE_Z_CAP = 8.0
 BASELINE_Z_ALERT = 2.0
 EXPORT_LOCK_FILE = os.path.join("state", "export.lock")
-UNIVERSE_CONTRACT_VERSION = "2.8-tiered-universe-1"
+UNIVERSE_CONTRACT_VERSION = ("2.9-profile-universe-1" if UNIVERSE_PROFILE is not None
+                             else "2.8-tiered-universe-1")
 HEADLINE_CONTRACT_VERSION = "2.7-headline-lanes-1"
 SIGNAL_ELIGIBILITY_AUDIT_VERSION = "2.7-signal-eligibility-1"
 
@@ -833,8 +835,7 @@ def audit_signal_eligible_tickers(document):
     """
     if (
         not isinstance(document, dict)
-        or document.get("schema_version") != SCHEMA_VERSION
-        or document.get("pipeline_version") != PIPELINE_VERSION
+        or document.get("schema_version") not in ("2.7", "2.8", "2.9")
     ):
         return True
     sections = document.get("sections") if isinstance(document, dict) else None
@@ -1735,23 +1736,12 @@ def _generate_daily_brief():
         # Sector Rotation
         f.write("\n--- SECTOR ROTATION ---\n")
         f.write(f"- Regime label: {sector_rotation.get('signal', 'N/A')}\n")
-        f.write(f"- Growth 5d: {sector_rotation.get('growth_5d', 'N/A')} | Defensive 5d: {sector_rotation.get('defensive_5d', 'N/A')}\n")
-        spread_5d = sector_rotation.get('spread_5d', 'N/A')
-        if isinstance(spread_5d, (int, float)):
-            spread_5d = f"{spread_5d:+.1f}%"
-        f.write(f"- Spread (Def-Growth): {spread_5d}\n")
-        if sector_rotation.get('growth_20d'):
-            growth_20d = sector_rotation.get('growth_20d', 'N/A')
-            def_20d = sector_rotation.get('defensive_20d', 'N/A')
-            if isinstance(growth_20d, (int, float)):
-                growth_20d = f"{growth_20d:+.1f}%"
-            if isinstance(def_20d, (int, float)):
-                def_20d = f"{def_20d:+.1f}%"
-            f.write(f"- Growth 20d: {growth_20d} | Defensive 20d: {def_20d}\n")
-            spread_20d = sector_rotation.get('spread_20d', 0)
-            if isinstance(spread_20d, (int, float)):
-                leader = "defensives" if spread_20d > 0 else "growth"
-                f.write(f"  📊 20-day trend confirms: {leader} {'+' if spread_20d > 0 else ''}{round(spread_20d, 1)}% vs {'growth' if spread_20d > 0 else 'defensives'} (sustained {'risk-off' if spread_20d > 0 else 'risk-on'})\n")
+        for horizon in (5, 20):
+            growth = format_percent(sector_rotation.get(f'growth_{horizon}d'))
+            defensive = format_percent(sector_rotation.get(f'defensive_{horizon}d'))
+            spread = format_percent(sector_rotation.get(f'spread_{horizon}d')).replace('%', ' percentage points')
+            f.write(f"- {horizon} completed sessions: Growth {growth} | Defensive {defensive} | Spread (Def-Growth) {spread}\n")
+        f.write("- Fixed-basket relative measurements; overlapping horizons are not independent confirmation.\n")
         f.write("\n")
 
         # VIX Term Structure (regime flag)
@@ -1832,6 +1822,7 @@ def _generate_daily_brief():
         "run_context": run_context.to_dict(),
         "pipeline_time_seconds": round(elapsed, 1),
         "universe": {
+            **({"profile": UNIVERSE_PROFILE} if UNIVERSE_PROFILE is not None else {}),
             "coverage_policy": coverage_policy_manifest(EDITORIAL_COVERAGE_MODE),
             "name": UNIVERSE_NAME,
             "version": hashlib.sha256(",".join(EDITORIAL_COVERAGE_TICKERS).encode("utf-8")).hexdigest()[:8],
@@ -1862,8 +1853,8 @@ def _generate_daily_brief():
             "as_of": "when the data was true at its source — exchange bar time for prices, filing time for filings, publication time for news, registry last-update time for trial records; NEVER the pipeline's observation time; null when the source exposes no usable timestamp (paths listed in data_quality.as_of_nulled, same philosophy as the NaN policy)",
             "observed_at": "when this pipeline fetched a snapshot; it never substitutes for source as_of except for observation-native alerts such as a registry diff or social leaderboard transition",
             "derived_as_of": "derived records inherit source time: single-series computations carry the last observation used; multi-series aggregates (sector_rotation, instrument_relative_return_spread, regime) carry the OLDEST constituent timestamp; event sets carry the newest constituent timestamp",
-            "universe.version": "sha256[:8] of the ordered 42-name editorial coverage list",
-            "universe.instrumented_version": "sha256[:8] of the ordered 29-name signal-eligible list",
+            "universe.version": "sha256[:8] of the ordered editorial coverage list",
+            "universe.instrumented_version": "sha256[:8] of the ordered instrumented list",
             "coverage_tier": "instrumented names retain measurement eligibility; editorial_only names can supply neutral headline context/focus only and never enter signals",
             "relevance": "whisper ticker-anchor confidence: 1.0 cashtag, 0.8 bare symbol, 0.6 company-name alias",
             "z_scores": "vs the ticker's own pipeline-versioned trailing 20-run baseline; null until 15 prior runs, baseline_immature through 19, immature z capped at ±8",

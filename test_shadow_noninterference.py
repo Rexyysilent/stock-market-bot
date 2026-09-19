@@ -96,7 +96,7 @@ def state_projection(mode):
         confluence = signals.build_confluence(events, "2026-08-07T21:00:00Z")
         assert social_alerts and confluence and registry
         assert all(r["ticker"] not in blocked for r in social_alerts + baseline_alerts + confluence)
-        doc = {"schema_version": "2.8", "pipeline_version": "2.6.3",
+        doc = {"schema_version": "2.8", "pipeline_version": "2.6.4",
                "generated_at": "2026-08-07T21:00:00Z", "sections": {
                    "social_alerts": social_alerts, "confluence": confluence,
                    "insider_clusters": [{"ticker": t, "cluster_direction": "buy",
@@ -113,7 +113,7 @@ def state_projection(mode):
         state = {p.name: json.loads(p.read_text()) for p in root.glob("*.json")
                  if p.name != file.name}
         assert set(state["social.json"]["tickers"]) == {"TSLA"}
-        assert set(state["baselines.json"]["versions"]["2.6.3"]) == {"TSLA"}
+        assert set(state["baselines.json"]["versions"]["2.6.4"]) == {"TSLA"}
         return state, social_alerts, baseline_alerts, registry, confluence, ledger
 
 original = (signals.SOCIAL_HISTORY_FILE, signals.CTGOV_SNAPSHOT_FILE,

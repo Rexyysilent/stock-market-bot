@@ -144,7 +144,7 @@ def subprocess_check(code, mode):
 
 # Purpose-specific universes are exact, ordered, disjoint, and immutable. The
 # deprecated ALL_TICKERS projection remains the original ordered 29.
-assert PIPELINE_VERSION == "2.6.3"
+assert PIPELINE_VERSION == "2.6.4"
 assert SCHEMA_VERSION == "2.8"
 assert SIGNAL_ELIGIBLE_TICKERS == CORE_29
 assert EDITORIAL_ONLY_TICKERS == EDITORIAL_13

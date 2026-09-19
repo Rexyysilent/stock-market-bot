@@ -10,7 +10,7 @@ import export_for_gemini as exporter
 from timeutil import split_fresh_records
 
 
-CURRENT_PIPELINE_VERSION = "2.6.3"
+CURRENT_PIPELINE_VERSION = "2.6.4"
 assert exporter.SCHEMA_VERSION == "2.8"
 assert exporter.PIPELINE_VERSION == CURRENT_PIPELINE_VERSION
 assert ledger.__version__ == CURRENT_PIPELINE_VERSION
@@ -165,4 +165,4 @@ for banned in ("buyers panicking for delivery", "gamma squeeze", "potential buy"
 watcher_source = (repo / "agents/watcher_agent.py").read_text(encoding="utf-8")
 assert "VOLUME_ALERT_MULT" not in watcher_source
 assert "above 20-day avg — UNUSUAL" not in watcher_source
-print("v2.6.3 pipeline hygiene checks passed")
+print("v2.6.4 pipeline hygiene checks passed")

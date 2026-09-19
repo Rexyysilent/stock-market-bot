@@ -11,7 +11,7 @@ Top-level fields:
 
 - `generated_at` - ISO timestamp for the export
 - `schema_version` - public JSON contract (`2.8`)
-- `pipeline_version` - upstream logic era (`2.6.3`); ledger statistics never pool eras
+- `pipeline_version` - upstream logic era (`2.6.4`; historical `2.6.3` remains valid); ledger statistics never pool eras
 - `run_context` - immutable UTC/NYSE clock shared by all stages, including
   market state and the latest completed/settled session
 - `pipeline_time_seconds` - total runtime
@@ -647,3 +647,24 @@ lanes, and scores, not unavailable source bodies or all dropped-only shadow labe
   cached, undated, future-dated, and out-of-window cluster constituents; that
   changes possible confluence and ledger membership and must not be pooled with
   2.6.1 statistics.
+
+
+## Optional profile contract (schema 2.9)
+
+Legacy/default configuration still emits 2.8. Explicit profile launches emit 2.9
+with `universe_contract_version=2.9-profile-universe-1`, pipeline 2.6.4, and a
+normalized `universe.profile`. The full configuration SHA-256 is part of
+`universe.name`; ordered membership has its own eight-character fingerprints.
+All 1–64 profile members are instrumented; editorial-only membership is empty
+and editorial mode is off. Profile changes require a separate workspace.
+
+`schemas/daily_brief.2.9.schema.json` and semantic validation recompute membership,
+focus configuration, source-purpose policy, collector targets and fingerprints
+from the embedded profile, independently of local operator settings. A profile
+cannot relax the existing default 2.8 cohort contract. Profile aliases and symbols
+are unverified user assertions, not an instrument identity certification.
+
+Measurement era 2.6.4 uses exact five/twenty-session basket return intervals,
+full fixed membership, explicit missing coverage and endpoint-aware ledger prices.
+`UNAVAILABLE` is distinct from legacy descriptive regime labels. Historical
+archives and fixtures retain their original measurement eras.

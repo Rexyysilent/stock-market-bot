@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "name": "us-core-example",
+  "equities": [
+    {
+      "symbol": "AAPL",
+      "aliases": [
+        "apple inc"
+      ]
+    },
+    {
+      "symbol": "MSFT",
+      "aliases": [
+        "microsoft"
+      ]
+    },
+    {
+      "symbol": "GOOGL",
+      "aliases": [
+        "alphabet inc"
+      ]
+    },
+    {
+      "symbol": "AMZN",
+      "aliases": [
+        "amazon.com inc"
+      ]
+    },
+    {
+      "symbol": "META",
+      "aliases": [
+        "meta platforms"
+      ]
+    },
+    {
+      "symbol": "NVDA",
+      "aliases": [
+        "nvidia"
+      ]
+    },
+    {
+      "symbol": "AMD",
+      "aliases": [
+        "advanced micro devices"
+      ]
+    },
+    {
+      "symbol": "AVGO",
+      "aliases": [
+        "broadcom"
+      ]
+    },
+    {
+      "symbol": "ORCL",
+      "aliases": [
+        "oracle corporation"
+      ]
+    },
+    {
+      "symbol": "CRM",
+      "aliases": [
+        "salesforce"
+      ]
+    },
+    {
+      "symbol": "JPM",
+      "aliases": [
+        "jpmorgan chase"
+      ]
+    },
+    {
+      "symbol": "BAC",
+      "aliases": [
+        "bank of america"
+      ]
+    },
+    {
+      "symbol": "GS",
+      "aliases": [
+        "goldman sachs"
+      ]
+    },
+    {
+      "symbol": "V",
+      "aliases": [
+        "visa inc"
+      ]
+    },
+    {
+      "symbol": "MA",
+      "aliases": [
+        "mastercard"
+      ]
+    },
+    {
+      "symbol": "XOM",
+      "aliases": [
+        "exxon mobil"
+      ]
+    },
+    {
+      "symbol": "CVX",
+      "aliases": [
+        "chevron"
+      ]
+    },
+    {
+      "symbol": "CAT",
+      "aliases": [
+        "caterpillar"
+      ]
+    },
+    {
+      "symbol": "DE",
+      "aliases": [
+        "deere & company"
+      ]
+    },
+    {
+      "symbol": "GE",
+      "aliases": [
+        "ge aerospace"
+      ]
+    },
+    {
+      "symbol": "WMT",
+      "aliases": [
+        "walmart"
+      ]
+    },
+    {
+      "symbol": "COST",
+      "aliases": [
+        "costco"
+      ]
+    },
+    {
+      "symbol": "HD",
+      "aliases": [
+        "home depot"
+      ]
+    },
+    {
+      "symbol": "PG",
+      "aliases": [
+        "procter & gamble"
+      ]
+    },
+    {
+      "symbol": "KO",
+      "aliases": [
+        "coca-cola company"
+      ]
+    },
+    {
+      "symbol": "JNJ",
+      "aliases": [
+        "johnson & johnson"
+      ]
+    },
+    {
+      "symbol": "MRK",
+      "aliases": [
+        "merck & co"
+      ]
+    },
+    {
+      "symbol": "ABBV",
+      "aliases": [
+        "abbvie"
+      ]
+    },
+    {
+      "symbol": "AMGN",
+      "aliases": [
+        "amgen"
+      ]
+    },
+    {
+      "symbol": "UNH",
+      "aliases": [
+        "unitedhealth group"
+      ]
+    },
+    {
+      "symbol": "LMT",
+      "aliases": [
+        "lockheed martin"
+      ]
+    },
+    {
+      "symbol": "NOC",
+      "aliases": [
+        "northrop grumman"
+      ]
+    },
+    {
+      "symbol": "PLTR",
+      "aliases": [
+        "palantir"
+      ]
+    },
+    {
+      "symbol": "COIN",
+      "aliases": [
+        "coinbase"
+      ]
+    },
+    {
+      "symbol": "AMAT",
+      "aliases": [
+        "applied materials"
+      ]
+    }
+  ],
+  "funds": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "DIA",
+    "GLD",
+    "TLT",
+    "XLF",
+    "XLE",
+    "XLV"
+  ],
+  "futures": [],
+  "indices": [
+    "^VIX"
+  ],
+  "focus_ticker": "MSFT",
+  "groups": {
+    "defense": [
+      "LMT",
+      "NOC"
+    ],
+    "uranium": [],
+    "cash_runway": []
+  },
+  "baskets": {
+    "growth": [],
+    "defensive": []
+  },
+  "relative_return_pairs": []
+}

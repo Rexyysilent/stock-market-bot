@@ -67,7 +67,9 @@ class DashboardConnectionSecurityTests(unittest.TestCase):
 
     def request(self, path="/"):
         sock = self.connect()
-        sock.sendall(f"GET {path} HTTP/1.0\r\nHost: localhost\r\n\r\n".encode())
+        sock.sendall(
+            f"GET {path} HTTP/1.0\r\nHost: localhost:{self.address[1]}\r\n\r\n".encode()
+        )
         data = b""
         while True:
             chunk = sock.recv(4096)
@@ -85,7 +87,9 @@ class DashboardConnectionSecurityTests(unittest.TestCase):
 
     def test_incomplete_client_does_not_block_ordinary_request(self):
         incomplete = self.connect()
-        incomplete.sendall(b"GET / HTTP/1.1\r\nHost: localhost\r\n")
+        incomplete.sendall(
+            f"GET / HTTP/1.1\r\nHost: localhost:{self.address[1]}\r\n".encode()
+        )
         self.assertIn(b"200 OK", self.request("/api/brief"))
 
     def test_idle_and_slow_trickle_connections_expire(self):

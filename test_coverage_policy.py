@@ -18,7 +18,7 @@ from scripts.validate_export_schema import (
 )
 from export_for_gemini import audit_signal_eligible_tickers
 
-assert config.PIPELINE_VERSION == "2.6.3" and config.SCHEMA_VERSION == "2.8"
+assert config.PIPELINE_VERSION == "2.6.4" and config.SCHEMA_VERSION == "2.8"
 assert len(LEGACY_COVERAGE_TICKERS) == 41
 assert tuple(LEGACY_COVERAGE_TICKERS) + ("MRK",) == config.EDITORIAL_COVERAGE_TICKERS
 assert config.EDITORIAL_ONLY_TICKERS[-2:] == ("HOOD", "MRK")
@@ -158,7 +158,7 @@ templates = {
 }
 for ticker in config.EDITORIAL_ONLY_TICKERS + ("OUTSIDE",):
     for section, fields in templates.items():
-        doc = {"schema_version": "2.8", "pipeline_version": "2.6.3",
+        doc = {"schema_version": "2.8", "pipeline_version": "2.6.4",
                "sections": {section: [{"ticker": ticker, **fields}]}}
         try:
             audit_signal_eligible_tickers(doc)
@@ -166,7 +166,7 @@ for ticker in config.EDITORIAL_ONLY_TICKERS + ("OUTSIDE",):
             pass
         else:
             raise AssertionError((ticker, section))
-    doc = {"schema_version": "2.8", "pipeline_version": "2.6.3",
+    doc = {"schema_version": "2.8", "pipeline_version": "2.6.4",
            "sections": {"options_flow": {ticker: {}}}}
     try:
         audit_signal_eligible_tickers(doc)

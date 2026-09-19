@@ -241,7 +241,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
         schedule_provider=schedule,
         universe=("SPY", "TSLA", "CRSP"),
     )
-    assert result["filled"] > 0 and result["unpriceable"] > 0
+    assert result["filled"] > 0 and result["unpriceable"] == 0
+    # A temporary empty response is retryable, not proof of terminal absence.
     conn = connect(db_path)
     assert conn.execute(
         "SELECT COUNT(*) AS n FROM outcomes WHERE exit_session<=entry_session"
@@ -265,7 +266,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     assert spy and abs(spy["excess"]) < 1e-12
     assert conn.execute(
         """SELECT COUNT(*) AS n FROM outcomes o JOIN signals s ON s.record_id=o.record_id
-           WHERE s.ticker='STTDF' AND o.status='unpriceable'"""
+           WHERE s.ticker='STTDF' AND o.status='pending'"""
     ).fetchone()["n"] > 0
     conn.close()
 

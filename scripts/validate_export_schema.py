@@ -15,6 +15,7 @@ from jsonschema.exceptions import ValidationError
 
 
 UNIVERSE_CONTRACT_VERSION = "2.8-tiered-universe-1"
+PROFILE_UNIVERSE_CONTRACT_VERSION = "2.9-profile-universe-1"
 LEGACY_UNIVERSE_CONTRACT_VERSION = "2.7-tiered-universe-1"
 HEADLINE_CONTRACT_VERSION = "2.7-headline-lanes-1"
 FOCUS_CONTRACT_VERSION = "2.7-editorial-focus-1"
@@ -57,6 +58,7 @@ SCHEMA_PATHS = {
     "2.6": LEGACY_SCHEMA,
     "2.7": LEGACY_TIERED_SCHEMA,
     "2.8": DEFAULT_SCHEMA,
+    "2.9": ROOT / "schemas" / "daily_brief.2.9.schema.json",
 }
 
 
@@ -215,7 +217,7 @@ def headline_contract_semantic_errors(document):
     if not isinstance(data_quality, dict):
         return []
     expected_contract = (
-        HEADLINE_CONTRACT_VERSION if document.get("schema_version") in ("2.7", "2.8")
+        HEADLINE_CONTRACT_VERSION if document.get("schema_version") in ("2.7", "2.8", "2.9")
         else LEGACY_HEADLINE_CONTRACT_VERSION
     )
     if data_quality.get("headline_contract_version") != expected_contract:
@@ -341,7 +343,7 @@ def editorial_focus_contract_semantic_errors(document):
     if not isinstance(data_quality, dict):
         return []
     expected_contract = (
-        FOCUS_CONTRACT_VERSION if document.get("schema_version") in ("2.7", "2.8")
+        FOCUS_CONTRACT_VERSION if document.get("schema_version") in ("2.7", "2.8", "2.9")
         else LEGACY_FOCUS_CONTRACT_VERSION
     )
     if data_quality.get("focus_contract_version") != expected_contract:
@@ -696,10 +698,12 @@ def _iter_explicit_tickers(value, path):
 
 def tiered_universe_contract_semantic_errors(document):
     """Validate each deployed cohort under its own immutable contract."""
-    if not isinstance(document, dict) or document.get("schema_version") not in ("2.7", "2.8"):
+    if not isinstance(document, dict) or document.get("schema_version") not in ("2.7", "2.8", "2.9"):
         return []
-    current = document.get("schema_version") == "2.8"
-    contract = UNIVERSE_CONTRACT_VERSION if current else LEGACY_UNIVERSE_CONTRACT_VERSION
+    profiled = document.get("schema_version") == "2.9"
+    current = document.get("schema_version") in ("2.8", "2.9")
+    contract = (PROFILE_UNIVERSE_CONTRACT_VERSION if profiled else
+                UNIVERSE_CONTRACT_VERSION if current else LEGACY_UNIVERSE_CONTRACT_VERSION)
     data_quality = document.get("data_quality")
     if not isinstance(data_quality, dict) or data_quality.get(
             "universe_contract_version") != contract:
@@ -719,7 +723,25 @@ def tiered_universe_contract_semantic_errors(document):
     expected_counts = ((coverage, 42 if current else 41, "tickers"),
                        (instrumented, 29, "instrumented_tickers"),
                        (editorial, 13 if current else 12, "editorial_only_tickers"))
-    if current:
+    if profiled:
+        from universe_profile import validate_profile, profile_plan, profile_policy_manifest, fingerprint
+        try:
+            profile = validate_profile(universe.get("profile"))
+        except (ValueError, TypeError, KeyError) as exc:
+            return [_tier_semantic_error(f"Invalid universe profile: {exc}", ["universe", "profile"])]
+        expected = profile_plan(profile)["active_tickers"]
+        expected_counts = ((coverage, len(expected), "tickers"),
+                           (instrumented, len(expected), "instrumented_tickers"),
+                           (editorial, 0, "editorial_only_tickers"))
+        if instrumented != expected or universe.get("editorial_coverage_mode") != "off":
+            errors.append(_tier_semantic_error("Profile membership must match its instrumented cohort with editorial mode off", ["universe"]))
+        if universe.get("coverage_policy") != profile_policy_manifest(profile):
+            errors.append(_tier_semantic_error("Profile coverage policy must match its configuration", ["universe", "coverage_policy"]))
+        if universe.get("name") != f"{profile['name']}:{fingerprint(profile)}":
+            errors.append(_tier_semantic_error("Profile identity must include the full configuration fingerprint", ["universe", "name"]))
+        if universe.get("configured_focus_ticker") != profile["focus_ticker"]:
+            errors.append(_tier_semantic_error("Configured focus must match the profile", ["universe", "configured_focus_ticker"]))
+    elif current:
         from coverage_policy import coverage_policy_manifest
         from config import SIGNAL_ELIGIBLE_TICKERS, EDITORIAL_ONLY_TICKERS
         if instrumented != list(SIGNAL_ELIGIBLE_TICKERS) or editorial != list(EDITORIAL_ONLY_TICKERS):
@@ -1006,7 +1028,7 @@ def _signal_rows_for_audit(section_name, value, eligible_tickers=None):
 
 
 def signal_eligibility_semantic_errors(document):
-    if not isinstance(document, dict) or document.get("schema_version") not in ("2.7", "2.8"):
+    if not isinstance(document, dict) or document.get("schema_version") not in ("2.7", "2.8", "2.9"):
         return []
     universe = document.get("universe")
     sections = document.get("sections")

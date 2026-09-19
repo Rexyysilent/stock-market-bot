@@ -18,7 +18,7 @@
   "properties": {
     "generated_at": {"type": "string", "format": "date-time"},
     "schema_version": {"type": "string", "const": "2.8"},
-    "pipeline_version": {"type": "string", "const": "2.6.3"},
+    "pipeline_version": {"type": "string", "enum": ["2.6.3", "2.6.4"]},
     "run_context": {
       "type": "object",
       "required": [
@@ -125,7 +125,7 @@
       },
       "then": {
         "properties": {
-          "pipeline_version": {"const": "2.6.3"},
+          "pipeline_version": {"enum": ["2.6.3", "2.6.4"]},
           "sections": {
             "properties": {
               "headlines": {
@@ -164,7 +164,7 @@
         "required": ["universe"],
         "properties": {
           "generated_at": {"$ref": "#/$defs/requiredFocusDateTime"},
-          "pipeline_version": {"const": "2.6.3"},
+          "pipeline_version": {"enum": ["2.6.3", "2.6.4"]},
           "data_quality": {
             "required": ["headline_contract_version"]
           },

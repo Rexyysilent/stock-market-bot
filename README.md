@@ -20,7 +20,7 @@ The JSON includes source health, run context, timestamps, coverage gaps, retries
 ## Current pipeline
 
 This public research-tooling checkout implements the current collection pipeline (`schema_version=2.8`,
-`pipeline_version=2.6.3`):
+`pipeline_version=2.6.4`):
 
 - publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill; and explicit universe, macro, and impact-gated discovery lanes
 - separate ordered universes: 29 instrumented/signal-eligible tickers and 13
@@ -51,6 +51,37 @@ from clusters, signals, state, confluence, and the ledger. When secure live
 OpenInsider rows cannot produce a cluster, SEC EDGAR Form 4 remains the cluster
 fallback.
 
+## Try the viewer without credentials
+
+```sh
+python marketbot.py demo
+python marketbot.py doctor
+python marketbot.py plan --universe profiles/us-core.example.json
+python marketbot.py inspect path/to/daily_brief.json
+python marketbot.py diff path/to/previous.json path/to/current.json
+```
+
+The demo is entirely synthetic and needs only Python. The other commands inspect
+local data without provider requests. Saved JSON files are imported inside your
+browser. Health, missing values, source timestamps and coverage appear before
+interpretation. `doctor` shows credential presence only, never values.
+
+[Optional profiles and isolated workspaces](docs/WORKSPACES.md) let you try an
+explicit 1–64 instrument universe without mixing legacy state or archives.
+Profile exports use schema **2.9**, carry the normalized profile, and disable the
+legacy editorial expansion. Default runs preserve schema **2.8** and OMNI-02.
+Both use measurement era **2.6.4**; historical 2.6/2.7/2.8 exports remain readable.
+The 45-symbol profile is an example, not verified coverage or a portfolio.
+
+Basket and pair returns require exact completed-session windows and full fixed
+membership. Missing is unavailable, not neutral. Empty price responses leave
+ledger outcomes pending for a later retry. Directional statistics have their own
+sample gate and disclose overlapping horizons and same-session dependence.
+
+The six-scenario Windows launcher regression checks real exit-code handling:
+stderr warnings alone do not fail a run. Profile-aware scheduling remains a
+future gate; use the profile CLI manually until that path is implemented.
+
 ## Quickstart
 
 Requirements:
@@ -80,9 +111,9 @@ Serve the local dashboard:
 python serve_dump.py
 ```
 
-The optional dashboard listens on all IPv4 interfaces for phone/LAN access and
-serves the current export without authentication. Use only on a trusted network;
-do not expose it directly to the internet or serve private research through it.
+The optional dashboard defaults to `127.0.0.1`. A trusted-LAN listener requires
+explicit `--host` configuration; there is no application authentication or TLS.
+The viewer displays saved observations, not a live market feed. See [WORKSPACES](docs/WORKSPACES.md) for controls and limitations.
 
 ## Configuration
 

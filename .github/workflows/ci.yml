@@ -9,13 +9,14 @@ permissions:
 
 jobs:
   offline-regressions:
-    name: Python ${{ matrix.python-version }} offline checks
-    runs-on: ubuntu-latest
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -33,11 +34,13 @@ jobs:
         run: >-
           python -m compileall -q
           export_for_gemini.py openinsider_agent.py signals.py timeutil.py
-          stateutil.py agents ledger scripts
+          stateutil.py marketbot.py universe_profile.py brief_tools.py diagnostics.py session_returns.py agents ledger scripts
       - name: Validate synthetic export schema
         run: python scripts/validate_export_schema.py
       - name: Run deterministic offline regressions
-        run: python scripts/run_offline_checks.py
+        run: python scripts/run_offline_checks.py --report review-results/offline.json
+      - name: Check dashboard JavaScript syntax
+        run: node --check dashboard/app.js
       - name: Check dashboard transport on loopback with synthetic data
         run: python test_dashboard_security.py
         timeout-minutes: 2

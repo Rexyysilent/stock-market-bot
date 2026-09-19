@@ -1,4 +1,8 @@
-"""Sniper-layer signal derivations for the daily brief.
+"""Deterministic event-classification derivations for the daily brief.
+
+Legacy public keys containing ``signal`` or ``alert`` are retained for schema
+compatibility. They represent threshold labels and cross-source coincidence,
+not recommendations, expected returns, or execution instructions.
 
 Pure functions over already-fetched section data plus small JSON state files
 under state/ (same conventions as update_baselines_and_score in the exporter):
@@ -172,7 +176,7 @@ def update_social_signals(social_attention, top200_rows, run_date,
                 continue
             mcap = mcap_lookup(ticker)
             if mcap is None or mcap >= ENTRANCE_MAX_MCAP_MUSD:
-                continue  # unknown or mega-cap: not an entrance signal
+                continue  # unknown or mega-cap: not a qualifying entrance
             row = by_ticker[ticker]
             alerts.append({
                 "ticker": ticker,

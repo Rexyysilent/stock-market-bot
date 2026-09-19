@@ -20,7 +20,7 @@ classification/state/ledger paths through discovery or social mentions.
 
 ## Operational parity
 
-- Pipeline and ledger version 2.6.3; daily schema 2.8, with version-dispatched
+- Pipeline and ledger version 2.6.4; daily schema 2.8, with version-dispatched
   legacy schema 2.6/2.7 validation.
 - Shared run-scoped OpenInsider acquisition, bounded retries, explicit health,
   stale-cache exclusion, SEC EDGAR fallback, and HTTP narrative-only degradation.
@@ -79,3 +79,5 @@ complete market coverage, licensing, or a completed scheduled observation streak
 Publishing artifacts requires separate source-rights and privacy review. Source
 text may itself contain directional language; it remains attributed input, never
 the tool's own recommendation.
+
+See [INTEGRATION_2_6_4.md](INTEGRATION_2_6_4.md) for the reconciled observability, measurement and optional schema 2.9 profile changes.

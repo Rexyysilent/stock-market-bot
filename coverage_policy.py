@@ -161,6 +161,10 @@ def _fingerprint(value):
 
 def coverage_policy_manifest(mode):
     """Fresh JSON-safe snapshot; callers cannot mutate the policy registry."""
+    from config import UNIVERSE_PROFILE
+    if UNIVERSE_PROFILE is not None:
+        from universe_profile import profile_policy_manifest
+        return profile_policy_manifest(UNIVERSE_PROFILE)
     mode = normalize_mode(mode)
     manifest = {
         "cohort_version": COHORT_VERSION,

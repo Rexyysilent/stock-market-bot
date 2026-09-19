@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "name": "existing-sample",
+  "equities": [
+    {
+      "symbol": "TSLA",
+      "aliases": [
+        "tesla"
+      ]
+    },
+    {
+      "symbol": "ROKU",
+      "aliases": [
+        "roku"
+      ]
+    },
+    {
+      "symbol": "PLTR",
+      "aliases": [
+        "palantir"
+      ]
+    },
+    {
+      "symbol": "STTDF",
+      "aliases": []
+    },
+    {
+      "symbol": "CRSP",
+      "aliases": [
+        "crispr therapeutics"
+      ]
+    },
+    {
+      "symbol": "ACHR",
+      "aliases": [
+        "archer aviation"
+      ]
+    },
+    {
+      "symbol": "SHOP",
+      "aliases": [
+        "shopify"
+      ]
+    },
+    {
+      "symbol": "SCCO",
+      "aliases": [
+        "southern copper"
+      ]
+    },
+    {
+      "symbol": "NTLA",
+      "aliases": [
+        "intellia"
+      ]
+    },
+    {
+      "symbol": "FCX",
+      "aliases": [
+        "freeport"
+      ]
+    },
+    {
+      "symbol": "VRT",
+      "aliases": [
+        "vertiv"
+      ]
+    },
+    {
+      "symbol": "COIN",
+      "aliases": [
+        "coinbase"
+      ]
+    },
+    {
+      "symbol": "RIVN",
+      "aliases": [
+        "rivian"
+      ]
+    },
+    {
+      "symbol": "AMAT",
+      "aliases": [
+        "applied materials"
+      ]
+    },
+    {
+      "symbol": "VNDA",
+      "aliases": [
+        "vanda"
+      ]
+    },
+    {
+      "symbol": "UUUU",
+      "aliases": [
+        "energy fuels"
+      ]
+    },
+    {
+      "symbol": "CCJ",
+      "aliases": [
+        "cameco"
+      ]
+    },
+    {
+      "symbol": "NXE",
+      "aliases": [
+        "nexgen"
+      ]
+    },
+    {
+      "symbol": "DNN",
+      "aliases": [
+        "denison"
+      ]
+    },
+    {
+      "symbol": "RGNX",
+      "aliases": [
+        "regenxbio"
+      ]
+    },
+    {
+      "symbol": "LMT",
+      "aliases": [
+        "lockheed"
+      ]
+    },
+    {
+      "symbol": "NOC",
+      "aliases": [
+        "northrop"
+      ]
+    }
+  ],
+  "funds": [
+    "URA",
+    "USO",
+    "GLD",
+    "PSLV",
+    "ITA"
+  ],
+  "futures": [
+    "SI=F"
+  ],
+  "indices": [
+    "^VIX"
+  ],
+  "focus_ticker": "ROKU",
+  "groups": {
+    "uranium": [
+      "UUUU",
+      "CCJ",
+      "NXE",
+      "DNN"
+    ],
+    "defense": [
+      "LMT",
+      "NOC",
+      "ITA"
+    ],
+    "cash_runway": [
+      "RGNX",
+      "CCJ"
+    ]
+  },
+  "baskets": {
+    "growth": [
+      "TSLA",
+      "ROKU",
+      "PLTR",
+      "SHOP",
+      "VRT",
+      "ACHR",
+      "COIN"
+    ],
+    "defensive": [
+      "GLD",
+      "USO",
+      "SI=F",
+      "URA"
+    ]
+  },
+  "relative_return_pairs": []
+}

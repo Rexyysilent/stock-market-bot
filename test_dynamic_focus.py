@@ -411,8 +411,8 @@ assert focus_signals[0]["family"] == "confluence"
 
 # PR3 is editorial-only: public schema and signal/ledger eras do not advance.
 assert SCHEMA_VERSION == "2.8"
-assert PIPELINE_VERSION == "2.6.3"
-assert LEDGER_VERSION == "2.6.3"
+assert PIPELINE_VERSION == "2.6.4"
+assert LEDGER_VERSION == "2.6.4"
 assert FOCUS_CONTRACT_VERSION == "2.7-editorial-focus-1"
 
 print("PR3 deterministic editorial-focus acceptance checks passed")

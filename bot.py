@@ -1,3 +1,4 @@
+from session_returns import format_percent
 import asyncio
 import discord
 from discord.ext import commands
@@ -328,9 +329,9 @@ async def full_debate(ctx, ticker: str):
     )
     await ctx.send(embed=embed_bear)
 
-    # Verdict embed
+    # Neutral evidence balance; the `verdict` key remains for compatibility.
     embed_verdict = discord.Embed(
-        title=f"⚖️ THE VERDICT on {ticker}",
+        title=f"⚖️ EVIDENCE BALANCE — {ticker}",
         description=result['verdict'][:4000],
         color=0xf39c12  # Gold
     )
@@ -345,7 +346,7 @@ async def show_whispers(ctx):
 
 @bot.command(name='dump')
 async def dump_data(ctx):
-    """Exports gathered intelligence to a local data file."""
+    """Exports gathered observations to a local data file."""
     await ctx.send("Building the local data export...")
     filename = await asyncio.to_thread(export_for_notebooklm)
     await ctx.send(file=discord.File(filename))
@@ -356,13 +357,13 @@ async def dump_data(ctx):
 @bot.command(name='research')
 async def research_dump(ctx):
     """Shows CEO.ca uranium context and ClinicalTrials.gov data."""
-    await ctx.send("🔬 **RESEARCH AGENT** - Fetching specialized intelligence...")
+    await ctx.send("🔬 **SOURCE REVIEW** — Fetching specialized public data...")
 
     # CEO.ca / Uranium
     await ctx.send("⛏️ Fetching CEO.ca / Uranium context (UUUU, CCJ, NXE, DNN)...")
     ceo_signals = await asyncio.to_thread(research_agent.get_ceo_ca_signals)
 
-    embed_ceo = discord.Embed(title="⛏️ CEO.CA / URANIUM INTELLIGENCE", color=0x2ecc71)
+    embed_ceo = discord.Embed(title="⛏️ CEO.CA / URANIUM SOURCE CONTEXT", color=0x2ecc71)
     embed_ceo.set_footer(text="Focus: Core samples, geology maps, permit delays")
 
     if ceo_signals:
@@ -401,7 +402,7 @@ async def research_dump(ctx):
 @bot.command(name='pdufa')
 async def pdufa_scan(ctx):
     """Scans for upcoming PDUFA dates and cross-references with cash runway."""
-    await ctx.send("💊 **PDUFA / TRIAL DATA SCANNER** - Scanning FDA catalysts + checking cash runway...")
+    await ctx.send("💊 **FDA / TRIAL EVENT SCANNER** — Collecting dated events and cash-runway measurements...")
 
     pdufa_data = await asyncio.to_thread(
         research_agent.get_pdufa_with_financials, days_ahead=60
@@ -509,7 +510,7 @@ async def dip_scanner(ctx):
             )
         await ctx.send(embed=embed_opt)
     else:
-        await ctx.send("✅ No unusual options flow detected.")
+        await ctx.send("ℹ️ No threshold-qualified options activity detected.")
 
     # 3. Earnings Calendar
     await ctx.send("ℹ️ Scanning earnings calendar...")
@@ -538,7 +539,7 @@ async def dip_scanner(ctx):
     if divergences:
         embed_div = discord.Embed(
             title="📉 RSI DIVERGENCE MEASUREMENTS",
-            description="Price vs momentum mismatch — potential reversal",
+            description="Price/momentum divergence measurement; no future direction is inferred",
             color=0xf44336
         )
         for ticker, data in divergences.items():
@@ -562,22 +563,24 @@ async def dip_scanner(ctx):
     )
     embed_rot.add_field(
         name="Growth Basket (5d)",
-        value=f"{rotation.get('growth_5d', 0):+.1f}%",
+        value=format_percent(rotation.get('growth_5d')),
         inline=True
     )
     embed_rot.add_field(
         name="Defensive Basket (5d)",
-        value=f"{rotation.get('defensive_5d', 0):+.1f}%",
+        value=format_percent(rotation.get('defensive_5d')),
         inline=True
     )
     embed_rot.add_field(
         name="Spread (Def-Growth)",
-        value=f"{rotation.get('spread_5d', 0):+.1f}%",
+        value=format_percent(rotation.get('spread_5d')).replace('%', ' percentage points'),
         inline=True
     )
     embed_rot.add_field(
         name="20-day Trend",
-        value=f"Growth: {rotation.get('growth_20d', 0):+.1f}% | Def: {rotation.get('defensive_20d', 0):+.1f}% | Spread: {rotation.get('spread_20d', 0):+.1f}%",
+        value=(f"Growth: {format_percent(rotation.get('growth_20d'))} | "
+               f"Def: {format_percent(rotation.get('defensive_20d'))} | "
+               f"Spread: {format_percent(rotation.get('spread_20d')).replace('%', ' percentage points')}"),
         inline=False
     )
     if rotation.get('alerts'):
