@@ -71,12 +71,18 @@ body {
 }
 
 .header-sub {
+    display: block;
     font-size: 11px;
     color: var(--text-muted);
     font-family: var(--font-mono);
 }
 
+.header-left { min-width: 0; }
+.header-right { flex: 0 0 auto; margin-left: 12px; }
+
 .pipeline-badge {
+    display: inline-block;
+    white-space: nowrap;
     font-size: 11px;
     font-family: var(--font-mono);
     color: var(--accent-green);
@@ -173,6 +179,10 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+}
+
+@media (max-width: 479px) {
+    .card-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (min-width: 600px) {

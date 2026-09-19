@@ -2,6 +2,21 @@
 
 An open-source, local-first data collection and observability pipeline for public market information. It gathers public headlines, filings, price/volume measurements, social context, options statistics, earnings dates, and clinical/regulatory events into a versioned daily brief for human or software review.
 
+Run `python marketbot.py demo` to explore a saved synthetic brief without keys or
+third-party packages. It deliberately includes missing data so you can see how
+coverage and uncertainty are represented.
+
+<details>
+<summary>Preview the synthetic viewer</summary>
+
+![Synthetic saved brief showing source health, explicit missing values, and coverage](docs/images/synthetic-demo.png)
+
+This is fabricated demonstration data using a historical export schema, not a
+live market snapshot or a performance record. The version badge describes the
+loaded brief's pipeline era.
+
+</details>
+
 ## Project scope
 
 This repository is public data tooling, not a market-advisory, research-call, or execution service. It does not provide paid or free trading signals, buy/sell/hold recommendations, security rankings, target prices, personalized suitability assessments, position sizing, portfolio management, brokerage connectivity, or order placement.
