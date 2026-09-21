@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS runs (
   pipeline_version TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS run_cohorts (
+  run_id TEXT PRIMARY KEY REFERENCES runs(run_id),
+  status TEXT NOT NULL CHECK(status IN ('valid', 'refused', 'legacy_unfrozen')),
+  reason TEXT,
+  members_json TEXT NOT NULL,
+  weights_json TEXT NOT NULL,
+  cohort_sha256 TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS signals (
   record_id TEXT PRIMARY KEY,
   source_record_id TEXT NOT NULL,
@@ -28,6 +37,23 @@ CREATE TABLE IF NOT EXISTS signals (
   as_of TEXT,
   asset_class TEXT NOT NULL CHECK(asset_class IN ('equity', 'etf', 'future', 'index')),
   payload TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS signal_sightings (
+  record_id TEXT NOT NULL REFERENCES signals(record_id),
+  run_id TEXT NOT NULL REFERENCES runs(run_id),
+  observed_at TEXT NOT NULL,
+  source_record_id TEXT NOT NULL,
+  family TEXT NOT NULL,
+  subtype TEXT,
+  ticker TEXT NOT NULL,
+  direction TEXT NOT NULL CHECK(direction IN ('long', 'short', 'none')),
+  strength TEXT,
+  regime_at_emission TEXT,
+  as_of TEXT,
+  asset_class TEXT NOT NULL CHECK(asset_class IN ('equity', 'etf', 'future', 'index')),
+  payload TEXT NOT NULL,
+  PRIMARY KEY (record_id, run_id)
 );
 
 CREATE TABLE IF NOT EXISTS prices (
@@ -86,6 +112,8 @@ CREATE TABLE IF NOT EXISTS outcomes (
 
 CREATE INDEX IF NOT EXISTS idx_signals_first_seen ON signals(first_seen_run);
 CREATE INDEX IF NOT EXISTS idx_signals_family ON signals(family, subtype, strength);
+CREATE INDEX IF NOT EXISTS idx_signal_sightings_observed
+  ON signal_sightings(record_id, observed_at, run_id);
 CREATE INDEX IF NOT EXISTS idx_outcomes_status ON outcomes(status);
 CREATE INDEX IF NOT EXISTS idx_price_acquisitions_ticker_range
   ON price_acquisitions(ticker, requested_start, requested_end);
@@ -100,4 +128,18 @@ def connect(path=DB_PATH):
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    # Existing ledgers retained only first/last run pointers. Preserve those
+    # admissible observations as additive sightings until archives are replayed.
+    for run_column in ("first_seen_run", "last_seen_run"):
+        conn.execute(
+            f"""INSERT OR IGNORE INTO signal_sightings(
+                   record_id,run_id,observed_at,source_record_id,family,subtype,
+                   ticker,direction,strength,regime_at_emission,as_of,asset_class,payload
+                 )
+                 SELECT s.record_id,s.{run_column},r.generated_at,s.source_record_id,
+                        s.family,s.subtype,s.ticker,s.direction,s.strength,
+                        s.regime_at_emission,s.as_of,s.asset_class,s.payload
+                 FROM signals AS s JOIN runs AS r ON r.run_id=s.{run_column}"""
+        )
+    conn.commit()
     return conn
