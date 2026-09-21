@@ -38,6 +38,37 @@ CREATE TABLE IF NOT EXISTS prices (
   PRIMARY KEY (ticker, session)
 );
 
+-- Additive coherent price cache. The legacy prices table remains untouched;
+-- its rows have no acquisition/basis identity and cannot satisfy new windows.
+CREATE TABLE IF NOT EXISTS price_acquisitions (
+  acquisition_id TEXT PRIMARY KEY,
+  ticker TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  interval TEXT NOT NULL,
+  requested_start TEXT NOT NULL,
+  requested_end TEXT NOT NULL,
+  adjustment_basis TEXT NOT NULL,
+  currency TEXT,
+  acquired_at TEXT NOT NULL,
+  content_sha256 TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS price_points (
+  acquisition_id TEXT NOT NULL REFERENCES price_acquisitions(acquisition_id),
+  session TEXT NOT NULL,
+  open REAL,
+  close REAL,
+  PRIMARY KEY (acquisition_id, session)
+);
+
+CREATE TABLE IF NOT EXISTS price_windows (
+  ticker TEXT NOT NULL,
+  entry_session TEXT NOT NULL,
+  exit_session TEXT NOT NULL,
+  acquisition_id TEXT NOT NULL REFERENCES price_acquisitions(acquisition_id),
+  PRIMARY KEY (ticker, entry_session, exit_session)
+);
+
 CREATE TABLE IF NOT EXISTS outcomes (
   record_id TEXT NOT NULL REFERENCES signals(record_id),
   horizon INTEGER NOT NULL,
@@ -56,6 +87,8 @@ CREATE TABLE IF NOT EXISTS outcomes (
 CREATE INDEX IF NOT EXISTS idx_signals_first_seen ON signals(first_seen_run);
 CREATE INDEX IF NOT EXISTS idx_signals_family ON signals(family, subtype, strength);
 CREATE INDEX IF NOT EXISTS idx_outcomes_status ON outcomes(status);
+CREATE INDEX IF NOT EXISTS idx_price_acquisitions_ticker_range
+  ON price_acquisitions(ticker, requested_start, requested_end);
 """
 
 
