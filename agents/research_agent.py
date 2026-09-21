@@ -1080,7 +1080,7 @@ class ResearchAgent:
             # Extract total debt
             total_debt = None
             debt_metric = None
-            debt_fields = ['Total Debt', 'Long Term Debt', 'Total Non Current Liabilities Net Minority Interest']
+            debt_fields = ['Total Debt', 'Long Term Debt']
             for field in debt_fields:
                 if field in latest.index and latest[field] is not None:
                     value = finite_float(latest[field])

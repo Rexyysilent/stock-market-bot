@@ -66,6 +66,20 @@ assert missing["cash_period_end"] == "2026-06-30", missing
 assert missing["source_time_available"] is False, missing
 
 
+# Non-current liabilities are not a substitute for a reported debt metric.
+liabilities_only_balance = _balance_sheet()
+liabilities_only_balance.loc[
+    "Total Non Current Liabilities Net Minority Interest"
+] = 9_000_000
+liabilities_only = _check(
+    liabilities_only_balance,
+    _cash_flow("Operating Cash Flow", [-2_000_000] * 4),
+    {"financialCurrency": "USD"},
+)
+assert liabilities_only["total_debt"] is None, liabilities_only
+assert liabilities_only["debt_metric"] is None, liabilities_only
+
+
 # A present but wholly non-finite OCF row is unavailable, not measured zero.
 non_finite = _check(
     _balance_sheet(),
