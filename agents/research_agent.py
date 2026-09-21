@@ -1005,12 +1005,16 @@ class ResearchAgent:
         Checks a company's financial health using yfinance quarterly data.
         
         Returns dict with:
-          - cash_and_equivalents: Total cash + short-term investments
-          - total_debt: Total debt obligations
-          - quarterly_burn: Avg quarterly cash burn (operating cash flow)
+          - cash_and_equivalents: Cash value from the named cash metric
+          - total_debt: Debt value from the named debt metric, or None
+          - quarterly_burn: Avg signed quarterly operating cash flow, or None
           - runway_quarters: Estimated quarters of cash remaining
-          - risk_level: GREEN (>6Q), YELLOW (4-6Q), RED (<4Q)
+          - risk_level: GREEN (>6Q), YELLOW (4-6Q), RED (<4Q), or UNKNOWN
           - market_cap: Current market cap
+
+        Financial statement fields are not treated as interchangeable. The
+        result records the selected metric and period, and never substitutes
+        free cash flow for operating cash flow.
         """
         if not HAS_YFINANCE:
             return {'error': 'yfinance not installed', 'ticker': ticker}
@@ -1028,9 +1032,36 @@ class ResearchAgent:
             
             # Get the most recent quarter
             latest = bs.iloc[:, 0]  # Most recent column
+
+            def finite_float(value):
+                if value is None:
+                    return None
+                try:
+                    number = float(value)
+                except (TypeError, ValueError):
+                    return None
+                return number if math.isfinite(number) else None
+
+            def period_label(value):
+                if value is None:
+                    return None
+                try:
+                    if hasattr(value, "date"):
+                        return value.date().isoformat()
+                    if hasattr(value, "isoformat"):
+                        return value.isoformat()
+                except (TypeError, ValueError, AttributeError):
+                    return None
+                text = str(value).strip()
+                return text or None
+
+            balance_period = period_label(
+                bs.columns[0] if len(bs.columns) else None
+            )
             
             # Extract cash position (try multiple field names)
-            cash = 0
+            cash = None
+            cash_metric = None
             cash_fields = [
                 'Cash And Cash Equivalents',
                 'Cash Cash Equivalents And Short Term Investments',
@@ -1040,53 +1071,132 @@ class ResearchAgent:
             ]
             for field in cash_fields:
                 if field in latest.index and latest[field] is not None:
-                    try:
-                        val = float(latest[field])
-                        if val > cash:
-                            cash = val
-                    except (ValueError, TypeError):
-                        continue
+                    val = finite_float(latest[field])
+                    if val is not None:
+                        cash = val
+                        cash_metric = field
+                        break
             
             # Extract total debt
-            total_debt = 0
+            total_debt = None
+            debt_metric = None
             debt_fields = ['Total Debt', 'Long Term Debt', 'Total Non Current Liabilities Net Minority Interest']
             for field in debt_fields:
                 if field in latest.index and latest[field] is not None:
-                    try:
-                        total_debt = float(latest[field])
+                    value = finite_float(latest[field])
+                    if value is not None:
+                        total_debt = value
+                        debt_metric = field
                         break
-                    except (ValueError, TypeError):
-                        continue
-            
+
             # Calculate quarterly burn rate from operating cash flow
-            quarterly_burn = 0
+            quarterly_burn = None
+            cash_flow_metric = None
+            cash_flow_periods = []
+            valid_quarter_count = 0
+            non_finite_quarter_count = 0
             if cf is not None and not cf.empty:
                 ocf_row = None
-                for field in ['Operating Cash Flow', 'Free Cash Flow', 'Cash Flow From Continuing Operating Activities']:
+                for field in [
+                    'Operating Cash Flow',
+                    'Cash Flow From Continuing Operating Activities',
+                ]:
                     if field in cf.index:
                         ocf_row = cf.loc[field]
+                        cash_flow_metric = field
                         break
                 
                 if ocf_row is not None:
                     # Average of last 4 quarters (or however many we have)
-                    valid_vals = [float(v) for v in ocf_row.values[:4] if v is not None]
+                    valid_vals = []
+                    for index, raw_value in enumerate(ocf_row.values[:4]):
+                        value = finite_float(raw_value)
+                        if value is None:
+                            if raw_value is not None:
+                                non_finite_quarter_count += 1
+                            continue
+                        valid_vals.append(value)
+                        period = period_label(
+                            cf.columns[index] if index < len(cf.columns) else None
+                        )
+                        cash_flow_periods.append(period)
                     if valid_vals:
                         quarterly_burn = sum(valid_vals) / len(valid_vals)
+                        valid_quarter_count = len(valid_vals)
+
+            cash_flow_period = (
+                cash_flow_periods[0] if cash_flow_periods else None
+            )
+            source_time_available = bool(
+                cash_metric
+                and cash_flow_metric
+                and balance_period
+                and cash_flow_periods
+                and all(cash_flow_periods)
+            )
+            period_match = None
+            if balance_period and cash_flow_period:
+                period_match = balance_period == cash_flow_period
+
+            info = stock.info or {}
+            raw_currency = info.get('financialCurrency')
+            currency = None
+            currency_ambiguous = False
+            if raw_currency is not None:
+                if isinstance(raw_currency, str):
+                    candidate = raw_currency.strip().upper()
+                    if len(candidate) == 3 and candidate.isalpha():
+                        currency = candidate
+                    elif candidate:
+                        currency_ambiguous = True
+                else:
+                    currency_ambiguous = True
             
             # Calculate runway
             runway_quarters = None
-            if quarterly_burn < 0 and cash > 0:
+            reason = None
+            cash_flow_status = 'unavailable'
+            cash_flow_positive = None
+            if quarterly_burn is not None:
+                if quarterly_burn < 0:
+                    cash_flow_status = 'negative'
+                    cash_flow_positive = False
+                elif quarterly_burn > 0:
+                    cash_flow_status = 'positive'
+                    cash_flow_positive = True
+                else:
+                    cash_flow_status = 'zero'
+                    cash_flow_positive = False
+
+            if cf is None or cf.empty:
+                reason = 'missing_cashflow'
+            elif cash_flow_metric is None:
+                reason = 'missing_operating_cash_flow'
+            elif quarterly_burn is None:
+                reason = (
+                    'non_finite_cashflow'
+                    if non_finite_quarter_count
+                    else 'missing_cashflow_values'
+                )
+            elif cash is None:
+                reason = 'missing_cash'
+            elif period_match is False:
+                reason = 'period_mismatch'
+            elif currency_ambiguous:
+                reason = 'currency_ambiguous'
+            elif quarterly_burn < 0 and cash > 0:
                 # Company is burning cash — calculate quarters until empty
                 runway_quarters = round(cash / abs(quarterly_burn), 1)
-            elif quarterly_burn >= 0:
-                # Company is cash-flow positive — not at risk
-                runway_quarters = float('inf')
+            elif quarterly_burn < 0:
+                reason = 'non_positive_cash_balance'
+            elif quarterly_burn > 0:
+                reason = 'positive_cash_flow'
+            else:
+                reason = 'zero_cash_flow'
             
             # Risk level
             if runway_quarters is None:
                 risk_level = "UNKNOWN"
-            elif runway_quarters == float('inf'):
-                risk_level = "GREEN"  # Cash flow positive
             elif runway_quarters > 6:
                 risk_level = "GREEN"
             elif runway_quarters >= 4:
@@ -1095,8 +1205,7 @@ class ResearchAgent:
                 risk_level = "RED"  # Short estimated runway
             
             # Market cap
-            info = stock.info or {}
-            market_cap = info.get('marketCap', 0)
+            market_cap = finite_float(info.get('marketCap'))
             
             # Format large numbers
             def fmt_money(val):
@@ -1113,12 +1222,32 @@ class ResearchAgent:
                 'ticker': ticker,
                 'cash_and_equivalents': cash,
                 'cash_formatted': fmt_money(cash),
+                'cash_metric': cash_metric,
+                'cash_period_end': balance_period if cash_metric else None,
                 'total_debt': total_debt,
                 'debt_formatted': fmt_money(total_debt),
+                'debt_metric': debt_metric,
+                'debt_period_end': balance_period if debt_metric else None,
                 'quarterly_burn': quarterly_burn,
                 'burn_formatted': fmt_money(quarterly_burn),
-                'runway_quarters': runway_quarters if runway_quarters != float('inf') else 999,
+                'runway_quarters': runway_quarters,
                 'risk_level': risk_level,
+                'reason': reason,
+                'cash_flow_status': cash_flow_status,
+                'cash_flow_positive': cash_flow_positive,
+                'cash_flow_metric': cash_flow_metric,
+                'cash_flow_period_end': cash_flow_period,
+                'cash_flow_period_ends': cash_flow_periods,
+                'valid_quarter_count': valid_quarter_count,
+                'non_finite_quarter_count': non_finite_quarter_count,
+                'period_match': period_match,
+                'currency': currency,
+                'currency_source': (
+                    'yfinance.info.financialCurrency' if currency else None
+                ),
+                'currency_available': currency is not None,
+                'currency_ambiguous': currency_ambiguous,
+                'source_time_available': source_time_available,
                 'market_cap': market_cap,
                 'mcap_formatted': fmt_money(market_cap),
             }
