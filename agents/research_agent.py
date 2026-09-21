@@ -1302,7 +1302,7 @@ class ResearchAgent:
         for ticker, data in financials.items():
             if data['risk_level'] in ('RED', 'YELLOW'):
                 risk_emoji = "🔴" if data['risk_level'] == 'RED' else "🟡"
-                runway_str = f"{data['runway_quarters']}Q" if data['runway_quarters'] < 999 else "N/A"
+                runway_str = f"{data['runway_quarters']}Q"
                 alerts.append({
                     'ticker': ticker,
                     'risk_level': data['risk_level'],
