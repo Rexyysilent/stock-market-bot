@@ -32,6 +32,7 @@ CHECKS = (
     'test_twitter_health.py',
     'test_apewisdom_social.py',
     'test_ceo_ca_verification.py',
+    'test_cash_runway_missingness.py',
     'test_earnings_calendar.py',
     'test_insider_direction.py',
     'test_openinsider_params.py',

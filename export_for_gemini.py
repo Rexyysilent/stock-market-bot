@@ -420,7 +420,7 @@ def build_cash_runway_record(fin):
         return round(val / 1e6, 1)
 
     runway = fin.get("runway_quarters")
-    cash_flow_positive = runway == 999
+    cash_flow_positive = fin.get("cash_flow_positive")
     burn = fin.get("quarterly_burn")
     return {
         "ticker": fin.get("ticker"),
@@ -428,8 +428,24 @@ def build_cash_runway_record(fin):
         "cash_musd": _musd(fin.get("cash_and_equivalents")),
         "burn_musd": _musd(-burn) if burn is not None else None,
         "debt_musd": _musd(fin.get("total_debt")),
-        "runway_quarters": None if cash_flow_positive else runway,
+        "runway_quarters": runway,
         "cash_flow_positive": cash_flow_positive,
+        "cash_flow_status": fin.get("cash_flow_status"),
+        "measurement_reason": fin.get("reason"),
+        "cash_metric": fin.get("cash_metric"),
+        "debt_metric": fin.get("debt_metric"),
+        "cash_flow_metric": fin.get("cash_flow_metric"),
+        "cash_period_end": fin.get("cash_period_end"),
+        "debt_period_end": fin.get("debt_period_end"),
+        "cash_flow_period_end": fin.get("cash_flow_period_end"),
+        "cash_flow_period_ends": fin.get("cash_flow_period_ends") or [],
+        "valid_quarter_count": fin.get("valid_quarter_count", 0),
+        "non_finite_quarter_count": fin.get("non_finite_quarter_count", 0),
+        "period_match": fin.get("period_match"),
+        "currency": fin.get("currency"),
+        "currency_available": fin.get("currency_available"),
+        "currency_ambiguous": fin.get("currency_ambiguous"),
+        "source_time_available": fin.get("source_time_available"),
         "market_cap_musd": _musd(fin.get("market_cap")),
     }
 
@@ -1612,7 +1628,15 @@ def _generate_daily_brief():
             f.write("\n--- CASH RUNWAY SUMMARY ---\n")
             for ticker, data in sorted(financials.items()):
                 risk_tag = {"GREEN": "[OK]", "YELLOW": "[CAUTION]", "RED": "[DANGER]"}.get(data.get('risk_level', ''), "[?]")
-                runway = f"{data['runway_quarters']}Q" if data.get('runway_quarters', 999) < 999 else "CF+"
+                runway_value = data.get('runway_quarters')
+                if runway_value is not None:
+                    runway = f"{runway_value}Q"
+                elif data.get('cash_flow_status') == 'positive':
+                    runway = "N/A (positive operating cash flow)"
+                elif data.get('cash_flow_status') == 'zero':
+                    runway = "N/A (zero operating cash flow)"
+                else:
+                    runway = f"Unavailable ({data.get('reason') or 'insufficient data'})"
                 f.write(
                     f"- {risk_tag} {ticker}: Cash {data.get('cash_formatted', 'N/A')} | "
                     f"Burn {data.get('burn_formatted', 'N/A')}/Q | Runway {runway} | "

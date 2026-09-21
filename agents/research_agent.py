@@ -1392,7 +1392,15 @@ class ResearchAgent:
             output.append("--- CASH RUNWAY SUMMARY ---")
             for ticker, data in sorted(pdufa_data['financials'].items()):
                 risk_emoji = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(data['risk_level'], "⚪")
-                runway = f"{data['runway_quarters']}Q" if data['runway_quarters'] < 999 else "CF+"
+                runway_value = data.get('runway_quarters')
+                if runway_value is not None:
+                    runway = f"{runway_value}Q"
+                elif data.get('cash_flow_status') == 'positive':
+                    runway = "N/A (positive operating cash flow)"
+                elif data.get('cash_flow_status') == 'zero':
+                    runway = "N/A (zero operating cash flow)"
+                else:
+                    runway = f"Unavailable ({data.get('reason') or 'insufficient data'})"
                 output.append(
                     f"{risk_emoji} {ticker}: Cash {data['cash_formatted']} | "
                     f"Burn {data['burn_formatted']}/Q | Runway {runway} | "

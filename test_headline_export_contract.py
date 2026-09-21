@@ -17,6 +17,7 @@ from export_for_gemini import (
     normalize_headline_pool_diagnostics,
     add_record_metadata,
     build_export_health,
+    build_cash_runway_record,
     build_headline_export_records,
     audit_signal_eligible_tickers,
     filter_signal_eligible_cash_runway_alerts,
@@ -344,6 +345,47 @@ assert filtered_cash_alerts == [{
     "risk_level": "RED",
     "message": "core",
 }]
+
+unknown_cash = build_cash_runway_record({
+    "ticker": "TEST",
+    "risk_level": "UNKNOWN",
+    "cash_and_equivalents": 10_000_000,
+    "total_debt": None,
+    "quarterly_burn": None,
+    "runway_quarters": None,
+    "cash_flow_positive": None,
+    "cash_flow_status": "unavailable",
+    "reason": "missing_cashflow",
+    "cash_metric": "Cash And Cash Equivalents",
+    "cash_period_end": "2026-06-30",
+    "valid_quarter_count": 0,
+    "currency": "USD",
+    "currency_available": True,
+    "source_time_available": False,
+    "market_cap": None,
+})
+assert unknown_cash["runway_quarters"] is None
+assert unknown_cash["cash_flow_positive"] is None
+assert unknown_cash["cash_flow_status"] == "unavailable"
+assert unknown_cash["measurement_reason"] == "missing_cashflow"
+assert unknown_cash["debt_musd"] is None
+assert unknown_cash["market_cap_musd"] is None
+assert unknown_cash["cash_metric"] == "Cash And Cash Equivalents"
+assert unknown_cash["currency"] == "USD"
+
+positive_cash = build_cash_runway_record({
+    "ticker": "TEST",
+    "risk_level": "UNKNOWN",
+    "quarterly_burn": 2_000_000,
+    "runway_quarters": None,
+    "cash_flow_positive": True,
+    "cash_flow_status": "positive",
+    "reason": "positive_cash_flow",
+})
+assert positive_cash["burn_musd"] == -2.0
+assert positive_cash["runway_quarters"] is None
+assert positive_cash["cash_flow_positive"] is True
+assert positive_cash["cash_flow_status"] == "positive"
 
 
 editorial_row = dict(selected[0])
