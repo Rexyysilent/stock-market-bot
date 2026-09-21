@@ -49,7 +49,7 @@ The JSON includes source health, run context, timestamps, coverage gaps, retries
 ## Current pipeline
 
 This public research-tooling checkout implements the current collection pipeline (`schema_version=2.8`,
-`pipeline_version=2.6.4`):
+`pipeline_version=2.6.5`):
 
 - publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill; and explicit universe, macro, and impact-gated discovery lanes
 - separate ordered universes: 29 instrumented/signal-eligible tickers and 13
@@ -100,13 +100,20 @@ interpretation. `doctor` shows credential presence only, never values.
 explicit 1–64 instrument universe without mixing legacy state or archives.
 Profile exports use schema **2.9**, carry the normalized profile, and disable the
 legacy editorial expansion. Default runs preserve schema **2.8** and OMNI-02.
-Both use measurement era **2.6.4**; historical 2.6/2.7/2.8 exports remain readable.
+Both use measurement era **2.6.5**; historical 2.6/2.7/2.8 exports, including
+the 2.6.4 era, remain readable.
 The 45-symbol profile is an example, not verified coverage or a portfolio.
 
 Basket and pair returns require exact completed-session windows and full fixed
 membership. Missing is unavailable, not neutral. Empty price responses leave
 ledger outcomes pending for a later retry. Directional statistics have their own
 sample gate and disclose overlapping horizons and same-session dependence.
+
+Era 2.6.5 binds each ledger return window to one immutable price acquisition,
+so overlapping provider revisions cannot combine endpoints from different
+adjustment vintages. Cash-runway measurements expose missing operating cash flow,
+period mismatch, currency ambiguity and missing debt as typed unknowns; they do
+not use an infinite-runway sentinel or treat missing financials as zero.
 
 The six-scenario Windows launcher regression checks real exit-code handling:
 stderr warnings alone do not fail a run. Profile-aware scheduling remains a

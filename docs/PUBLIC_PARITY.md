@@ -20,8 +20,8 @@ classification/state/ledger paths through discovery or social mentions.
 
 ## Operational parity
 
-- Pipeline and ledger version 2.6.4; daily schema 2.8, with version-dispatched
-  legacy schema 2.6/2.7 validation.
+- Pipeline and ledger version 2.6.5; daily schema 2.8, with version-dispatched
+  legacy schema 2.6/2.7 validation and readable 2.6.4-era archives.
 - Shared run-scoped OpenInsider acquisition, bounded retries, explicit health,
   stale-cache exclusion, SEC EDGAR fallback, and HTTP narrative-only degradation.
 - Source-purpose policy and registry fingerprints, zero-spend defaults, and

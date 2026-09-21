@@ -50,7 +50,7 @@ def _profiled_document():
     tickers = profile_plan(profile)["active_tickers"]
     universe = document["universe"]
     document["schema_version"] = "2.9"
-    document["pipeline_version"] = "2.6.4"
+    document["pipeline_version"] = "2.6.5"
     universe.update({
         "profile": profile,
         "coverage_policy": profile_policy_manifest(profile),
@@ -88,6 +88,10 @@ class ProfileExportContractTests(unittest.TestCase):
     def test_profiled_brief_validates_with_default_schema_selection(self):
         document = _profiled_document()
         self.assertEqual([], self.errors(document))
+
+        historical = copy.deepcopy(document)
+        historical["pipeline_version"] = "2.6.4"
+        self.assertEqual([], self.errors(historical))
 
         with TemporaryDirectory() as tempdir:
             path = Path(tempdir) / "profiled.json"
@@ -194,7 +198,7 @@ print(json.dumps({
         self.assertEqual(actual["news_editorial"], [])
         self.assertEqual(actual["config_mode"], "off")
         self.assertEqual(actual["schema"], "2.9")
-        self.assertEqual(actual["pipeline"], "2.6.4")
+        self.assertEqual(actual["pipeline"], "2.6.5")
         self.assertEqual(actual["policy_fmp"], ["AAA", "BBB", "SPY"])
         self.assertEqual(actual["watchlist"], ["AAA", "BBB", "SPY", "SI=F"])
 

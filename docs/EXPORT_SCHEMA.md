@@ -11,7 +11,7 @@ Top-level fields:
 
 - `generated_at` - ISO timestamp for the export
 - `schema_version` - public JSON contract (`2.8`)
-- `pipeline_version` - upstream logic era (`2.6.4`; historical `2.6.3` remains valid); ledger statistics never pool eras
+- `pipeline_version` - upstream logic era (`2.6.5`; historical `2.6.3` and `2.6.4` remain valid); ledger statistics never pool eras
 - `run_context` - immutable UTC/NYSE clock shared by all stages, including
   market state and the latest completed/settled session
 - `pipeline_time_seconds` - total runtime
@@ -652,7 +652,7 @@ lanes, and scores, not unavailable source bodies or all dropped-only shadow labe
 ## Optional profile contract (schema 2.9)
 
 Legacy/default configuration still emits 2.8. Explicit profile launches emit 2.9
-with `universe_contract_version=2.9-profile-universe-1`, pipeline 2.6.4, and a
+with `universe_contract_version=2.9-profile-universe-1`, pipeline 2.6.5, and a
 normalized `universe.profile`. The full configuration SHA-256 is part of
 `universe.name`; ordered membership has its own eight-character fingerprints.
 All 1–64 profile members are instrumented; editorial-only membership is empty
@@ -664,7 +664,18 @@ from the embedded profile, independently of local operator settings. A profile
 cannot relax the existing default 2.8 cohort contract. Profile aliases and symbols
 are unverified user assertions, not an instrument identity certification.
 
-Measurement era 2.6.4 uses exact five/twenty-session basket return intervals,
+Measurement era 2.6.5 retains exact five/twenty-session basket return intervals,
 full fixed membership, explicit missing coverage and endpoint-aware ledger prices.
 `UNAVAILABLE` is distinct from legacy descriptive regime labels. Historical
 archives and fixtures retain their original measurement eras.
+
+Ledger price windows in 2.6.5 reference one immutable acquisition identity with
+provider, interval, range, adjustment basis, currency when known, acquisition
+time and content hash. Legacy session-only price rows remain readable storage but
+cannot satisfy a new coherent-window calculation without a complete refetch.
+
+Cash-runway rows distinguish unavailable, positive, zero and negative operating
+cash flow. They carry the selected source fields, statement periods, currency
+availability, valid-quarter count and an explicit reason when a derived runway is
+unavailable. Missing cash flow, debt or market capitalization is null, not zero;
+free cash flow is not substituted for operating cash flow.

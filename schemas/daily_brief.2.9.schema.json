@@ -25,7 +25,8 @@
       "const": "2.9"
     },
     "pipeline_version": {
-      "const": "2.6.4"
+      "type": "string",
+      "enum": ["2.6.4", "2.6.5"]
     },
     "run_context": {
       "type": "object",
@@ -211,7 +212,8 @@
           "pipeline_version": {
             "enum": [
               "2.6.3",
-              "2.6.4"
+              "2.6.4",
+              "2.6.5"
             ]
           },
           "sections": {
@@ -267,7 +269,8 @@
           "pipeline_version": {
             "enum": [
               "2.6.3",
-              "2.6.4"
+              "2.6.4",
+              "2.6.5"
             ]
           },
           "data_quality": {

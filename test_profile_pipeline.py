@@ -176,7 +176,7 @@ class ProfilePipelineTests(unittest.TestCase):
             document = json.loads(payload)
 
             self.assertEqual(document["schema_version"], "2.9")
-            self.assertEqual(document["pipeline_version"], "2.6.4")
+            self.assertEqual(document["pipeline_version"], "2.6.5")
             self.assertEqual(document["universe"]["profile"], PROFILE)
             self.assertEqual(document["universe"]["instrumented_tickers"], ["AAA", "BBB", "SPY"])
             self.assertEqual(document["universe"]["editorial_only_tickers"], [])

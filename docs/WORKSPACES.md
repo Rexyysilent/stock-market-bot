@@ -129,6 +129,6 @@ identity and saved-brief health counts. File permissions are only an estimate.
 The synthetic demo is deliberately a versioned legacy-schema example; it does
 not claim to be output from a live current collection.
 
-Both profile and default collection now use measurement era 2.6.4. The default
+Both profile and default collection now use measurement era 2.6.5. The default
 Windows launcher retains its prior repaired stderr/exit-code handling. It remains
 unaware of profiles; do not assume its logs or success marker describe a profile.

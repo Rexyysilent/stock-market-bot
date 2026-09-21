@@ -113,7 +113,7 @@ def state_projection(mode):
         state = {p.name: json.loads(p.read_text()) for p in root.glob("*.json")
                  if p.name != file.name}
         assert set(state["social.json"]["tickers"]) == {"TSLA"}
-        assert set(state["baselines.json"]["versions"]["2.6.4"]) == {"TSLA"}
+        assert set(state["baselines.json"]["versions"]["2.6.5"]) == {"TSLA"}
         return state, social_alerts, baseline_alerts, registry, confluence, ledger
 
 original = (signals.SOCIAL_HISTORY_FILE, signals.CTGOV_SNAPSHOT_FILE,
