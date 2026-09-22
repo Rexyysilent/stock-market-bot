@@ -35,6 +35,7 @@ CHECKS = (
     'test_temporal_eligibility.py',
     'test_provenance_language.py',
     'test_lean_brief.py',
+    'test_narrative_guard.py',
     'test_ceo_ca_verification.py',
     'test_cash_runway_missingness.py',
     'test_earnings_calendar.py',

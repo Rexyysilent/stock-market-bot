@@ -1,5 +1,17 @@
-import ollama
 from config import OLLAMA_MODEL, OLLAMA_NUM_CTX
+
+# Quarantined legacy route (T6/N05). Free-form model text here has no frozen
+# evidence, source-purpose approval or claim validation, and every collected
+# source is unapproved for model processing. Re-enabling it is a reviewed code
+# change, not a configuration toggle.
+NARRATIVE_MODEL_ENABLED = False
+NARRATIVE_DISABLED_REASON = "legacy_narrative_model_disabled"
+NARRATIVE_DISABLED_MESSAGE = (
+    "Model-written narrative is disabled in this bot: this path has no frozen "
+    "evidence, source-purpose approval or claim validation. Read the daily "
+    "brief instead, or share lean_brief.json with a model you choose."
+)
+
 
 class AnalystAgent:
     """
@@ -8,6 +20,18 @@ class AnalystAgent:
     """
     def __init__(self):
         self.model = OLLAMA_MODEL
+        self.enabled = NARRATIVE_MODEL_ENABLED
+
+    def _disabled_result(self, topic):
+        return {
+            "topic": topic,
+            "status": "disabled",
+            "reason": NARRATIVE_DISABLED_REASON,
+            "detail": NARRATIVE_DISABLED_MESSAGE,
+            "bull_case": None,
+            "bear_case": None,
+            "verdict": None,
+        }
 
     # ═══════════════════════════════════════════════════════════════════
     # CONSTRUCTIVE CASE
@@ -67,6 +91,9 @@ Keep it under 600 characters. Be precise rather than promotional."""
 
     def _call_llm(self, system_prompt, user_prompt):
         """Send a message to Ollama with a specific persona."""
+        if not self.enabled:
+            raise PermissionError(NARRATIVE_DISABLED_REASON)
+        import ollama
         try:
             messages = [
                 {'role': 'system', 'content': system_prompt},
@@ -82,6 +109,8 @@ Keep it under 600 characters. Be precise rather than promotional."""
         Run a full evidence review on a topic.
         Returns dict with constructive case, cautionary case, and verdict.
         """
+        if not self.enabled:
+            return self._disabled_result(topic)
         context = f"Topic: {topic}"
         if market_data:
             context += f"\n\nMARKET DATA:\n{market_data}"
@@ -123,6 +152,8 @@ Summarize the evidence balance."""
 
     def analyze_sentiment(self, text):
         """Quick sentiment via debate format — returns formatted string."""
+        if not self.enabled:
+            return NARRATIVE_DISABLED_MESSAGE
         result = self.debate(text)
         output = f"**Constructive Case:**\n{result['bull_case']}\n\n"
         output += f"**Cautionary Case:**\n{result['bear_case']}\n\n"
@@ -135,6 +166,8 @@ Summarize the evidence balance."""
 
     def generate_consensus(self, news_list, social_list):
         """Generate a market consensus using constructive/cautionary evidence review."""
+        if not self.enabled:
+            return NARRATIVE_DISABLED_MESSAGE
         news_list = news_list or []
         social_list = social_list or []
 
@@ -179,6 +212,8 @@ Summarize the overall evidence balance without a trading recommendation."""
 
     def chat_with_memory(self, user_message, history, live_context=None):
         """Conversational chat — uses MarketMind persona for general questions."""
+        if not self.enabled:
+            return NARRATIVE_DISABLED_MESSAGE
         system_prompt = """You are MarketMind, a neutral public-market data assistant.
 
 Your capabilities:
@@ -206,6 +241,7 @@ Use this data to inform your answers. Cite sources like [r/wallstreetbets] or [Z
         messages.extend(history)
         messages.append({'role': 'user', 'content': user_message})
 
+        import ollama
         try:
             response = ollama.chat(model=self.model, messages=messages, options={'num_ctx': OLLAMA_NUM_CTX})
             return response['message']['content']
