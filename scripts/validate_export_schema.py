@@ -111,11 +111,11 @@ def _focus_timeliness(as_of, generated_at):
 
 
 def _expected_evidence_grade(components):
-    corroboration = components.get("independent_corroboration")
+    breadth = components.get("independent_corroboration")
     authority = components.get("source_authority")
-    if not (_is_integer(corroboration) and _is_integer(authority)):
+    if not (_is_integer(breadth) and _is_integer(authority)):
         return None
-    if corroboration and authority >= 2:
+    if breadth and authority >= 2:
         return "multiple_selected_sources"
     if authority >= 3:
         return "official_source"

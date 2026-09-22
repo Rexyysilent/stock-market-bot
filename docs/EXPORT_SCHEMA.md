@@ -422,13 +422,14 @@ omits the focus card instead of emitting an empty ticker shell.
 A selected focus exposes separate integer components rather than a weighted
 score: `impact` (editorial materiality, not expected return), `confidence`,
 `novelty`, `source_authority`, `audience_relevance`, `timeliness`,
-`independent_corroboration`, and `unresolved_contradiction_penalty`. Ranking is
-lexicographic and deterministic: higher impact, confidence, source authority,
-timeliness, independent corroboration, audience relevance, and novelty; then a
+`independent_corroboration` (publisher breadth; legacy key name), and
+`unresolved_contradiction_penalty`. Ranking is lexicographic and deterministic:
+higher impact, confidence, source authority, timeliness, publisher breadth,
+audience relevance, and novelty; then a
 lower unresolved-contradiction penalty; then newer exact source `as_of`; then
 ticker and primary evidence ID as stable tie-breakers. Each candidate represents
 one selected story. Separate headlines for one issuer cannot lend each other
-component maxima or corroboration. Source class contributes to confidence only; it
+component maxima or publisher breadth. Source class contributes to confidence only; it
 does not state licensing, redistribution, or commercial-use rights.
 
 Each `what_changed` and `why_it_matters` claim carries one or more
@@ -444,15 +445,20 @@ class, and `timeliness` from the evidence `as_of` relative to `generated_at`.
 The top-level focus `score_components` must exactly match the primary evidence
 row identified by the focus `headline` and `as_of`; its contradiction penalty
 is the capped primary-evidence contradiction count. `evidence_grade` is likewise
-derived from the primary evidence's authority and same-story independent
-corroboration, so jointly rewriting the evidence and focus-level fields cannot
+derived from the primary evidence's authority and same-story publisher
+breadth, so jointly rewriting the evidence and focus-level fields cannot
 bypass lineage validation. A row present in `headlines_dropped` cannot supply
 focus evidence. Evidence must also remain inside the selector's trailing
 three-day window. These checks prevent stale, dropped, unmapped, invalid, or
 rewritten rows from entering the editorial focus.
-`independent_corroboration` counts distinct duplicate publisher identities for
-the same selected story, capped at three; duplicate acquisition providers do not
-increase it.
+`independent_corroboration` is a legacy key name retained for schema
+compatibility. Its value is publisher breadth: distinct duplicate publisher
+identities for the same selected story, capped at three; duplicate acquisition
+providers do not increase it. It does not assess whether those publishers had
+independent reporting origins — a filing and two articles repeating it score 2
+while sharing one origin — and the text rendering labels it `publisher_breadth`.
+`multiple_selected_sources` likewise means more than one publisher carried the
+story, not independent confirmation.
 
 `market_reaction` and `next_checkpoint` remain null in this PR because their
 timestamp/window and provenance contracts belong to later roadmap work.

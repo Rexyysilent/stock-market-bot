@@ -33,6 +33,7 @@ CHECKS = (
     'test_apewisdom_social.py',
     'test_social_validity.py',
     'test_temporal_eligibility.py',
+    'test_provenance_language.py',
     'test_ceo_ca_verification.py',
     'test_cash_runway_missingness.py',
     'test_earnings_calendar.py',

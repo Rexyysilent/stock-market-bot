@@ -30,9 +30,13 @@ SCORE_COMPONENT_KEYS = (
     "source_authority",
     "audience_relevance",
     "timeliness",
+    # Legacy wire key retained for schema 2.6-2.9 compatibility. The value is
+    # publisher breadth; independence of reporting origins is not assessed.
     "independent_corroboration",
     "unresolved_contradiction_penalty",
 )
+# Reader-facing names where a legacy key would overstate what is measured.
+COMPONENT_DISPLAY_NAMES = {"independent_corroboration": "publisher_breadth"}
 
 _CONFIDENCE_BY_SOURCE_CLASS = {
     "official": 3,
@@ -177,7 +181,12 @@ def _publisher_aliases(value):
     return aliases
 
 
-def _independent_publisher_count(primary_publisher, publisher_domain, duplicates):
+def _publisher_breadth(primary_publisher, publisher_domain, duplicates):
+    """Distinct additional publishers that carried the same story, capped at 3.
+
+    This is coverage breadth, not corroboration: two outlets repeating one
+    filing or press release count twice here while sharing a single origin.
+    """
     primary_aliases = (
         _publisher_aliases(primary_publisher)
         | _publisher_aliases(publisher_domain)
@@ -185,16 +194,16 @@ def _independent_publisher_count(primary_publisher, publisher_domain, duplicates
     if not primary_aliases:
         return 0
 
-    independent = 0
+    breadth = 0
     seen_aliases = set(primary_aliases)
     for duplicate in duplicates:
         aliases = _publisher_aliases(duplicate)
         if not aliases or aliases & seen_aliases:
             continue
-        independent += 1
+        breadth += 1
 
         seen_aliases.update(aliases)
-    return min(3, independent)
+    return min(3, breadth)
 
 def _parse_utc(value):
     normalized = to_utc_z(value)
@@ -289,7 +298,7 @@ def _normalize_evidence(row, ticker, generated_at):
         else None
     )
     duplicate_publishers = _string_list(row.get("duplicate_publishers"))
-    independent_publisher_count = _independent_publisher_count(
+    publisher_breadth = _publisher_breadth(
         primary_publisher, publisher_domain, duplicate_publishers
     )
 
@@ -315,7 +324,7 @@ def _normalize_evidence(row, ticker, generated_at):
         "source_authority": source_authority,
         "audience_relevance": _bounded_int(components.get("issuer_relevance")),
         "timeliness": timeliness,
-        "independent_corroboration": independent_publisher_count,
+        "independent_corroboration": publisher_breadth,
         "contradiction_count": contradiction_count,
     }
 
@@ -661,7 +670,8 @@ def render_focus_text(focus):
     lines.extend([
         f"- Evidence grade: {focus['evidence_grade']}",
         "- Editorial score components: " + ", ".join(
-            f"{key}={components[key]}" for key in SCORE_COMPONENT_KEYS
+            f"{COMPONENT_DISPLAY_NAMES.get(key, key)}={components[key]}"
+            for key in SCORE_COMPONENT_KEYS
         ),
     ])
     if focus.get("market_reaction") is not None:
