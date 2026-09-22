@@ -16,7 +16,7 @@ from config import EDITORIAL_ONLY_TICKERS, PIPELINE_VERSION
 
 tmpdir = tempfile.mkdtemp(prefix="sniper_test_")
 assert os.path.basename(signals.SOCIAL_HISTORY_FILE) == (
-    f"social_history_{PIPELINE_VERSION}.json"
+    f"social_history_{PIPELINE_VERSION}_validity1.json"
 )
 assert os.path.basename(signals.CTGOV_SNAPSHOT_FILE) == (
     f"ctgov_snapshot_{PIPELINE_VERSION}.json"
@@ -28,7 +28,18 @@ BLOCKED_TICKERS = tuple(EDITORIAL_ONLY_TICKERS) + ("OUTSIDE",)
 
 def universe_row(ticker, mentions, upvotes=0):
     return {"ticker": ticker, "filter": "all-stocks", "universe_member": True,
-            "mentions": mentions, "upvotes": upvotes}
+            "mentions": mentions, "upvotes": upvotes,
+            "observation_status": "explicit_zero" if mentions == 0 else "observed",
+            "collection_status": "observed"}
+
+
+def complete_snapshot(rows, observed_at=None):
+    return {
+        "source": "ApeWisdom", "filter": "all-stocks", "scope": "top-200",
+        "observation_status": "observed", "coverage_status": "complete",
+        "reason": None, "comparable": True, "observed_at": observed_at,
+        "rows": rows,
+    }
 
 
 def no_mcap(ticker, now=None):
@@ -73,7 +84,8 @@ try:
         for rank, ticker in enumerate(BLOCKED_TICKERS)
     ]
     alerts = signals.update_social_signals(
-        blocked_rows, blocked_top200, "2026-07-06", mcap_lookup=no_mcap,
+        blocked_rows, complete_snapshot(blocked_top200), "2026-07-06",
+        mcap_lookup=no_mcap,
     )
     assert alerts == []
     with open(signals.SOCIAL_HISTORY_FILE, encoding="utf-8") as handle:
@@ -88,28 +100,36 @@ try:
         state = json.load(f)
     tsla_hist = state["tickers"]["TSLA"]
     assert len(tsla_hist) == 6, tsla_hist  # 5 warm-up days + one 07-06 entry
-    assert tsla_hist[-1] == {"date": "2026-07-06", "mentions": 12, "upvotes": 0}
+    assert tsla_hist[-1] == {
+        "date": "2026-07-06", "mentions": 12, "upvotes": 0,
+        "observation_status": "observed",
+    }
     # burst still computed against the 5 PRIOR days only (median 10): 12/10
     assert rows[0]["burst_ratio"] == 1.2
 
-    # --- 1c entrances: warm after 5 prior runs of top-200 history ------------
-    # The 7 runs above each stored an (empty) top-200 set, so history is warm.
+    # --- 1c entrances: warm after 5 complete comparable snapshots ------------
+    signals.SOCIAL_HISTORY_FILE = os.path.join(tmpdir, "entrance_history.json")
+    for day in range(1, 6):
+        signals.update_social_signals(
+            [], complete_snapshot([]), f"2026-06-{day:02d}",
+            mcap_lookup=no_mcap,
+        )
     top200 = [
         {"ticker": "DNN", "rank": 150, "mentions": 12},    # core small cap -> alert
         {"ticker": "TSLA", "rank": 10, "mentions": 900},   # core mega cap -> gated out
         {"ticker": "RGNX", "rank": 60, "mentions": 5},     # core unknown mcap -> gated out
     ]
     mcaps = {"DNN": 850.0, "TSLA": 50_000.0, "RGNX": None}
-    alerts = signals.update_social_signals([], top200, "2026-07-07",
+    alerts = signals.update_social_signals([], complete_snapshot(top200), "2026-07-07",
                                            mcap_lookup=lambda t, now=None: mcaps[t])
     assert [a["ticker"] for a in alerts] == ["DNN"], alerts
     birth = alerts[0]
-    assert birth["tag"] == "ATTENTION_BIRTH"
+    assert birth["tag"] == "TOP200_ENTRANCE"
     assert birth["rank"] == 150 and birth["mentions"] == 12
     assert birth["market_cap_musd"] == 850.0
 
     # Next run: DNN was in yesterday's top-200 -> no longer an entrance
-    alerts = signals.update_social_signals([], top200, "2026-07-08",
+    alerts = signals.update_social_signals([], complete_snapshot(top200), "2026-07-08",
                                            mcap_lookup=lambda t, now=None: mcaps[t])
     assert alerts == [], alerts
 
@@ -120,7 +140,7 @@ try:
 
     # --- entrances silent until 5 prior runs exist ---------------------------
     signals.SOCIAL_HISTORY_FILE = os.path.join(tmpdir, "cold_history.json")
-    alerts = signals.update_social_signals([], top200, "2026-07-07",
+    alerts = signals.update_social_signals([], complete_snapshot(top200), "2026-07-07",
                                            mcap_lookup=no_mcap)
     assert alerts == [], "cold state must not emit entrances"
 

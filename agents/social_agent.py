@@ -65,7 +65,12 @@ class SocialAgent:
 
         self._last_reddit_rss_time = 0
         self._apewisdom_records = []
-        self._apewisdom_top200 = []
+        self._apewisdom_collections = {}
+        self._apewisdom_top200 = self._top200_snapshot(
+            status="unavailable",
+            coverage_status="unavailable",
+            reason="not_collected",
+        )
         self._set_health_value("reddit_mode", "praw" if self.reddit else "rss")
 
     def _empty_health(self):
@@ -85,6 +90,24 @@ class SocialAgent:
             "apewisdom_failures": [],
             "apewisdom_failures_omitted": 0,
             "apewisdom_items": 0,
+            "apewisdom_collections": {},
+        }
+
+    @staticmethod
+    def _top200_snapshot(status, coverage_status, reason, rows=None,
+                         observed_at=None):
+        """Typed top-200 snapshot passed to deterministic signal state."""
+        comparable = status == "observed" and coverage_status == "complete"
+        return {
+            "source": "ApeWisdom",
+            "filter": "all-stocks",
+            "scope": "top-200",
+            "observation_status": status,
+            "coverage_status": coverage_status,
+            "reason": reason,
+            "comparable": comparable,
+            "observed_at": observed_at,
+            "rows": list(rows or []),
         }
 
     def _set_health_value(self, key, value):
@@ -140,7 +163,25 @@ class SocialAgent:
         else:
             with self._health_lock:
                 self._apewisdom_records = []
-                self._apewisdom_top200 = []
+                disabled = {
+                    "filter": "all-stocks",
+                    "status": "disabled",
+                    "coverage_status": "disabled",
+                    "reason": "source_disabled",
+                    "pages_requested": 0,
+                    "pages_succeeded": 0,
+                    "records_observed": 0,
+                    "top200_complete": False,
+                }
+                self._apewisdom_collections = {"all-stocks": disabled}
+                self.health["apewisdom_collections"] = deepcopy(
+                    self._apewisdom_collections
+                )
+                self._apewisdom_top200 = self._top200_snapshot(
+                    status="disabled",
+                    coverage_status="disabled",
+                    reason="source_disabled",
+                )
 
         # 3. Scrape Hacker News
         whispers.extend(self._fetch_hacker_news(limit=10))
@@ -173,8 +214,8 @@ class SocialAgent:
 
         Returns (attention_records, render_records):
         - attention_records: one row per universe ticker (wherever it ranks in
-          the paginated all-stocks leaderboard, or mentions=0 /
-          in_leaderboard=false if absent), plus the configured top-N
+          the paginated all-stocks leaderboard, or a null censored/unavailable
+          observation if absent), plus the configured top-N
           market-color rows flagged universe_member=false.
         - render_records: the market-color subset only (what the whisper
           strings have always shown).
@@ -186,6 +227,12 @@ class SocialAgent:
         all_rows = self._fetch_apewisdom(
             "all-stocks", limit=None, pages=APEWISDOM_UNIVERSE_PAGES
         )
+        collection = self._apewisdom_collections.get("all-stocks", {
+            "status": "unavailable",
+            "coverage_status": "unavailable",
+            "reason": "collection_status_missing",
+            "top200_complete": False,
+        })
         by_ticker = {row["ticker"]: row for row in all_rows}
 
         attention_records = []
@@ -200,24 +247,36 @@ class SocialAgent:
                     observed_at=observed_at,
                 )
             else:
-                # Not in the scanned leaderboard depth: mentions=0 by spec
-                # (velocity/rank unknowable, attention_score unmeasured).
+                collection_status = collection.get("status", "unavailable")
+                if collection_status == "observed":
+                    observation_status = "censored"
+                    observation_reason = "not_in_scanned_leaderboard"
+                else:
+                    observation_status = collection_status
+                    observation_reason = (
+                        collection.get("reason") or "collection_unavailable"
+                    )
                 rec = {
                     "source": "ApeWisdom",
                     "filter": "all-stocks",
                     "ticker": ticker,
                     "name": None,
                     "rank": None,
-                    "mentions": 0,
-                    "upvotes": 0,
+                    "mentions": None,
+                    "upvotes": None,
                     "mentions_24h_ago": None,
                     "rank_24h_ago": None,
                     "mention_velocity_24h": None,
                     "rank_delta_24h": None,
                     "attention_score": None,
-                    "is_low_volume": True,
+                    "is_low_volume": None,
                     "universe_member": True,
-                    "in_leaderboard": False,
+                    "in_leaderboard": None,
+                    "observation_status": observation_status,
+                    "observation_reason": observation_reason,
+                    "collection_status": collection_status,
+                    "collection_reason": collection.get("reason"),
+                    "coverage_status": collection.get("coverage_status"),
                     "observed_at": observed_at,
                 }
             attention_records.append(rec)
@@ -245,14 +304,30 @@ class SocialAgent:
                 "ticker": r["ticker"],
                 "rank": r["rank"],
                 "mentions": r["mentions"],
+                "observation_status": r["observation_status"],
                 "observed_at": observed_at,
             }
             for r in all_rows
             if r.get("rank") is not None and r["rank"] <= 200
         ]
+        top200_complete = bool(collection.get("top200_complete"))
+        snapshot_coverage = "complete" if top200_complete else (
+            collection.get("coverage_status") or "unavailable"
+        )
+        snapshot_status = collection.get("status", "unavailable")
+        snapshot_reason = None if (
+            snapshot_status == "observed" and top200_complete
+        ) else collection.get("reason") or "top200_incomplete"
+        snapshot = self._top200_snapshot(
+            status=snapshot_status,
+            coverage_status=snapshot_coverage,
+            reason=snapshot_reason,
+            rows=top200,
+            observed_at=observed_at,
+        )
         with self._health_lock:
             self._apewisdom_records = deepcopy(attention_records)
-            self._apewisdom_top200 = deepcopy(top200)
+            self._apewisdom_top200 = deepcopy(snapshot)
         return attention_records, render_records
 
     def _fetch_apewisdom(self, filter_name="all-stocks", limit=15, pages=1):
@@ -272,9 +347,14 @@ class SocialAgent:
         base_url = f"https://apewisdom.io/api/v1.0/filter/{filter_name}"
         records = []
         seen_tickers = set()
+        results = []
+        successful_pages = 0
+        terminal_empty_page = False
+        failure_reason = None
+        boundary_overlap = False
+        raw_seen_tickers = set()
 
         try:
-            results = []
             for page in range(1, pages + 1):
                 url = base_url if page == 1 else f"{base_url}/page/{page}"
                 self._bump_health("apewisdom_requests")
@@ -287,11 +367,28 @@ class SocialAgent:
                     self._record_source_failure(
                         "apewisdom_failures", filter_name, response.status_code, url
                     )
+                    failure_reason = f"http_{response.status_code}"
                     break  # keep rows already fetched; failure is in health
 
-                page_results = response.json().get("results", [])
-                if not page_results:
+                payload = response.json()
+                page_results = payload.get("results", [])
+                if not isinstance(page_results, list):
+                    failure_reason = "invalid_results_payload"
+                    self._record_source_failure(
+                        "apewisdom_failures", filter_name,
+                        "invalid_results_payload", url,
+                    )
                     break
+                successful_pages += 1
+                if not page_results:
+                    terminal_empty_page = True
+                    break
+                for raw_row in page_results:
+                    raw_ticker = str(raw_row.get("ticker", "")).upper().strip()
+                    if raw_ticker and raw_ticker in raw_seen_tickers:
+                        boundary_overlap = True
+                    if raw_ticker:
+                        raw_seen_tickers.add(raw_ticker)
                 results.extend(page_results)
 
             if limit is not None:
@@ -323,6 +420,17 @@ class SocialAgent:
                         and upvotes is not None and mentions is not None):
                     attention_score = round(upvotes / max(mentions, 1), 3)
 
+                if mentions is None or mentions < 0:
+                    observation_status = "unavailable"
+                    observation_reason = "missing_or_invalid_mentions"
+                    mentions = None
+                elif mentions == 0:
+                    observation_status = "explicit_zero"
+                    observation_reason = "source_reported_zero"
+                else:
+                    observation_status = "observed"
+                    observation_reason = None
+
                 records.append({
                     "source": "ApeWisdom",
                     "filter": filter_name,
@@ -337,14 +445,84 @@ class SocialAgent:
                     "rank_delta_24h": rank_delta,
                     "attention_score": attention_score,
                     "is_low_volume": (
-                        mentions is None or mentions < APEWISDOM_LOW_VOLUME_MENTIONS
+                        None if mentions is None else
+                        mentions < APEWISDOM_LOW_VOLUME_MENTIONS
                     ),
+                    "observation_status": observation_status,
+                    "observation_reason": observation_reason,
                 })
-
-            self._bump_health("apewisdom_items", len(records))
         except Exception as e:
             logger.error(f"ApeWisdom fetch failed for {filter_name}: {e}")
             self._record_source_failure("apewisdom_failures", filter_name, "exception", e)
+            failure_reason = "exception"
+
+        page_limit_reached = bool(
+            successful_pages == pages
+            and not terminal_empty_page
+            and failure_reason is None
+        )
+        if failure_reason:
+            collection_status = "partial" if successful_pages else "unavailable"
+            coverage_status = collection_status
+            collection_reason = failure_reason
+        elif boundary_overlap:
+            collection_status = "partial"
+            coverage_status = "partial"
+            collection_reason = "page_boundary_overlap"
+        else:
+            collection_status = "observed"
+            coverage_status = (
+                "complete" if terminal_empty_page else "censored"
+            )
+            collection_reason = (
+                "end_of_results" if terminal_empty_page
+                else "page_limit_reached"
+            )
+
+        top200_complete = False
+        if filter_name == "all-stocks" and collection_status == "observed":
+            top200_ranks = [
+                row["rank"] for row in records
+                if row.get("rank") is not None and 1 <= row["rank"] <= 200
+            ]
+            ranks = {
+                rank for rank in top200_ranks
+            }
+            highest_rank = max(ranks, default=0)
+            rank_coverage_valid = (
+                len(top200_ranks) == highest_rank
+                and ranks == set(range(1, highest_rank + 1))
+            )
+            top200_complete = rank_coverage_valid and (
+                200 in ranks or terminal_empty_page
+            )
+            if not rank_coverage_valid:
+                collection_status = "partial"
+                coverage_status = "partial"
+                collection_reason = "top200_rank_coverage_gap"
+
+        collection = {
+            "filter": filter_name,
+            "status": collection_status,
+            "coverage_status": coverage_status,
+            "reason": collection_reason,
+            "pages_requested": pages,
+            "pages_succeeded": successful_pages,
+            "page_limit_reached": page_limit_reached,
+            "end_of_results": terminal_empty_page,
+            "records_observed": len(records),
+            "top200_complete": top200_complete,
+        }
+        for record in records:
+            record["collection_status"] = collection_status
+            record["collection_reason"] = collection_reason
+            record["coverage_status"] = coverage_status
+        with self._health_lock:
+            self._apewisdom_collections[filter_name] = deepcopy(collection)
+            self.health["apewisdom_collections"] = deepcopy(
+                self._apewisdom_collections
+            )
+        self._bump_health("apewisdom_items", len(records))
 
         return records
 
@@ -375,13 +553,18 @@ class SocialAgent:
             return deepcopy(self._apewisdom_records)
 
     def get_apewisdom_top200(self):
-        """rank<=200 all-stocks rows from the most recent get_whisper() run.
+        """Typed top-200 snapshot from the most recent get_whisper() run.
 
-        Input for leaderboard-entrance detection (signals.py); not a JSON
-        section of its own.
+        ``rows`` is usable for entrance detection only when ``comparable`` is
+        true; failed, partial, and depth-censored collections fail closed.
         """
         with self._health_lock:
             return deepcopy(self._apewisdom_top200)
+
+    def get_apewisdom_collection_status(self):
+        """Per-filter acquisition status from the most recent collection."""
+        with self._health_lock:
+            return deepcopy(self._apewisdom_collections)
 
     def _safe_int(self, value):
         try:

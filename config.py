@@ -430,7 +430,7 @@ APEWISDOM_FILTERS = [
 ]
 # Universe-first scan: paginate all-stocks this deep (~100 rows/page) to locate
 # every universe ticker whatever its rank. Beyond this depth a ticker is
-# treated as mentions=0 / in_leaderboard=false.
+# censored (mentions=null, in_leaderboard=null), not a measured zero.
 APEWISDOM_UNIVERSE_PAGES = 5
 # Filters whose source has no upvote mechanic: ApeWisdom reports upvotes=0
 # there, so attention_score (upvotes/mentions) is emitted as null, not 0.0.

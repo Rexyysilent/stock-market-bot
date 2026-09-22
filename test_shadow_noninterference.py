@@ -74,6 +74,8 @@ def state_projection(mode):
             attention = [{
                 "ticker": ticker, "filter": "all-stocks", "universe_member": True,
                 "mentions": 50 if day == 7 else 10, "upvotes": 1,
+                "observation_status": "observed",
+                "collection_status": "observed",
             } for ticker in ("TSLA",) + blocked]
             social_alerts = signals.update_social_signals(
                 attention, [], date, mcap_lookup=lambda *a, **k: None,

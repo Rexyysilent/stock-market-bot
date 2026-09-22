@@ -350,13 +350,20 @@ Important section keys:
 - `social_attention` (structured ApeWisdom ticker heat: mentions, upvotes,
   mention_velocity_24h, rank_delta_24h, attention_score, is_low_volume.
   Universe-first: one row per universe ticker whatever its leaderboard rank —
-  `universe_member`/`in_leaderboard` flags, mentions=0 when absent from the
-  scanned depth (~500 rows), plus `burst_ratio` = mentions today /
-  trailing-20-run median, null until 5 prior runs. Market-color top-N rows
-  kept with `universe_member: false`)
+  `universe_member`/`in_leaderboard` flags. Since 2.6.5 each row carries
+  `observation_status` (observed / explicit_zero / censored / partial /
+  unavailable / disabled) with reason and collection/coverage status; a
+  ticker absent from the scanned depth (~500 rows) is `censored` with null
+  mentions, not zero, and failed pages never become measured absence. Plus
+  `burst_ratio` = mentions today / trailing-20-run median of measured
+  mentions, null until 5 prior measured runs (reason in `burst_ratio_reason`).
+  Market-color top-N rows kept with `universe_member: false`)
 - `social_alerts` (SOCIAL_BURST: burst_ratio >= 3.0 and mentions >= 10;
-  ATTENTION_BIRTH: entered ApeWisdom top-200 after >=5 runs absent, mcap <
-  $2000M; empty until state/social_history_2.6.3.json warms up over 5 runs)
+  TOP200_ENTRANCE: entered the ApeWisdom top-200 after >=5 complete
+  comparable top-200 snapshots absent, mcap < $2000M — archives before 2.6.5
+  label this ATTENTION_BIRTH under the looser any-run rule; empty until the
+  `social_history_<pipeline>_validity1.json` state warms up over 5 complete
+  runs)
 - `fda_catalysts` (keyword-mined FDA regulatory events — PDUFA_DATE, ADCOM,
   CRL, ACCEPTANCE, PRIORITY_REVIEW, DESIGNATION — from SEC filing metadata,
   biotech_news titles, CEO.ca posts, and the FDA AdCom calendar when its page

@@ -31,6 +31,7 @@ CHECKS = (
     'test_timestamp_policy.py',
     'test_twitter_health.py',
     'test_apewisdom_social.py',
+    'test_social_validity.py',
     'test_ceo_ca_verification.py',
     'test_cash_runway_missingness.py',
     'test_earnings_calendar.py',

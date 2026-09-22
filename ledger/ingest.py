@@ -192,13 +192,16 @@ def _iter_signals(data, run_id, pipeline_version):
         explicit_attention = set()
         for row in records("social_alerts"):
             tag = str(row.get("tag") or "")
-            if tag not in ("SOCIAL_BURST", "ATTENTION_BIRTH"):
+            # TOP200_ENTRANCE (2.6.5+) requires complete comparable snapshots;
+            # legacy ATTENTION_BIRTH archives keep their own subtype.
+            if tag not in ("SOCIAL_BURST", "ATTENTION_BIRTH", "TOP200_ENTRANCE"):
                 continue
             ticker = row.get("ticker")
             explicit_attention.add(ticker)
             strength = _bucket(row.get("burst_ratio"), BURST_BUCKETS,
                                ("3-5x", "5-10x", "10x+"))
-            yield row, "attention", "ATTENTION_BIRTH" if tag == "ATTENTION_BIRTH" else "BURST", "none", strength
+            subtype = "BURST" if tag == "SOCIAL_BURST" else tag
+            yield row, "attention", subtype, "none", strength
         for row in records("social_attention"):
             ticker = row.get("ticker")
             if (

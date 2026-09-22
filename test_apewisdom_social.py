@@ -87,6 +87,11 @@ try:
             # upvotes / max(mentions, 1) = 1250 / 100
             "attention_score": 12.5,
             "is_low_volume": False,
+            "observation_status": "observed",
+            "observation_reason": None,
+            "collection_status": "observed",
+            "collection_reason": "page_limit_reached",
+            "coverage_status": "censored",
         }
     ]
 
@@ -176,10 +181,12 @@ try:
     # Found deep on page 2 — the whole point of universe-first pagination
     assert by["RGNX"]["in_leaderboard"] is True and by["RGNX"]["mentions"] == 8
     assert by["RGNX"]["rank"] == 101
-    # Not found anywhere in the scanned depth: mentions=0 by spec, fields null
-    assert by["ROKU"]["in_leaderboard"] is False
-    assert by["ROKU"]["mentions"] == 0
+    # A rank gap makes the collection partial; absent names are not zeroes.
+    assert by["ROKU"]["in_leaderboard"] is None
+    assert by["ROKU"]["mentions"] is None
     assert by["ROKU"]["rank"] is None
+    assert by["ROKU"]["observation_status"] == "partial"
+    assert by["ROKU"]["observation_reason"] == "top200_rank_coverage_gap"
 
     # Market-color rows kept but flagged non-universe (MU via all-stocks + 4chan)
     mu_rows = [r for r in attention if r["ticker"] == "MU"]
@@ -197,16 +204,20 @@ try:
 
     # top-200 membership stored for leaderboard-entrance detection
     top200 = agent.get_apewisdom_top200()
+    assert top200["observation_status"] == "partial"
+    assert top200["coverage_status"] == "partial"
+    assert top200["reason"] == "top200_rank_coverage_gap"
+    assert top200["comparable"] is False
     assert [
         {key: row[key] for key in ("ticker", "rank", "mentions")}
-        for row in top200
+        for row in top200["rows"]
     ] == [
         {"ticker": "TSLA", "rank": 1, "mentions": 100},
         {"ticker": "MU", "rank": 2, "mentions": 90},
         {"ticker": "RGNX", "rank": 101, "mentions": 8},
     ]
-    assert all(row["observed_at"].endswith("Z") for row in top200)
-    assert len({row["observed_at"] for row in top200}) == 1
+    assert all(row["observed_at"].endswith("Z") for row in top200["rows"])
+    assert len({row["observed_at"] for row in top200["rows"]}) == 1
 
     assert calls2 == [
         "https://apewisdom.io/api/v1.0/filter/all-stocks",
