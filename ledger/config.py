@@ -16,6 +16,15 @@ NOTIONAL_BUCKETS = (100_000, 1_000_000)
 Z_BUCKETS = (3.0, 5.0)
 LEGACY_PIPELINE_VERSION = "legacy-unversioned"
 
+# M11: prospectively declared evaluation holdout. Entry sessions on or after
+# the start are reserved for evaluation; development outcomes whose window
+# reaches into it are purged. Declared before any holdout session existed.
+# Never move it to fit results: a new design needs a new version and a new,
+# later holdout.
+EVALUATION_DESIGN_VERSION = "holdout-1"
+EVALUATION_HOLDOUT_START = "2026-10-01"
+EVALUATION_HOLDOUT_DECLARED_AT = "2026-09-22"
+
 ARCHIVE_DIR = Path(BRIEF_ARCHIVE_DIR)
 DB_PATH = Path("ledger") / "ledger.db"
 STATS_JSON_PATH = Path("ledger") / "stats.json"

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .config import DB_PATH, MIN_N, STATS_JSON_PATH, STATS_MD_PATH
 from .db import connect
+from .evaluation import PARTITIONS, evaluation_design, evaluation_partition
 
 STATS_SCHEMA_VERSION = "2.6"
 DEPENDENCE_WARNING = (
@@ -92,6 +93,10 @@ def _cell(rows, min_n):
     signed = [row["signed"] for row in cluster_rows if row["signed"] is not None]
     raw_only = [row["raw"] for row in cluster_rows if row["raw_only"]]
     pairs = [row["pair"] for row in cluster_rows if row["pair"] is not None]
+    partitions = defaultdict(int)
+    for ticker, entry_session in clusters:
+        exit_session = clusters[(ticker, entry_session)][0]["exit_session"]
+        partitions[evaluation_partition(entry_session, exit_session)] += 1
     if not pairs:
         energy_status = "unavailable"
     elif len(pairs) < min_n:
@@ -105,6 +110,7 @@ def _cell(rows, min_n):
         "n_directional": len(signed),
         "n_entry_sessions": len({row["entry_session"] for row in filled}),
         "n_benchmark_pairs": len(pairs),
+        **{f"n_{name}": partitions[name] for name in PARTITIONS},
         "directional_status": "ready" if len(signed) >= min_n else "accumulating",
         "energy_status": energy_status,
         "inference_status": "ineligible",
@@ -194,6 +200,7 @@ def build_stats(db_path=DB_PATH, min_n=MIN_N):
                 "complete frozen-cohort benchmark; gated on n_benchmark_pairs"
             ),
             "inference": "withheld",
+            "evaluation_design": evaluation_design(),
         },
         "segments": [
             {
@@ -261,6 +268,11 @@ def render_markdown(stats):
         "- Directional statistics have their own minimum sample gate.",
         "- n counts ticker/session clusters, not independent episodes; the Sessions column shows distinct entry sessions.",
         "- No confidence interval is published: same-session market dependence and overlapping horizons require a blocked, forward-held-out evaluation that does not yet exist.",
+        (f"- Evaluation holdout {stats['config']['evaluation_design']['version']}: "
+         f"entry sessions from {stats['config']['evaluation_design']['holdout_start']} "
+         f"are reserved for evaluation (declared "
+         f"{stats['config']['evaluation_design']['declared_at']}); windows crossing "
+         "that date are purged from development."),
         "- Energy compares raw and universe moves only on clusters with a complete frozen-cohort benchmark, gated on that matched count.",
         "- This measures signals; it is not a strategy backtest and includes no costs, sizing, or fills.",
         "- Option anomalies are directionless until timestamped trade/NBBO classification exists.",

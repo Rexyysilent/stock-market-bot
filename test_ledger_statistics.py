@@ -8,7 +8,7 @@ from ledger.stats import _cell
 def _row(i, *, session="2026-09-01", ret=0.02, univ_ret=0.01,
          benchmark_status="complete", direction="long"):
     return {"status": "filled", "ticker": f"TEST{i}",
-            "entry_session": session, "ret": ret,
+            "entry_session": session, "exit_session": session, "ret": ret,
             "univ_ret": univ_ret, "excess": 0.01,
             "benchmark_status": benchmark_status,
             "direction": direction, "asset_class": "equity"}
