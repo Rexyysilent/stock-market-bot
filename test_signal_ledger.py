@@ -272,9 +272,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     stats_json = root / "stats.json"
     stats_md = root / "stats.md"
-    write_stats(db_path, stats_json, stats_md, min_n=1, bootstrap_samples=100)
+    write_stats(db_path, stats_json, stats_md, min_n=1)
     first_bytes = stats_json.read_bytes()
-    write_stats(db_path, stats_json, stats_md, min_n=1, bootstrap_samples=100)
+    write_stats(db_path, stats_json, stats_md, min_n=1)
     assert stats_json.read_bytes() == first_bytes
     stats = json.loads(first_bytes)
     assert {segment["pipeline_version"] for segment in stats["segments"]} == {
@@ -306,7 +306,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     )
     rebuilt_json = root / "rebuilt-stats.json"
     write_stats(rebuilt_db, rebuilt_json, root / "rebuilt-stats.md",
-                min_n=1, bootstrap_samples=100)
+                min_n=1)
     assert rebuilt_json.read_bytes() == first_bytes
 
 print("Signal Ledger acceptance checks passed")
