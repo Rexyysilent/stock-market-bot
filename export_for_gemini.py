@@ -58,7 +58,7 @@ from editorial_focus import (
 )
 import signals
 from coverage_policy import coverage_policy_manifest
-from lean_brief import LEAN_BRIEF_FILENAME, write_lean_brief
+from lean_brief import LEAN_BRIEF_FILENAME, write_dated_lean_brief, write_lean_brief
 from stateutil import (
     atomic_text_writer,
     atomic_write_json,
@@ -2272,17 +2272,26 @@ def _generate_daily_brief():
     snapshot_path = write_snapshot(filename_json, snapshot_dt)
     # Derived convenience file; the canonical brief above is already durable,
     # so a projection failure must never fail the export.
+    lean_brief_path = dated_lean_path = None
+    pruned_lean = []
     try:
         lean_brief_path = write_lean_brief(filename_json, LEAN_BRIEF_FILENAME)
     except Exception as exc:
-        lean_brief_path = None
         print(f"  [warn] lean brief not written: {exc}")
+    if lean_brief_path:
+        try:
+            dated_lean_path, pruned_lean = write_dated_lean_brief(lean_brief_path)
+        except Exception as exc:
+            print(f"  [warn] dated lean copy not written: {exc}")
 
     print(f"\nDone! Exported to:")
     print(f"  - {filename_txt} (human readable)")
     print(f"  - {filename_json} (structured JSON)")
     if lean_brief_path:
         print(f"  - {lean_brief_path} (lean brief for sharing with models)")
+    if dated_lean_path:
+        print(f"  - {dated_lean_path} (dated lean copy; "
+              f"{len(pruned_lean)} older than 7 days removed)")
     print(f"  - {snapshot_path} (point-in-time snapshot)")
     print(f"  - {archive_path} (canonical append-only archive)")
     if mirror_path:

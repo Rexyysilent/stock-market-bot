@@ -213,6 +213,12 @@ class ProfilePipelineTests(unittest.TestCase):
             self.assertNotIn("data_quality", share)
             self.assertEqual(share["sections"], document["sections"])
             self.assertEqual(share["health_summary"]["status"], document["health"]["status"])
+            dated = list((workspace / "lean_briefs").glob("*Z.json"))
+            self.assertEqual(len(dated), 1)
+            self.assertEqual(
+                dated[0].read_bytes(),
+                (workspace / "lean_brief.json").read_bytes(),
+            )
 
 
 if __name__ == "__main__":

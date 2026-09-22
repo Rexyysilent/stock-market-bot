@@ -14,12 +14,17 @@ import hashlib
 import json
 import os
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from stateutil import atomic_write_json
+from stateutil import atomic_write_bytes, atomic_write_json
+from timeutil import to_utc_z
 
 LEAN_BRIEF_CONTRACT = "lean-brief-1"
 LEAN_BRIEF_FILENAME = "lean_brief.json"
+LEAN_BRIEF_DIR = "lean_briefs"
+LEAN_BRIEF_KEEP_DAYS = 7
+_DATED_NAME = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{6})Z\.json")
 WARNING_MAX_CHARS = 240
 KEPT_TOP_LEVEL = (
     "schema_version", "pipeline_version", "generated_at", "run_context",
@@ -97,6 +102,39 @@ def write_lean_brief(brief_path="daily_brief.json", out_path=LEAN_BRIEF_FILENAME
     # Single-line JSON: indentation whitespace costs model tokens.
     atomic_write_json(os.fspath(out_path), share, indent=None)
     return out_path
+
+
+def write_dated_lean_brief(lean_path=LEAN_BRIEF_FILENAME, directory=LEAN_BRIEF_DIR,
+                           keep_days=LEAN_BRIEF_KEEP_DAYS):
+    """Copy a lean brief to ``directory/<generated_at>.json`` and prune old copies.
+
+    The cutoff is measured from the brief's own ``generated_at``, not the
+    clock, so replaying an old brief never removes newer copies. Only files
+    named like dated copies are candidates for removal.
+    Returns ``(target_path, pruned_names)``.
+    """
+    raw = Path(lean_path).read_bytes()
+    stamp = to_utc_z(json.loads(raw.decode("utf-8")).get("generated_at"))
+    if stamp is None:
+        raise ValueError("lean brief has no usable generated_at")
+    generated = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    directory = Path(directory)
+    target = directory / generated.strftime("%Y-%m-%d_%H%M%SZ.json")
+    atomic_write_bytes(target, raw)
+
+    cutoff = generated - timedelta(days=keep_days)
+    pruned = []
+    for path in sorted(directory.iterdir()):
+        match = _DATED_NAME.fullmatch(path.name)
+        if not match or not path.is_file():
+            continue
+        dated = datetime.strptime(match.group(1), "%Y-%m-%d_%H%M%S").replace(
+            tzinfo=timezone.utc
+        )
+        if dated < cutoff:
+            path.unlink()
+            pruned.append(path.name)
+    return target, pruned
 
 
 def main(argv=None):
