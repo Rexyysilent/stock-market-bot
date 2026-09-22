@@ -23,6 +23,7 @@ __pycache__/
 # Generated exports and local data
 daily_brief.json
 daily_brief.txt
+daily_brief.model_share.json
 gemini_daily_brief.json
 gemini_daily_brief.txt
 deep_dive_*.json
