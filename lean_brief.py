@@ -5,7 +5,7 @@ file keeps the market sections, summary, universe, field conventions and a
 compact warning list, and drops the per-source diagnostics and data-quality
 exclusion records that make up most of the canonical file's size.
 
-Usage: python model_share.py [daily_brief.json] [-o daily_brief.model_share.json]
+Usage: python lean_brief.py [daily_brief.json] [-o lean_brief.json]
 """
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from pathlib import Path
 
 from stateutil import atomic_write_json
 
-MODEL_SHARE_CONTRACT = "model-share-1"
-MODEL_SHARE_FILENAME = "daily_brief.model_share.json"
+LEAN_BRIEF_CONTRACT = "lean-brief-1"
+LEAN_BRIEF_FILENAME = "lean_brief.json"
 WARNING_MAX_CHARS = 240
 KEPT_TOP_LEVEL = (
     "schema_version", "pipeline_version", "generated_at", "run_context",
@@ -57,17 +57,17 @@ def _compact_warning(text):
     return text
 
 
-def build_model_share(brief, source_sha256=None):
+def build_lean_brief(brief, source_sha256=None):
     """Return the lean projection; ``brief`` is not modified."""
     if not isinstance(brief, dict):
         raise TypeError("brief must be a JSON object")
     health = brief.get("health") if isinstance(brief.get("health"), dict) else {}
     share = {
         "artifact": {
-            "kind": "model_share_projection",
-            "contract": MODEL_SHARE_CONTRACT,
+            "kind": "lean_brief",
+            "contract": LEAN_BRIEF_CONTRACT,
             "label": (
-                "Lean projection of the daily brief for sharing with language "
+                "Lean brief: a projection of the daily brief for sharing with language "
                 "models. Not the canonical record; not for public "
                 "redistribution or use as evidence."
             ),
@@ -87,10 +87,10 @@ def build_model_share(brief, source_sha256=None):
     return share
 
 
-def write_model_share(brief_path="daily_brief.json", out_path=MODEL_SHARE_FILENAME):
+def write_lean_brief(brief_path="daily_brief.json", out_path=LEAN_BRIEF_FILENAME):
     """Project an on-disk brief; the share records the brief's exact bytes."""
     raw = Path(brief_path).read_bytes()
-    share = build_model_share(
+    share = build_lean_brief(
         json.loads(raw.decode("utf-8")),
         source_sha256=hashlib.sha256(raw).hexdigest(),
     )
@@ -102,9 +102,9 @@ def write_model_share(brief_path="daily_brief.json", out_path=MODEL_SHARE_FILENA
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("brief", nargs="?", default="daily_brief.json")
-    parser.add_argument("-o", "--output", default=MODEL_SHARE_FILENAME)
+    parser.add_argument("-o", "--output", default=LEAN_BRIEF_FILENAME)
     args = parser.parse_args(argv)
-    out = write_model_share(args.brief, args.output)
+    out = write_lean_brief(args.brief, args.output)
     before = Path(args.brief).stat().st_size
     after = Path(out).stat().st_size
     print(f"{out}: {after:,} bytes (canonical brief {before:,} bytes)")

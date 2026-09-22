@@ -39,7 +39,7 @@ A successful export writes:
 
 - `daily_brief.json` — typed schema 2.8 data for scripts and dashboards; additional uses require source-purpose approval
 - `daily_brief.txt` — human-readable rendering of the same run
-- `daily_brief.model_share.json` — lean, labelled projection (about 5% of the full size) for an operator who chooses to share a brief with a language model: market sections, summary, field conventions, compact health warnings and reading rules, without per-source diagnostics or data-quality records. It is not the canonical record, is not archived, and is not for redistribution; sending source content to a model remains the operator's source-purpose decision. `python model_share.py <brief.json>` projects any saved brief.
+- `lean_brief.json` — the lean brief, a labelled projection (about 5% of the full size) for an operator who chooses to share a brief with a language model: market sections, summary, field conventions, compact health warnings and reading rules, without per-source diagnostics or data-quality records. It is not the canonical record, is not archived, and is not for redistribution; sending source content to a model remains the operator's source-purpose decision. `python lean_brief.py <brief.json>` projects any saved brief.
 - `briefs/YYYY-MM-DD/` — point-in-time snapshots
 - `archive/briefs/` — append-only canonical JSON copies
 

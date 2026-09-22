@@ -58,7 +58,7 @@ from editorial_focus import (
 )
 import signals
 from coverage_policy import coverage_policy_manifest
-from model_share import MODEL_SHARE_FILENAME, write_model_share
+from lean_brief import LEAN_BRIEF_FILENAME, write_lean_brief
 from stateutil import (
     atomic_text_writer,
     atomic_write_json,
@@ -2273,16 +2273,16 @@ def _generate_daily_brief():
     # Derived convenience file; the canonical brief above is already durable,
     # so a projection failure must never fail the export.
     try:
-        model_share_path = write_model_share(filename_json, MODEL_SHARE_FILENAME)
+        lean_brief_path = write_lean_brief(filename_json, LEAN_BRIEF_FILENAME)
     except Exception as exc:
-        model_share_path = None
-        print(f"  [warn] model-share projection not written: {exc}")
+        lean_brief_path = None
+        print(f"  [warn] lean brief not written: {exc}")
 
     print(f"\nDone! Exported to:")
     print(f"  - {filename_txt} (human readable)")
     print(f"  - {filename_json} (structured JSON)")
-    if model_share_path:
-        print(f"  - {model_share_path} (lean projection for sharing with models)")
+    if lean_brief_path:
+        print(f"  - {lean_brief_path} (lean brief for sharing with models)")
     print(f"  - {snapshot_path} (point-in-time snapshot)")
     print(f"  - {archive_path} (canonical append-only archive)")
     if mirror_path:

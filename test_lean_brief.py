@@ -1,4 +1,4 @@
-"""The model-share file is a labelled, lean, faithful projection of a brief."""
+"""The lean brief is a labelled, lean, faithful projection of a brief."""
 from copy import deepcopy
 import hashlib
 import json
@@ -6,21 +6,21 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from model_share import (
-    MODEL_SHARE_CONTRACT, build_model_share, main, write_model_share,
+from lean_brief import (
+    LEAN_BRIEF_CONTRACT, build_lean_brief, main, write_lean_brief,
 )
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "exports" / "daily_brief.valid.json"
 
 
-class ModelShareTests(unittest.TestCase):
+class LeanBriefTests(unittest.TestCase):
     def setUp(self):
         self.brief = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
     def test_labelled_and_lean(self):
-        share = build_model_share(self.brief, source_sha256="abc")
-        self.assertEqual(share["artifact"]["kind"], "model_share_projection")
-        self.assertEqual(share["artifact"]["contract"], MODEL_SHARE_CONTRACT)
+        share = build_lean_brief(self.brief, source_sha256="abc")
+        self.assertEqual(share["artifact"]["kind"], "lean_brief")
+        self.assertEqual(share["artifact"]["contract"], LEAN_BRIEF_CONTRACT)
         self.assertIn("not for public redistribution", share["artifact"]["label"])
         self.assertEqual(share["artifact"]["source_brief_sha256"], "abc")
         self.assertNotIn("data_quality", share)
@@ -30,12 +30,12 @@ class ModelShareTests(unittest.TestCase):
     def test_market_content_is_unchanged(self):
         brief = deepcopy(self.brief)
         brief["conventions"] = {"nan_policy": "null means unknown"}
-        share = build_model_share(brief)
+        share = build_lean_brief(brief)
         for key in ("sections", "summary", "universe", "conventions",
                     "schema_version", "pipeline_version", "generated_at"):
             self.assertEqual(share[key], brief[key], key)
         # Optional blocks absent from the brief are not invented.
-        self.assertNotIn("conventions", build_model_share(self.brief))
+        self.assertNotIn("conventions", build_lean_brief(self.brief))
 
     def test_warnings_survive_but_are_compacted(self):
         brief = deepcopy(self.brief)
@@ -46,7 +46,7 @@ class ModelShareTests(unittest.TestCase):
             "Options flow unavailable for 1/17 expected tickers: STTDF.",
         ]
         brief["health"]["errors"] = ["boom " + "x" * 400]
-        summary = build_model_share(brief)["health_summary"]
+        summary = build_lean_brief(brief)["health_summary"]
         self.assertEqual(summary["status"], "WARN")
         self.assertEqual(len(summary["warnings"]), 3)
         self.assertEqual(summary["warnings"][0],
@@ -58,16 +58,16 @@ class ModelShareTests(unittest.TestCase):
 
     def test_input_is_not_modified(self):
         before = json.dumps(self.brief, sort_keys=True)
-        share = build_model_share(self.brief)
+        share = build_lean_brief(self.brief)
         share["sections"]["headlines"] = "mutated"
         self.assertEqual(json.dumps(self.brief, sort_keys=True), before)
 
     def test_write_records_exact_source_bytes_and_is_deterministic(self):
         with TemporaryDirectory() as tmp:
             out = Path(tmp) / "share.json"
-            write_model_share(FIXTURE, out)
+            write_lean_brief(FIXTURE, out)
             first = out.read_bytes()
-            write_model_share(FIXTURE, out)
+            write_lean_brief(FIXTURE, out)
             self.assertEqual(out.read_bytes(), first)
             share = json.loads(first)
             self.assertEqual(
