@@ -99,7 +99,10 @@ def state_projection(mode):
         assert social_alerts and confluence and registry
         assert all(r["ticker"] not in blocked for r in social_alerts + baseline_alerts + confluence)
         doc = {"schema_version": "2.8", "pipeline_version": "2.6.4",
-               "generated_at": "2026-08-07T21:00:00Z", "sections": {
+               "generated_at": "2026-08-07T21:00:00Z",
+               # As exported: the ledger freezes this archived cohort.
+               "universe": {"instrumented_tickers": list(SIGNAL_ELIGIBLE_TICKERS)},
+               "sections": {
                    "social_alerts": social_alerts, "confluence": confluence,
                    "insider_clusters": [{"ticker": t, "cluster_direction": "buy",
                                          "record_id": "insider-" + t}

@@ -55,7 +55,7 @@ class LedgerCohortTests(unittest.TestCase):
             "SELECT ticker FROM signals WHERE source_record_id='shared-source'"
         ).fetchone()
         cohort = conn.execute(
-            """SELECT status,reason,members_json,weights_json
+            """SELECT status,reason,members_json,weights_json,weight_method
                FROM run_cohorts WHERE run_id=?""",
             (path.stem,),
         ).fetchone()
@@ -65,6 +65,7 @@ class LedgerCohortTests(unittest.TestCase):
         self.assertIsNone(cohort["reason"])
         self.assertEqual(json.loads(cohort["members_json"]), ["AAA", "BBB"])
         self.assertEqual(json.loads(cohort["weights_json"]), {"AAA": 0.5, "BBB": 0.5})
+        self.assertEqual(cohort["weight_method"], "equal_weight")
 
     def test_missing_strict_membership_is_typed_refusal(self):
         path = self.write(

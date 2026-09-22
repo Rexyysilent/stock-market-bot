@@ -52,6 +52,8 @@ CHECKS = (
     'test_dashboard_contract.py',
     'test_public_positioning.py',
     'test_ledger_outcome_retry.py',
+    'test_ledger_cohorts.py',
+    'test_ledger_benchmark_revisions.py',
     'test_scheduled_launcher.py',
     'test_profile_export_contract.py',
     'test_profile_pipeline.py',

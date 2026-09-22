@@ -116,7 +116,7 @@ def _archive_cohort(data, pipeline_version):
         "reason": reason,
         "members": members,
         "weights": weights,
-        "method": "equal_weight" if members else None,
+        "weight_method": "equal_weight" if members else "unavailable",
     }
     return {**identity, "cohort_sha256": _digest(_canonical(identity))}
 
@@ -124,10 +124,11 @@ def _archive_cohort(data, pipeline_version):
 def _store_run_cohort(conn, run_id, cohort):
     stored = (
         cohort["status"], cohort["reason"], _canonical(cohort["members"]),
-        _canonical(cohort["weights"]), cohort["cohort_sha256"],
+        _canonical(cohort["weights"]), cohort["weight_method"],
+        cohort["cohort_sha256"],
     )
     existing = conn.execute(
-        """SELECT status,reason,members_json,weights_json,cohort_sha256
+        """SELECT status,reason,members_json,weights_json,weight_method,cohort_sha256
            FROM run_cohorts WHERE run_id=?""",
         (run_id,),
     ).fetchone()
@@ -135,8 +136,8 @@ def _store_run_cohort(conn, run_id, cohort):
         raise ValueError(f"archive cohort mutation detected for run {run_id}")
     conn.execute(
         """INSERT OR IGNORE INTO run_cohorts(
-             run_id,status,reason,members_json,weights_json,cohort_sha256
-           ) VALUES(?,?,?,?,?,?)""",
+             run_id,status,reason,members_json,weights_json,weight_method,cohort_sha256
+           ) VALUES(?,?,?,?,?,?,?)""",
         (run_id, *stored),
     )
 
