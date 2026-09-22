@@ -130,6 +130,72 @@ HEADLINE_CONTRACT_VERSION = "2.7-headline-lanes-1"
 SIGNAL_ELIGIBILITY_AUDIT_VERSION = "2.7-signal-eligibility-1"
 
 
+def _baseline_session(row):
+    return row.get("session") or row.get("date")
+
+
+def baseline_prior(history, target_session, known_by=None, strict=False):
+    """Read-only eligible baseline rows for ``target_session``.
+
+    Only sessions strictly earlier than the target participate, and a row
+    observed after ``known_by`` is excluded even when its session is earlier.
+    Rows are ordered chronologically before the trailing window is taken, so
+    append order and later-appended history cannot change the result.
+    Returns ``(rows, reason)``. In ``strict`` mode a candidate row without an
+    observation time cannot prove it was known at the cutoff; the whole view
+    is refused with ``missing_knowledge_time`` rather than silently narrowed.
+    """
+    cutoff = to_utc_z(known_by)
+    if strict and cutoff is None:
+        raise ValueError("strict baseline view requires a known_by cutoff")
+    target = str(target_session or "")
+    rows = []
+    for row in history:
+        session = _baseline_session(row)
+        if not session or not target or str(session) >= target:
+            continue
+        observed = to_utc_z(row.get("observed_at"))
+        if observed is None:
+            if strict:
+                return [], "missing_knowledge_time"
+        elif cutoff is not None and observed > cutoff:
+            continue
+        rows.append(row)
+    rows.sort(key=lambda row: (str(_baseline_session(row)),
+                               to_utc_z(row.get("observed_at")) or ""))
+    return rows[-BASELINE_WINDOW:], None
+
+
+def score_against_baseline(value, prior_rows):
+    """Pure z-score of ``value`` against already-eligible prior rows."""
+    prior = [row["value"] for row in prior_rows]
+    z = None
+    if len(prior) >= BASELINE_MIN_POINTS:
+        mean = sum(prior) / len(prior)
+        std = (sum((v - mean) ** 2 for v in prior) / len(prior)) ** 0.5
+        # floor the std at 5% of the mean so a flat history (std=0) still
+        # yields a finite z instead of swallowing genuine deviations
+        std = max(std, abs(mean) * 0.05)
+        if std > 1e-9:
+            z = (value - mean) / std
+            if len(prior) < BASELINE_MATURE_POINTS:
+                z = max(-BASELINE_IMMATURE_Z_CAP,
+                        min(BASELINE_IMMATURE_Z_CAP, z))
+            z = round(z, 2)
+    inputs = [
+        [str(_baseline_session(row)), to_utc_z(row.get("observed_at")), row["value"]]
+        for row in prior_rows
+    ]
+    return {
+        "z": z,
+        "sample_size": len(prior),
+        "baseline_immature": len(prior) < BASELINE_MATURE_POINTS,
+        "input_sha256": hashlib.sha256(
+            json.dumps(inputs, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
+    }
+
+
 def update_baselines_and_score(options_flow, technicals, run_date,
                                pipeline_version=PIPELINE_VERSION):
     """P2-10: score put/call and volume ratios against each ticker's own
@@ -166,44 +232,32 @@ def update_baselines_and_score(options_flow, technicals, run_date,
                 "baseline_updated": False,
             }
         history = version_state.setdefault(ticker, {}).setdefault(metric, [])
-        prior_rows = [
-            row for row in history
-            if (row.get("session") or row.get("date")) != observation_key
-        ]
-        prior = [row["value"] for row in prior_rows]
+        prior_rows, _ = baseline_prior(history, observation_key, known_by=observed_at)
         if (not eligible or not observation_key
                 or not isinstance(value, (int, float)) or value != value):
             return {
                 "z": None,
-                "sample_size": len(prior),
-                "baseline_immature": len(prior) < BASELINE_MATURE_POINTS,
+                "sample_size": len(prior_rows),
+                "baseline_immature": len(prior_rows) < BASELINE_MATURE_POINTS,
                 "baseline_updated": False,
             }
-        z = None
-        if len(prior) >= BASELINE_MIN_POINTS:
-            mean = sum(prior) / len(prior)
-            std = (sum((v - mean) ** 2 for v in prior) / len(prior)) ** 0.5
-            # floor the std at 5% of the mean so a flat history (std=0) still
-            # yields a finite z instead of swallowing genuine deviations
-            std = max(std, abs(mean) * 0.05)
-            if std > 1e-9:
-                z = (value - mean) / std
-                if len(prior) < BASELINE_MATURE_POINTS:
-                    z = max(-BASELINE_IMMATURE_Z_CAP,
-                            min(BASELINE_IMMATURE_Z_CAP, z))
-                z = round(z, 2)
-        history[:] = prior_rows
-        history.append({
+        score = score_against_baseline(value, prior_rows)
+        # Retain later sessions too: a stale or backfilled observation must
+        # not delete history, only be excluded from earlier scores.
+        retained = [row for row in history
+                    if _baseline_session(row) != observation_key]
+        retained.append({
             "session": observation_key,
             "as_of": to_utc_z(as_of),
             "observed_at": to_utc_z(observed_at),
             "value": value,
         })
-        history[:] = history[-BASELINE_WINDOW:]
+        retained.sort(key=lambda row: str(_baseline_session(row) or ""))
+        history[:] = retained[-BASELINE_WINDOW:]
         return {
-            "z": z,
-            "sample_size": len(prior),
-            "baseline_immature": len(prior) < BASELINE_MATURE_POINTS,
+            "z": score["z"],
+            "sample_size": score["sample_size"],
+            "baseline_immature": score["baseline_immature"],
             "baseline_updated": True,
         }
 

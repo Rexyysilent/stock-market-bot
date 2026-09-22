@@ -67,8 +67,14 @@ def _save_state(path, state):
     atomic_write_json(path, state, indent=1)
 
 
-def get_mcap_musd(ticker, now=None):
-    """Market cap in $M via a weekly cache; None on fetch failure (not cached)."""
+def get_mcap_musd(ticker, now=None, allow_fetch=True):
+    """Market cap in $M via a weekly cache; None on fetch failure (not cached).
+
+    A cache entry is usable only when fetched at or before ``now`` and within
+    the maximum age; a future-dated entry is not fresh. Historical or strict
+    replay callers pass ``allow_fetch=False``: a live value cannot stand in
+    for a historical one, so an unusable cache yields None (unknown).
+    """
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -82,10 +88,13 @@ def get_mcap_musd(ticker, now=None):
             )
             if fetched.tzinfo is None:
                 fetched = fetched.replace(tzinfo=timezone.utc)
-            if (now - fetched).days <= MCAP_CACHE_MAX_AGE_DAYS:
+            age = now - fetched
+            if timedelta(0) <= age and age.days <= MCAP_CACHE_MAX_AGE_DAYS:
                 return entry["market_cap_musd"]
         except (KeyError, TypeError, ValueError):
             pass
+    if not allow_fetch:
+        return None
     try:
         import yfinance as yf
         from yfinance_util import configure_yfinance_cache
@@ -147,7 +156,12 @@ def update_social_signals(social_attention, top200_rows, run_date,
             continue
 
         history = tickers_state.get(ticker, [])
-        prior = [h for h in history if h.get("date") != run_date]
+        # Strictly earlier dates, chronologically ordered: a backfilled or
+        # out-of-order run never scores against later observations.
+        prior = sorted(
+            (h for h in history if h.get("date") and str(h["date"]) < run_date),
+            key=lambda h: str(h.get("date")),
+        )
         typed_prior = [
             h for h in prior
             if h.get("observation_status") in {"observed", "explicit_zero"}
@@ -180,13 +194,15 @@ def update_social_signals(social_attention, top200_rows, run_date,
                            f"{SOCIAL_BURST_BASELINE} median"),
             })
 
-        prior.append({
+        retained = [h for h in history if h.get("date") != run_date]
+        retained.append({
             "date": run_date,
             "mentions": mentions_today,
             "upvotes": rec.get("upvotes"),
             "observation_status": status,
         })
-        tickers_state[ticker] = prior[-SOCIAL_HISTORY_WINDOW:]
+        retained.sort(key=lambda h: str(h.get("date") or ""))
+        tickers_state[ticker] = retained[-SOCIAL_HISTORY_WINDOW:]
 
     # --- 1c: top-200 entrances ---------------------------------------------
     snapshot = top200_rows if isinstance(top200_rows, dict) else {}
@@ -219,9 +235,10 @@ def update_social_signals(social_attention, top200_rows, run_date,
         and h.get("filter") == "all-stocks"
         and h.get("scope") == "top-200"
     ]
-    prior_runs = [
-        h for h in history_runs if h.get("date") != run_date
-    ][-ENTRANCE_ABSENT_RUNS:]
+    prior_runs = sorted(
+        (h for h in history_runs if h.get("date") and str(h["date"]) < run_date),
+        key=lambda h: str(h.get("date")),
+    )[-ENTRANCE_ABSENT_RUNS:]
     if snapshot_comparable and len(prior_runs) >= ENTRANCE_ABSENT_RUNS:
         seen_before = set()
         for run in prior_runs:
@@ -265,6 +282,7 @@ def update_social_signals(social_attention, top200_rows, run_date,
             "comparable": True,
             "observed_at": snapshot.get("observed_at") or observed_at,
         })
+    history_runs.sort(key=lambda h: str(h.get("date") or ""))
     state["top200_history"] = history_runs[-TOP200_HISTORY_RUNS:]
     _save_state(SOCIAL_HISTORY_FILE, state)
     return alerts
