@@ -82,6 +82,9 @@ try {
         if ($lastRun -eq $utcDate) { exit 0 }
     }
 
+    # Every timestamp the stages write comes from this machine's clock. A
+    # skewed or unverifiable clock stops the run before anything is written.
+    Invoke-ScheduledPython -Stage "clock" -PythonArguments @("-u", "clock_guard.py")
     Invoke-ScheduledPython -Stage "export" -PythonArguments @("-u", "export_for_gemini.py")
     Invoke-ScheduledPython -Stage "ledger" -PythonArguments @("-u", "-m", "ledger", "update")
     Set-Content -LiteralPath $lastRunPath -Value $utcDate -NoNewline

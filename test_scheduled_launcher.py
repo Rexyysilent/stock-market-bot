@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parent
+CLOCK, EXPORT, LEDGER = "-u clock_guard.py", "-u export_for_gemini.py", "-u -m ledger update"
 POWERSHELL = Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32/WindowsPowerShell/v1.0/powershell.exe"
 
 HARNESS = r'''
@@ -28,8 +29,9 @@ function Start-Process {
     Add-Content -LiteralPath (Join-Path $PSScriptRoot "calls.txt") -Value ($ArgumentList -join " ")
     if ($Scenario -eq "launch-failure") { throw "fixture launch failure" }
     $code = 0
-    if ($Scenario -eq "export-failure" -and $script:invocations -eq 1) { $code = 7 }
-    if ($Scenario -eq "ledger-failure" -and $script:invocations -eq 2) { $code = 9 }
+    if ($Scenario -eq "clock-failure" -and $script:invocations -eq 1) { $code = 2 }
+    if ($Scenario -eq "export-failure" -and $script:invocations -eq 2) { $code = 7 }
+    if ($Scenario -eq "ledger-failure" -and $script:invocations -eq 3) { $code = 9 }
     # Substitute only the child program. Exercise actual Windows PowerShell
     # Start-Process stream capture and exit-code behavior, without bot imports.
     $child = Microsoft.PowerShell.Management\Start-Process -FilePath $TestPython `
@@ -90,19 +92,22 @@ class ScheduledLauncherTests(unittest.TestCase):
                 self.assertIn("failed" if scenario != "launch-failure" else "fixture launch failure", result.stderr)
 
     def test_warning_stderr_succeeds_and_commits_marker(self):
-        self.run_case("success", ["-u export_for_gemini.py", "-u -m ledger update"], True, True)
+        self.run_case("success", [CLOCK, EXPORT, LEDGER], True, True)
+
+    def test_refused_clock_stops_before_export_and_marker(self):
+        self.run_case("clock-failure", [CLOCK])
 
     def test_export_failure_stops_before_ledger_and_marker(self):
-        self.run_case("export-failure", ["-u export_for_gemini.py"])
+        self.run_case("export-failure", [CLOCK, EXPORT])
 
     def test_ledger_failure_does_not_commit_marker(self):
-        self.run_case("ledger-failure", ["-u export_for_gemini.py", "-u -m ledger update"])
+        self.run_case("ledger-failure", [CLOCK, EXPORT, LEDGER])
 
     def test_missing_exit_code_fails_closed(self):
-        self.run_case("missing-exit-code", ["-u export_for_gemini.py"])
+        self.run_case("missing-exit-code", [CLOCK])
 
     def test_launch_failure_does_not_commit_marker(self):
-        self.run_case("launch-failure", ["-u export_for_gemini.py"])
+        self.run_case("launch-failure", [CLOCK])
 
     def test_validation_warning_succeeds_without_export(self):
         self.run_case("validate", ["-m ledger --help"], True)

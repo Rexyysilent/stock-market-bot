@@ -292,7 +292,7 @@ Windows users can install the UTC-gated current-user task:
 .\run_scheduled.ps1 -ValidateOnly
 ```
 
-The launcher runs the exporter and matures the separate outcome ledger. Ledger commands are research diagnostics, not performance promises or execution logic:
+The launcher first checks this machine's clock against network time (NTP, with an HTTPS `Date` fallback) and refuses the run if it is more than 5 minutes off or cannot be verified, because every timestamp the stages write comes from the local clock; the result is kept in `state/clock_check.json`. It then runs the exporter and matures the separate outcome ledger. Ledger commands are research diagnostics, not performance promises or execution logic:
 
 ```powershell
 python -m ledger ingest

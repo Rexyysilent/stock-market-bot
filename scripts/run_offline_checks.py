@@ -60,6 +60,7 @@ CHECKS = (
     'test_ledger_benchmark_revisions.py',
     'test_evaluation_holdout.py',
     'test_scheduled_launcher.py',
+    'test_clock_guard.py',
     'test_profile_export_contract.py',
     'test_profile_pipeline.py',
     'test_diagnostics.py',
