@@ -301,6 +301,41 @@ python -m ledger rebuild
 python -m ledger import-legacy
 ```
 
+## Evidence history (sidecar)
+
+`python -m event_history import` indexes archived briefs into a separate,
+append-only database (`history/event_history.db`). It reads archives and never
+writes them, the ledger, state, or any collector, and makes no network calls.
+
+- One archive identity per exact byte content; every path a copy was found at
+  is kept. Documents of an unknown schema are quarantined, not guessed.
+- SEC filing rows and validated OMNI-02 intake records become evidence versions
+  with JSON pointers back into the archive. Schemas 2.8/2.9 are native; 2.0 and
+  2.5-2.7 have documented legacy adapters. A zone-less `generated_at` (2.0) is
+  not established knowledge time, so strict views exclude those sightings.
+- Capture policy stays with each sighting as the archive recorded it; today's
+  policy is never applied to an older capture.
+- Interpretation (event anchors, memberships, amendments, contradictions,
+  aliases) is appended with a decision time and a registered resolver. Cycles,
+  out-of-order corrections and decisions made before a resolver existed are
+  refused. Ambiguous links stay candidates; nothing is merged automatically.
+- `view --cutoff T` is the as-operated view: evidence known by T, interpreted
+  only by decisions made by T. `--mode retrospective` applies later resolvers and
+  is labelled as a reconstruction, not what the system knew. Conflicting values
+  keep their attributions; nothing is voted on or averaged, and independence of
+  origins is not assessed. A date with unknown timezone never becomes UTC
+  midnight: ordering it against an instant on the same day abstains.
+- `annotate <archive_sha> --observed-not-before T --reason ...` records that an
+  archive's own time label was earlier than its real capture (for example a
+  skewed host clock); views then treat its contents as known from T.
+
+```powershell
+python -m event_history import
+python -m event_history anchor
+python -m event_history view --cutoff 2026-09-23T00:00:00Z
+python -m event_history status
+```
+
 ## Tests
 
 Run the same deterministic, network-free suite used by CI:
