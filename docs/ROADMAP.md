@@ -29,6 +29,19 @@ validators. Profiles use schema 2.9 with embedded configuration. It also adds
 read-only doctor diagnostics, retryable empty outcomes and the repaired Windows
 launcher. This is implemented code; release and live burn-in remain separate gates.
 
+## Integrated in 2.6.5
+
+Measurement integrity after an external methodology review: one immutable price
+acquisition per ledger window; archive-frozen benchmark cohorts with explicit
+partial coverage and append-only outcome revisions; matched-pair energy with
+inferential intervals withheld and a prospectively declared holdout; typed social
+censoring; strictly earlier, known-by-cutoff baselines; typed cash-runway
+missingness; publisher breadth instead of an independence claim. Also the lean
+brief, a scheduled-run clock guard, the append-only evidence history sidecar,
+and a disabled legacy narrative route. See [INTEGRATION_2_6_5.md](INTEGRATION_2_6_5.md).
+Calendar-block intervals, strict replay and exact claim-origin linking in exports
+remain open.
+
 ## Phase A: prove the local release path
 
 **A1. Release evidence and rollback.** Require the actual Python 3.11/3.12 CI results,

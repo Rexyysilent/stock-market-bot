@@ -13,7 +13,7 @@ from clock_guard import (
     NTP_EPOCH_OFFSET, check_clock, http_date_offset, main, parse_sntp, sntp_offset,
 )
 
-# 2026-09-23: the machine came up 45000 s (12.5 h) behind real time.
+# A host booting 12.5 h (45000 s) behind, as after an RTC written in another zone.
 REAL = 1790148000.0
 BEHIND = 45000.0
 

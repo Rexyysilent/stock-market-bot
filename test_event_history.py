@@ -372,7 +372,7 @@ class OrderAndPolicyTests(HistoryCase):
             eh.annotate_archive(self.conn, sha, observed_at_not_before="2026-09-22T10:00:00Z",
                                 reason="earlier is not allowed")
         eh.annotate_archive(self.conn, sha, observed_at_not_before="2026-09-23T07:37:00Z",
-                            reason="host clock 45000 s behind at capture",
+                            reason="host clock behind at capture",
                             decided_at="2026-09-23T16:00:00Z")
         self.assertEqual(eh.knowledge_view(self.conn, "2026-09-23T00:00:00Z")["evidence"], [])
         self.assertEqual(len(eh.knowledge_view(self.conn, "2026-09-23T08:00:00Z")["evidence"]), 1)

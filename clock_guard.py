@@ -5,7 +5,8 @@ acquisitions, outcome revisions) comes from the local clock, and the ledger
 places each signal's entry session from generated_at. A clock that is hours
 off labels a run with a time it could not have known: a run that really
 happens after a close can be entered at a session whose close it already saw.
-The dual-boot machine this runs on has come up 12.5 hours behind.
+A host whose hardware clock was last written in another timezone, for
+example by a second operating system, can boot hours off.
 
 A missed run is visibly missing; a mislabelled run silently enters the
 append-only archive. So a skewed clock, or one no time source can confirm,
