@@ -170,13 +170,15 @@ def _claim_change(key, group, before, sources, view):
         [v["claim_ref"].split("#", 1)[0] for v in values]
         + [r["attributed_to"].split("#", 1)[0] for r in group["superseded"]]))
     origins = []
-    for value in values:
-        summary = origin_summary(view, value["claim_ref"])
-        summary["source_key"] = value["source_key"]
-        summary["coverage_source_keys"] = [sources.evidence[v]["source_key"]
-                                           for v in summary.pop("coverage_versions")
-                                           if v in sources.evidence]
-        origins.append(summary)
+    for role, refs in (("current", group["values"]), ("superseded", group["superseded"])):
+        for ref in refs:
+            summary = origin_summary(view, ref["attributed_to"])
+            summary.update(role=role, value=ref["value"],
+                           source_key=_ref_source(ref, sources.evidence)[1])
+            summary["coverage_source_keys"] = sorted(sources.evidence[v]["source_key"]
+                                                     for v in summary.pop("coverage_versions")
+                                                     if v in sources.evidence)
+            origins.append(summary)
     shown = ", ".join(f"{v['value']} ({v['source_key']})" for v in values)
     limitations = [_limitation("independence_not_assessed",
                                "Origin independence is not assessed; coverage reports "
@@ -246,7 +248,11 @@ def _record_change(record, cutoff):
 
 def _conflict_change(relation, sources):
     ends = [relation["from"], relation["to"]]
-    keys = [sources.evidence[v]["source_key"] for v in ends]
+    keys = []
+    for version_id in ends:
+        record = sources.record(version_id)
+        keys.append(f"{record['source_key']} ({record['summary']})" if record["summary"]
+                    else record["source_key"])
     limitations = [_limitation(
         "conflict_retained",
         "Both attributed reports are kept; no vote, average or recency rule picks one.")]
@@ -380,15 +386,9 @@ def build_packet(conn, previous_path, current_path, subject):
             continue
         changes.append(_claim_change(key, group, before, sources, curr_view))
 
-    prev_relations = {_relation_key(r) for r in prev_view["relations"]}
     coverage_versions = {r["from"] for r in curr_view["relations"]
                          if r["decision"] == "accepted"
                          and r["type"] in ("reproduces", "derived_from")}
-    for relation in curr_view["relations"]:
-        if (relation["type"] == "contradicts" and _relation_key(relation) not in prev_relations
-                and relation["from"] in sources.evidence and relation["to"] in sources.evidence):
-            changes.append(_conflict_change(relation, sources))
-
     records = []
     for version_id in sorted(set(sources.evidence) - prev_evidence):
         record = sources.record(version_id)
@@ -398,6 +398,13 @@ def build_packet(conn, previous_path, current_path, subject):
         change["sources"] = [sources.public(version_id)]
         records.append((record["first_known_at"] or "", record["source_key"], change))
     changes += [change for _, _, change in sorted(records, key=lambda r: r[:2])]
+
+    # Conflicts come after the records they connect, so each side is introduced first.
+    prev_relations = {_relation_key(r) for r in prev_view["relations"]}
+    for relation in curr_view["relations"]:
+        if (relation["type"] == "contradicts" and _relation_key(relation) not in prev_relations
+                and relation["from"] in sources.evidence and relation["to"] in sources.evidence):
+            changes.append(_conflict_change(relation, sources))
 
     coverage = _coverage(current, components, ticker)
     if changes:
@@ -442,10 +449,22 @@ def render_note(packet):
         lines += [f"## {number}. What changed", "", change["what_changed"], "",
                   "**Source/version**", ""]
         lines += [_source_line(s) for s in change["sources"]]
+        for origin in change.get("origins", []):
+            reports = origin["coverage_reports"]
+            listed = f" ({', '.join(origin['coverage_source_keys'])})" if reports else ""
+            lines.append(f"- Origins of the {origin['role']} value {origin['value']} "
+                         f"({origin['source_key']}): {origin['primary_origins']} disclosure "
+                         f"origin, {reports} coverage reports{listed}; independence not assessed.")
         lines += ["", "**Limitation/conflict**", ""]
         lines += [f"- {l['text']}" for l in change["limitations"]] or ["- None recorded."]
         lines += ["", "**Next evidence needed**", ""]
         lines += [f"- {n}" for n in dict.fromkeys(change["next_evidence"])] or ["- None recorded."]
+        lines.append("")
+    if packet["unchanged_claims"]:
+        lines += ["## Unchanged claims", ""]
+        lines += [f"- {u['claim']} for {u['period']}: "
+                  + ", ".join(f"{v['value']} ({v['source_key']})" for v in u["values"])
+                  for u in packet["unchanged_claims"]]
         lines.append("")
     price = packet["price_context"]
     if price["status"] == "descriptive":

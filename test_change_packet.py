@@ -142,6 +142,15 @@ class FilingCoverageAmendmentTests(PacketCase):
         unchanged = {u["claim"]: u for u in packet["unchanged_claims"]}
         self.assertEqual([v["source_key"] for v in unchanged["eps"]["values"]], ["synthetic:sec:F1"])
         self.assertFalse(any(c.get("claim") == "eps" for c in packet["changes"]))
+        # The superseded value keeps its own origin record: one disclosure, two reports.
+        old = next(o for o in revenue["origins"] if o["role"] == "superseded")
+        self.assertEqual((old["source_key"], old["primary_origins"], old["coverage_reports"]),
+                         ("synthetic:sec:F1", 1, 2))
+        self.assertEqual(old["coverage_source_keys"], ["synthetic:news:N1", "synthetic:news:N2"])
+        note = render_note(packet)
+        self.assertIn("2 coverage reports (synthetic:news:N1, synthetic:news:N2)", note)
+        self.assertIn("## Unchanged", note)
+        self.assertIn("eps for 2026-Q2: 1.2 (synthetic:sec:F1)", note)
 
     def test_later_evidence_does_not_change_an_earlier_packet(self):
         self.build()
@@ -200,6 +209,11 @@ class RegulatoryConflictTests(PacketCase):
         conflict = self.changes(packet, "conflict")[0]
         self.assertEqual(sorted(s["source_key"] for s in conflict["sources"]),
                          ["synthetic:fda:notice", "synthetic:news:approval"])
+        self.assertIn("Report: approval granted", conflict["what_changed"])
+        self.assertIn("Advisory committee meeting scheduled", conflict["what_changed"])
+        kinds = [c["kind"] for c in packet["changes"]]
+        self.assertGreater(kinds.index("conflict"), max(i for i, k in enumerate(kinds)
+                                                        if k == "new_record"))
         self.assertNotIn("resolved", json.dumps(conflict))
         scheduled = next(c for c in packet["changes"]
                          if any(l["code"] == "scheduled_not_occurred" for l in c["limitations"]))
