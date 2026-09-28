@@ -33,7 +33,7 @@ jobs:
       - name: Compile
         run: >-
           python -m compileall -q
-          export_for_gemini.py lean_brief.py clock_guard.py change_packet.py change_packet_study.py openinsider_agent.py signals.py timeutil.py
+          export_for_gemini.py lean_brief.py clock_guard.py change_packet.py change_packet_study.py instrument_registry.py openinsider_agent.py signals.py timeutil.py
           stateutil.py marketbot.py universe_profile.py brief_tools.py diagnostics.py session_returns.py agents ledger event_history scripts
       - name: Validate synthetic export schema
         run: python scripts/validate_export_schema.py
