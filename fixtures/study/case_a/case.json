@@ -1,0 +1,78 @@
+{
+  "case": "A",
+  "subject": "ALFA",
+  "description": "SYNTHETIC. Alfa Minerals (fictitious): a quarterly revenue figure amended after two reports repeated it, plus an operational notice with a day-only time and a conflicting report.",
+  "resolver": {"rule_version": "study-manual-1", "introduced_at": "2026-09-01T00:00:00Z",
+               "description": "study reviewer decisions (synthetic)"},
+  "briefs": {
+    "previous": {
+      "file": "brief-2026-09-21.json",
+      "generated_at": "2026-09-21T22:00:00Z",
+      "prices": [{"ticker": "ALFA", "price": 100.0, "change_pct": 0.5,
+                  "as_of": "2026-09-21T13:30:00Z", "observed_at": "2026-09-21T21:59:00Z",
+                  "source_session": "2026-09-21", "session_complete": true,
+                  "source": "synthetic-fixture"}],
+      "sources": {"sec_edgar": {"exceptions": 0, "failed_requests": [], "no_cik_tickers": []},
+                  "news": {"fetch_error": null}}
+    },
+    "current": {
+      "file": "brief-2026-09-22.json",
+      "generated_at": "2026-09-22T22:00:00Z",
+      "prices": [{"ticker": "ALFA", "price": 96.0, "change_pct": -4.0,
+                  "as_of": "2026-09-22T13:30:00Z", "observed_at": "2026-09-22T21:59:00Z",
+                  "source_session": "2026-09-22", "session_complete": true,
+                  "source": "synthetic-fixture"}],
+      "sources": {"sec_edgar": {"exceptions": 1, "failed_requests": ["synthetic timeout"],
+                                "no_cik_tickers": []},
+                  "news": {"fetch_error": null}}
+    }
+  },
+  "extracts": [
+    {"file": "extract-2026-09-21-filing.json", "generated_at": "2026-09-21T14:10:00Z",
+     "extracts": [{"source_key": "study:A:filing:F1", "kind": "filing", "subject_id": "issuer:ALFA",
+                   "origin_hint": "issuer-disclosure:ALFA:2026-Q2",
+                   "published_at": "2026-09-21T14:00:00Z",
+                   "title": "Alfa Minerals quarterly report, Q2 2026 (F1)",
+                   "claims": {"revenue": {"value": "20", "unit": "USD_million", "period": "2026-Q2"},
+                              "eps": {"value": "1.2", "unit": "USD_per_share", "period": "2026-Q2"}}}]},
+    {"file": "extract-2026-09-21-news.json", "generated_at": "2026-09-21T14:20:00Z",
+     "extracts": [
+       {"source_key": "study:A:news:N1", "kind": "news", "subject_id": "issuer:ALFA",
+        "origin_hint": "issuer-disclosure:ALFA:2026-Q2", "published_at": "2026-09-21T14:12:00Z",
+        "title": "Alfa Minerals posts USD 20 million quarterly revenue (N1)",
+        "claims": {"revenue": {"value": "20", "unit": "USD_million", "period": "2026-Q2",
+                               "attribution": "F1"}}},
+       {"source_key": "study:A:news:N2", "kind": "news", "subject_id": "issuer:ALFA",
+        "origin_hint": "issuer-disclosure:ALFA:2026-Q2", "published_at": "2026-09-21T14:16:00Z",
+        "title": "Alfa revenue reaches USD 20 million, company says (N2)",
+        "claims": {"revenue": {"value": "20", "unit": "USD_million", "period": "2026-Q2",
+                               "attribution": "F1"}}}]},
+    {"file": "extract-2026-09-22-amendment.json", "generated_at": "2026-09-22T10:00:00Z",
+     "extracts": [{"source_key": "study:A:filing:F2", "kind": "filing", "subject_id": "issuer:ALFA",
+                   "origin_hint": "issuer-disclosure:ALFA:2026-Q2",
+                   "published_at": "2026-09-22T09:55:00Z",
+                   "title": "Alfa Minerals amended quarterly report, Q2 2026 (F2): revenue restated",
+                   "claims": {"revenue": {"value": "18", "unit": "USD_million", "period": "2026-Q2"}}}]},
+    {"file": "extract-2026-09-22-operations.json", "generated_at": "2026-09-22T12:00:00Z",
+     "extracts": [
+       {"source_key": "study:A:notice:R1", "kind": "notice", "subject_id": "issuer:ALFA",
+        "published_date": "2026-09-22", "event_date": "2026-09-22",
+        "title": "Alfa Minerals operations notice: mill restart (R1)"},
+       {"source_key": "study:A:news:D1", "kind": "news", "subject_id": "issuer:ALFA",
+        "published_at": "2026-09-22T11:40:00Z",
+        "title": "Report: Alfa mill restart delayed, unnamed sources say (D1)"}]}
+  ],
+  "decisions": [
+    {"from": "study:A:news:N1", "to": "study:A:filing:F1", "type": "reproduces",
+     "from_claim": "/claims/revenue", "to_claim": "/claims/revenue",
+     "decision": "accepted", "decision_at": "2026-09-21T14:30:00Z"},
+    {"from": "study:A:news:N2", "to": "study:A:filing:F1", "type": "reproduces",
+     "from_claim": "/claims/revenue", "to_claim": "/claims/revenue",
+     "decision": "accepted", "decision_at": "2026-09-21T14:30:00Z"},
+    {"from": "study:A:filing:F2", "to": "study:A:filing:F1", "type": "supersedes_claim",
+     "from_claim": "/claims/revenue", "to_claim": "/claims/revenue",
+     "decision": "accepted", "decision_at": "2026-09-22T10:05:00Z"},
+    {"from": "study:A:news:D1", "to": "study:A:notice:R1", "type": "contradicts",
+     "decision": "accepted", "decision_at": "2026-09-22T12:30:00Z"}
+  ]
+}

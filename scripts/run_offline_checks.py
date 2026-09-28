@@ -63,6 +63,7 @@ CHECKS = (
     'test_clock_guard.py',
     'test_event_history.py',
     'test_change_packet.py',
+    'test_change_packet_study.py',
     'test_profile_export_contract.py',
     'test_profile_pipeline.py',
     'test_diagnostics.py',

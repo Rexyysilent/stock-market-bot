@@ -37,6 +37,7 @@ state/
 *.sqlite3
 backups/
 history/
+study-runs/
 archive/
 briefs/
 ledger/ledger.db

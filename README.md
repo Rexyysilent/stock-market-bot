@@ -89,6 +89,7 @@ python marketbot.py doctor
 python marketbot.py plan --universe profiles/us-core.example.json
 python marketbot.py inspect path/to/daily_brief.json
 python marketbot.py diff path/to/previous.json path/to/current.json
+python marketbot.py packet path/to/previous.json path/to/current.json --subject ALFA --note
 ```
 
 `demo` opens the local viewer over the bundled synthetic fixture. It does not
@@ -96,6 +97,23 @@ write a new export or contact providers. The other commands inspect local data
 without provider requests. Saved JSON files are imported inside your browser.
 Health, missing values, source timestamps and coverage appear before
 interpretation. `doctor` shows credential presence only, never values.
+
+`packet` answers "what changed for this issuer since my previous brief, and
+what can I verify?" from the evidence history (`python -m event_history
+import`). Each change comes with:
+
+- its exact source, version, archive file and JSON pointer;
+- its limitation or conflict;
+- the next evidence that is missing.
+
+Amendments correct only the figures they name. Reports that repeat a
+disclosure count as coverage, not as independent confirmation. Missing
+providers are shown as coverage gaps, never as "nothing happened". Price
+context is descriptive and never attributed to a change. `--save note.md`
+writes the four-part note to a file you choose.
+
+The packet is an unvalidated prototype until the
+[falsification study](docs/study/CHANGE_PACKET_STUDY.md) has been run.
 
 [Optional profiles and isolated workspaces](docs/WORKSPACES.md) let you try an
 explicit 1–64 instrument universe without mixing legacy state or archives.
