@@ -6,6 +6,7 @@ Examples:
   python marketbot.py ledger update --universe profiles/us-core.example.json --workspace workspaces/core
   python marketbot.py inspect workspaces/core/daily_brief.json
   python marketbot.py diff previous.json current.json
+  python marketbot.py packet previous.json current.json --subject ALFA --note
   python marketbot.py demo
 """
 from __future__ import annotations
@@ -104,7 +105,16 @@ def main(argv=None):
     diff = sub.add_parser("diff", help="Describe changes between two local briefs")
     diff.add_argument("previous", type=Path)
     diff.add_argument("current", type=Path)
-    doctor = sub.add_parser("doctor", help="Read-only local diagnostics; never contacts providers or prints secrets")
+    packet = sub.add_parser("packet", help="Issuer-change packet between two saved briefs; read-only")
+    packet.add_argument("previous", type=Path)
+    packet.add_argument("current", type=Path)
+    packet.add_argument("--subject", required=True, help="ticker (ALFA) or subject id (issuer:ALFA)")
+    packet.add_argument("--history", type=Path, default=None,
+                        help="evidence history database (default history/event_history.db)")
+    packet.add_argument("--note", action="store_true", help="print the four-part note, not JSON")
+    packet.add_argument("--save", type=Path, help="write the note (.md) or packet (.json) here")
+    packet.add_argument("--overwrite", action="store_true", help="replace an existing --save file")
+    doctor =sub.add_parser("doctor", help="Read-only local diagnostics; never contacts providers or prints secrets")
     doctor.add_argument("--workspace", type=Path)
     doctor.add_argument("--universe", type=Path)
     args = parser.parse_args(argv)
@@ -118,6 +128,24 @@ def main(argv=None):
             output = (inspect_brief(load_brief(args.brief)) if args.command == "inspect"
                       else diff_briefs(load_brief(args.previous), load_brief(args.current)))
             print(json.dumps(output, indent=2, ensure_ascii=False, allow_nan=False))
+        elif args.command == "packet":
+            from change_packet import build_packet, render_note, save_note
+            from event_history import DEFAULT_DB, connect
+            history = args.history or DEFAULT_DB
+            if not Path(history).is_file():
+                raise ValueError(f"No evidence history at {history}; build it with "
+                                 "`python -m event_history import`")
+            conn = connect(history)
+            try:
+                output = build_packet(conn, args.previous, args.current, args.subject)
+            finally:
+                conn.close()
+            if args.save:
+                print(f"Saved {save_note(output, args.save, overwrite=args.overwrite)}")
+            elif args.note:
+                print(render_note(output))
+            else:
+                print(json.dumps(output, indent=2, ensure_ascii=False, allow_nan=False))
         elif args.command == "demo":
             from serve_dump import main as serve
             return serve(["--demo"])
