@@ -1,0 +1,1841 @@
+{
+ "contract": "instrument-registry-1",
+ "version": "seed-config-2026-09-28+snapshot-2026-09-28T14:42:33Z",
+ "snapshots": [
+  {
+   "part": "sec_company_tickers_exchange",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/files/company_tickers_exchange.json",
+   "captured_at": "2026-09-28T14:42:33Z",
+   "status": "captured",
+   "bytes": 523297,
+   "sha256": "affa8f025ab31bab39b60e06cf0bcc401bb87f23151412d686258fc9b99ef091",
+   "file_creation_time": null
+  },
+  {
+   "part": "nasdaq_listed",
+   "source": "Nasdaq Trader symbol directory",
+   "url": "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+   "captured_at": "2026-09-28T14:42:33Z",
+   "status": "captured",
+   "bytes": 349721,
+   "sha256": "4853eac77f624227ada8213de8c0b7fbea83726a19ed4e3bcd905c0252f22dc1",
+   "file_creation_time": "0928202610:01"
+  },
+  {
+   "part": "nasdaq_other_listed",
+   "source": "Nasdaq Trader symbol directory",
+   "url": "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
+   "captured_at": "2026-09-28T14:42:33Z",
+   "status": "captured",
+   "bytes": 542331,
+   "sha256": "9e8aa849c7fbc58b2b8d94e0794aabbe0ebe61c3800fb74ae6f382fcf261a5e4",
+   "file_creation_time": "0928202610:01"
+  }
+ ],
+ "issuers": [
+  {
+   "issuer_id": "cik:0001682852",
+   "legal_name": "Moderna, Inc.",
+   "cik": "0001682852",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0000875320",
+   "legal_name": "Vertex Pharmaceuticals Incorporated",
+   "cik": "0000875320",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001745999",
+   "legal_name": "Beam Therapeutics Inc.",
+   "cik": "0001745999",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001515673",
+   "legal_name": "Ultragenyx Pharmaceutical Inc.",
+   "cik": "0001515673",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001868275",
+   "legal_name": "Constellation Energy Corporation",
+   "cik": "0001868275",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001065059",
+   "legal_name": "Centrus Energy Corp.",
+   "cik": "0001065059",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001486957",
+   "legal_name": "BWX Technologies, Inc.",
+   "cik": "0001486957",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001996810",
+   "legal_name": "GE Vernova Inc.",
+   "cik": "0001996810",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001801368",
+   "legal_name": "MP Materials Corp.",
+   "cik": "0001801368",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001045810",
+   "legal_name": "NVIDIA Corporation",
+   "cik": "0001045810",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001819994",
+   "legal_name": "Rocket Lab Corporation",
+   "cik": "0001819994",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001783879",
+   "legal_name": "Robinhood Markets, Inc.",
+   "cik": "0001783879",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0000310158",
+   "legal_name": "Merck & Co., Inc.",
+   "cik": "0000310158",
+   "evidence": [
+    "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "primary_verified"
+  },
+  {
+   "issuer_id": "cik:0001318605",
+   "legal_name": "Tesla, Inc.",
+   "cik": "0001318605",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001428439",
+   "legal_name": "ROKU, INC",
+   "cik": "0001428439",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001321655",
+   "legal_name": "Palantir Technologies Inc.",
+   "cik": "0001321655",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001674416",
+   "legal_name": "CRISPR Therapeutics AG",
+   "cik": "0001674416",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001824502",
+   "legal_name": "Archer Aviation Inc.",
+   "cik": "0001824502",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001594805",
+   "legal_name": "SHOPIFY INC.",
+   "cik": "0001594805",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001001838",
+   "legal_name": "SOUTHERN COPPER CORP/",
+   "cik": "0001001838",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001652130",
+   "legal_name": "Intellia Therapeutics, Inc.",
+   "cik": "0001652130",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0000831259",
+   "legal_name": "FREEPORT-MCMORAN INC",
+   "cik": "0000831259",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001674101",
+   "legal_name": "Vertiv Holdings Co",
+   "cik": "0001674101",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001679788",
+   "legal_name": "Coinbase Global, Inc.",
+   "cik": "0001679788",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001874178",
+   "legal_name": "Rivian Automotive, Inc. / DE",
+   "cik": "0001874178",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0000006951",
+   "legal_name": "APPLIED MATERIALS INC /DE",
+   "cik": "0000006951",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001347178",
+   "legal_name": "Vanda Pharmaceuticals Inc.",
+   "cik": "0001347178",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001385849",
+   "legal_name": "ENERGY FUELS INC",
+   "cik": "0001385849",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001009001",
+   "legal_name": "CAMECO CORP",
+   "cik": "0001009001",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001698535",
+   "legal_name": "NexGen Energy Ltd.",
+   "cik": "0001698535",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001063259",
+   "legal_name": "DENISON MINES CORP.",
+   "cik": "0001063259",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0000936468",
+   "legal_name": "LOCKHEED MARTIN CORP",
+   "cik": "0000936468",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001133421",
+   "legal_name": "NORTHROP GRUMMAN CORP /DE/",
+   "cik": "0001133421",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "issuer_id": "cik:0001590877",
+   "legal_name": "REGENXBIO Inc.",
+   "cik": "0001590877",
+   "evidence": [
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  }
+ ],
+ "instruments": [
+  {
+   "instrument_id": "seed1:TSLA",
+   "issuer_id": "cik:0001318605",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:ROKU",
+   "issuer_id": "cik:0001428439",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:PLTR",
+   "issuer_id": "cik:0001321655",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:STTDF",
+   "issuer_id": null,
+   "type": "unknown",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented"
+   ],
+   "verification": "unverified"
+  },
+  {
+   "instrument_id": "seed1:CRSP",
+   "issuer_id": "cik:0001674416",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:ACHR",
+   "issuer_id": "cik:0001824502",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:SHOP",
+   "issuer_id": "cik:0001594805",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:SCCO",
+   "issuer_id": "cik:0001001838",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:NTLA",
+   "issuer_id": "cik:0001652130",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:FCX",
+   "issuer_id": "cik:0000831259",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:VRT",
+   "issuer_id": "cik:0001674101",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:COIN",
+   "issuer_id": "cik:0001679788",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:RIVN",
+   "issuer_id": "cik:0001874178",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:AMAT",
+   "issuer_id": "cik:0000006951",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:VNDA",
+   "issuer_id": "cik:0001347178",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:SI=F",
+   "issuer_id": null,
+   "type": "future",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented"
+   ],
+   "verification": "unverified"
+  },
+  {
+   "instrument_id": "seed1:URA",
+   "issuer_id": null,
+   "type": "exchange_traded_product",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:USO",
+   "issuer_id": null,
+   "type": "exchange_traded_product",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:GLD",
+   "issuer_id": null,
+   "type": "exchange_traded_product",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:PSLV",
+   "issuer_id": null,
+   "type": "exchange_traded_product",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:UUUU",
+   "issuer_id": "cik:0001385849",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:CCJ",
+   "issuer_id": "cik:0001009001",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:NXE",
+   "issuer_id": "cik:0001698535",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:DNN",
+   "issuer_id": "cik:0001063259",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:LMT",
+   "issuer_id": "cik:0000936468",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:NOC",
+   "issuer_id": "cik:0001133421",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:ITA",
+   "issuer_id": null,
+   "type": "exchange_traded_product",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:RGNX",
+   "issuer_id": "cik:0001590877",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:^VIX",
+   "issuer_id": null,
+   "type": "index",
+   "share_class": null,
+   "tier": "instrumented",
+   "evidence": [
+    "config:instrumented"
+   ],
+   "verification": "unverified"
+  },
+  {
+   "instrument_id": "seed1:MRNA",
+   "issuer_id": "cik:0001682852",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:VRTX",
+   "issuer_id": "cik:0000875320",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:BEAM",
+   "issuer_id": "cik:0001745999",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:RARE",
+   "issuer_id": "cik:0001515673",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:CEG",
+   "issuer_id": "cik:0001868275",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:LEU",
+   "issuer_id": "cik:0001065059",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:BWXT",
+   "issuer_id": "cik:0001486957",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:GEV",
+   "issuer_id": "cik:0001996810",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:MP",
+   "issuer_id": "cik:0001801368",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:NVDA",
+   "issuer_id": "cik:0001045810",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:RKLB",
+   "issuer_id": "cik:0001819994",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:HOOD",
+   "issuer_id": "cik:0001783879",
+   "type": "common_stock",
+   "share_class": "A",
+   "tier": "editorial_only",
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "instrument_id": "seed1:MRK",
+   "issuer_id": "cik:0000310158",
+   "type": "common_stock",
+   "share_class": null,
+   "tier": "editorial_only",
+   "evidence": [
+    "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "primary_verified"
+  }
+ ],
+ "listings": [
+  {
+   "listing_id": "seed1:TSLA",
+   "instrument_id": "seed1:TSLA",
+   "venue": "XNAS",
+   "symbol": "TSLA",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:ROKU",
+   "instrument_id": "seed1:ROKU",
+   "venue": "XNAS",
+   "symbol": "ROKU",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:PLTR",
+   "instrument_id": "seed1:PLTR",
+   "venue": "XNAS",
+   "symbol": "PLTR",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:STTDF",
+   "instrument_id": "seed1:STTDF",
+   "venue": null,
+   "symbol": "STTDF",
+   "calendar": null,
+   "currency": null,
+   "price_scale": null,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T00:00:00Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented"
+   ],
+   "verification": "unverified"
+  },
+  {
+   "listing_id": "seed1:CRSP",
+   "instrument_id": "seed1:CRSP",
+   "venue": "XNAS",
+   "symbol": "CRSP",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:ACHR",
+   "instrument_id": "seed1:ACHR",
+   "venue": "XNYS",
+   "symbol": "ACHR",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:SHOP",
+   "instrument_id": "seed1:SHOP",
+   "venue": "XNAS",
+   "symbol": "SHOP",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:SCCO",
+   "instrument_id": "seed1:SCCO",
+   "venue": "XNYS",
+   "symbol": "SCCO",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:NTLA",
+   "instrument_id": "seed1:NTLA",
+   "venue": "XNAS",
+   "symbol": "NTLA",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:FCX",
+   "instrument_id": "seed1:FCX",
+   "venue": "XNYS",
+   "symbol": "FCX",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:VRT",
+   "instrument_id": "seed1:VRT",
+   "venue": "XNYS",
+   "symbol": "VRT",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:COIN",
+   "instrument_id": "seed1:COIN",
+   "venue": "XNAS",
+   "symbol": "COIN",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:RIVN",
+   "instrument_id": "seed1:RIVN",
+   "venue": "XNAS",
+   "symbol": "RIVN",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:AMAT",
+   "instrument_id": "seed1:AMAT",
+   "venue": "XNAS",
+   "symbol": "AMAT",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:VNDA",
+   "instrument_id": "seed1:VNDA",
+   "venue": "XNAS",
+   "symbol": "VNDA",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:SI=F",
+   "instrument_id": "seed1:SI=F",
+   "venue": null,
+   "symbol": "SI=F",
+   "calendar": null,
+   "currency": null,
+   "price_scale": null,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T00:00:00Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented"
+   ],
+   "verification": "unverified"
+  },
+  {
+   "listing_id": "seed1:URA",
+   "instrument_id": "seed1:URA",
+   "venue": "ARCX",
+   "symbol": "URA",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:USO",
+   "instrument_id": "seed1:USO",
+   "venue": "ARCX",
+   "symbol": "USO",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:GLD",
+   "instrument_id": "seed1:GLD",
+   "venue": "ARCX",
+   "symbol": "GLD",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:PSLV",
+   "instrument_id": "seed1:PSLV",
+   "venue": "ARCX",
+   "symbol": "PSLV",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:UUUU",
+   "instrument_id": "seed1:UUUU",
+   "venue": "XASE",
+   "symbol": "UUUU",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:CCJ",
+   "instrument_id": "seed1:CCJ",
+   "venue": "XNYS",
+   "symbol": "CCJ",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:NXE",
+   "instrument_id": "seed1:NXE",
+   "venue": "XNYS",
+   "symbol": "NXE",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:DNN",
+   "instrument_id": "seed1:DNN",
+   "venue": "XASE",
+   "symbol": "DNN",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:LMT",
+   "instrument_id": "seed1:LMT",
+   "venue": "XNYS",
+   "symbol": "LMT",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:NOC",
+   "instrument_id": "seed1:NOC",
+   "venue": "XNYS",
+   "symbol": "NOC",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:ITA",
+   "instrument_id": "seed1:ITA",
+   "venue": "BATS",
+   "symbol": "ITA",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:RGNX",
+   "instrument_id": "seed1:RGNX",
+   "venue": "XNAS",
+   "symbol": "RGNX",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:^VIX",
+   "instrument_id": "seed1:^VIX",
+   "venue": null,
+   "symbol": "^VIX",
+   "calendar": null,
+   "currency": null,
+   "price_scale": null,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T00:00:00Z",
+   "terminal": null,
+   "evidence": [
+    "config:instrumented"
+   ],
+   "verification": "unverified"
+  },
+  {
+   "listing_id": "seed1:MRNA",
+   "instrument_id": "seed1:MRNA",
+   "venue": "XNAS",
+   "symbol": "MRNA",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:VRTX",
+   "instrument_id": "seed1:VRTX",
+   "venue": "XNAS",
+   "symbol": "VRTX",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:BEAM",
+   "instrument_id": "seed1:BEAM",
+   "venue": "XNAS",
+   "symbol": "BEAM",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:RARE",
+   "instrument_id": "seed1:RARE",
+   "venue": "XNAS",
+   "symbol": "RARE",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:CEG",
+   "instrument_id": "seed1:CEG",
+   "venue": "XNAS",
+   "symbol": "CEG",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:LEU",
+   "instrument_id": "seed1:LEU",
+   "venue": "XNYS",
+   "symbol": "LEU",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:BWXT",
+   "instrument_id": "seed1:BWXT",
+   "venue": "XNYS",
+   "symbol": "BWXT",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:GEV",
+   "instrument_id": "seed1:GEV",
+   "venue": "XNYS",
+   "symbol": "GEV",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:MP",
+   "instrument_id": "seed1:MP",
+   "venue": "XNYS",
+   "symbol": "MP",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:NVDA",
+   "instrument_id": "seed1:NVDA",
+   "venue": "XNAS",
+   "symbol": "NVDA",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:RKLB",
+   "instrument_id": "seed1:RKLB",
+   "venue": "XNAS",
+   "symbol": "RKLB",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:HOOD",
+   "instrument_id": "seed1:HOOD",
+   "venue": "XNAS",
+   "symbol": "HOOD",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "config:editorial_only",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "snapshot_matched"
+  },
+  {
+   "listing_id": "seed1:MRK",
+   "instrument_id": "seed1:MRK",
+   "venue": "XNYS",
+   "symbol": "MRK",
+   "calendar": "XNYS",
+   "currency": "USD",
+   "price_scale": 1,
+   "valid_from": null,
+   "valid_to": null,
+   "known_from": "2026-09-28T14:42:33Z",
+   "terminal": null,
+   "evidence": [
+    "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+    "snapshot:nasdaq_listed@4853eac77f624227",
+    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+   ],
+   "verification": "primary_verified"
+  }
+ ],
+ "provider_bindings": [],
+ "capabilities": []
+}

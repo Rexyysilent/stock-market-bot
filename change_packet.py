@@ -346,7 +346,39 @@ def _in_universe(brief, ticker):
     return ticker in members
 
 
-def build_packet(conn, previous_path, current_path, subject):
+def _subject_registry(registry, ticker, cutoff):
+    """How the dated registry resolves the subject symbol at the current brief.
+
+    `status` uses everything the registry knows now (retrospective when the
+    registry learned it after the brief); `as_operated_status` uses only what
+    it knew by the brief's time.
+    """
+    day = cutoff[:10]
+    now = registry.resolve(ticker, on=day)
+    then = registry.resolve(ticker, on=day, known_by=cutoff)
+    result = {"registry_version": registry.version, "registry_fingerprint": registry.fingerprint(),
+              "symbol": ticker, "on": day, "status": now["status"],
+              "as_operated_status": then["status"], "candidates": now["candidates"],
+              "instrument_id": now["instrument_id"], "issuer_id": now["issuer_id"],
+              "cik": None, "legal_name": None, "type": None, "share_class": None,
+              "verification": None, "venue": None}
+    if now["status"] == "resolved":
+        instrument = registry.instrument(now["instrument_id"])
+        issuer = registry.issuers.get(instrument["issuer_id"]) or {}
+        result.update(cik=issuer.get("cik"), legal_name=issuer.get("legal_name"),
+                      type=instrument["type"], share_class=instrument["share_class"],
+                      verification=instrument["verification"], venue=now["listing"]["venue"])
+    if now["status"] == "resolved" and then["status"] != "resolved":
+        result["label"] = ("retrospective: resolved with registry "
+                           f"{registry.version}, which learned it after this brief")
+    elif now["status"] == "resolved":
+        result["label"] = "as operated: known to the registry by this brief's time"
+    else:
+        result["label"] = f"registry status {now['status']}"
+    return result
+
+
+def build_packet(conn, previous_path, current_path, subject, *, registry=None):
     """Change packet for one subject between two saved briefs (previous earlier)."""
     subject_ids, ticker = _subject_ids(subject)
     previous, prev_meta = _brief(previous_path)
@@ -366,6 +398,13 @@ def build_packet(conn, previous_path, current_path, subject):
                   "current": _in_universe(current, ticker)}
     if not all(membership.values()):
         warnings.append("subject is not in both briefs' universes; coverage differs")
+    if registry is None:
+        from instrument_registry import load_registry
+        registry = load_registry()
+    subject_registry = _subject_registry(registry, ticker, curr_meta["cutoff"])
+    if subject_registry["status"] == "ambiguous":
+        warnings.append("subject symbol is ambiguous in the instrument registry "
+                        f"({', '.join(subject_registry['candidates'])}); identity not established")
 
     prev_view = knowledge_view(conn, prev_meta["cutoff"])
     curr_view = knowledge_view(conn, curr_meta["cutoff"])
@@ -416,6 +455,7 @@ def build_packet(conn, previous_path, current_path, subject):
                       "these sources is not evidence that nothing happened.")
     return {
         "contract": CONTRACT, "subject": subject, "subject_ids": sorted(subject_ids),
+        "subject_registry": subject_registry,
         "previous": prev_meta, "current": curr_meta,
         "comparability": {"configuration_comparable": not warnings, "warnings": warnings,
                           "indexed": {"previous": prev_indexed, "current": curr_indexed},
@@ -442,6 +482,15 @@ def render_note(packet):
     lines = [f"# Change note: {packet['subject']}", "",
              f"Briefs: {packet['previous']['generated_at']} -> {packet['current']['generated_at']}",
              "", packet["scope_statement"], ""]
+    registry = packet.get("subject_registry")
+    if registry and registry["status"] == "resolved":
+        share_class = f", class {registry['share_class']}" if registry["share_class"] else ""
+        lines += [f"Registry: {registry['symbol']} -> {registry['legal_name'] or 'issuer unknown'} "
+                  f"(CIK {registry['cik'] or 'n/a'}{share_class}, {registry['type']}, "
+                  f"{registry['verification']}); {registry['label']}.", ""]
+    elif registry:
+        lines += [f"Registry: {registry['symbol']} is {registry['status']} in registry "
+                  f"{registry['registry_version']}.", ""]
     warnings = packet["comparability"]["warnings"]
     if warnings:
         lines += ["Comparability warnings:"] + [f"- {w}" for w in warnings] + [""]

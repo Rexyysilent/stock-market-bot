@@ -17,7 +17,7 @@ Use this before publishing a release or sample artifact.
 ## Verification
 
 ```powershell
-python -m compileall -q export_for_gemini.py lean_brief.py clock_guard.py change_packet.py change_packet_study.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger event_history
+python -m compileall -q export_for_gemini.py lean_brief.py clock_guard.py change_packet.py change_packet_study.py instrument_registry.py registry_snapshot.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger event_history
 python scripts/validate_export_schema.py
 python scripts/run_offline_checks.py
 python test_dashboard_security.py

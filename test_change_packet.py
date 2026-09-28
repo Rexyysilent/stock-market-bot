@@ -323,6 +323,66 @@ class ComparabilityTests(PacketCase):
             self.packet(curr, prev)
 
 
+class RegistryTests(PacketCase):
+    """T9: the packet reports how the dated registry resolves its subject."""
+
+    def registry(self, listings, known_from="2026-09-28T00:00:00Z"):
+        from instrument_registry import CONTRACT, Registry
+        issuers = [{"issuer_id": "cik:0000001001", "legal_name": "Alfa Minerals Inc.",
+                    "cik": "0000001001", "evidence": ["x"], "verification": "snapshot_matched"},
+                   {"issuer_id": "other", "legal_name": "Other", "cik": None, "evidence": ["x"],
+                    "verification": "unverified"}]
+        instruments = [
+            {"instrument_id": "inst:alfa", "issuer_id": "cik:0000001001", "type": "common_stock",
+             "share_class": "A", "tier": "instrumented", "evidence": ["x"],
+             "verification": "snapshot_matched"},
+            {"instrument_id": "inst:other", "issuer_id": "other", "type": "common_stock",
+             "share_class": None, "tier": "instrumented", "evidence": ["x"],
+             "verification": "unverified"}]
+        rows = [dict({"venue": "XNAS", "calendar": "XNYS", "currency": "USD", "price_scale": 1,
+                      "valid_from": None, "valid_to": None, "known_from": known_from,
+                      "terminal": None, "evidence": ["x"], "verification": "snapshot_matched"}, **r)
+                for r in listings]
+        return Registry({"contract": CONTRACT, "version": "synthetic-registry", "issuers": issuers,
+                         "instruments": instruments, "listings": rows,
+                         "provider_bindings": [], "capabilities": []})
+
+    def test_resolution_is_labelled_retrospective_when_learned_after_the_brief(self):
+        reg = self.registry([{"listing_id": "l:alfa", "instrument_id": "inst:alfa", "symbol": "ALFA"}])
+        prev, curr = self.brief("prev.json", PREV), self.brief("curr.json", CURR)
+        subject = build_packet(self.conn, prev, curr, "ALFA", registry=reg)["subject_registry"]
+        self.assertEqual((subject["status"], subject["cik"], subject["share_class"], subject["verification"]),
+                         ("resolved", "0000001001", "A", "snapshot_matched"))
+        self.assertEqual(subject["as_operated_status"], "unknown")
+        self.assertIn("retrospective", subject["label"])
+        note = render_note(build_packet(self.conn, prev, curr, "ALFA", registry=reg))
+        self.assertIn("Registry: ALFA -> Alfa Minerals Inc. (CIK 0000001001", note)
+
+    def test_known_before_the_brief_is_as_operated(self):
+        reg = self.registry([{"listing_id": "l:alfa", "instrument_id": "inst:alfa", "symbol": "ALFA"}],
+                            known_from="2026-09-01T00:00:00Z")
+        subject = build_packet(self.conn, self.brief("prev.json", PREV), self.brief("curr.json", CURR),
+                               "ALFA", registry=reg)["subject_registry"]
+        self.assertEqual((subject["status"], subject["as_operated_status"]), ("resolved", "resolved"))
+        self.assertNotIn("retrospective", subject["label"])
+
+    def test_an_ambiguous_symbol_is_a_comparability_warning(self):
+        reg = self.registry([{"listing_id": "l:a", "instrument_id": "inst:alfa", "symbol": "ALFA"},
+                             {"listing_id": "l:b", "instrument_id": "inst:other", "symbol": "ALFA"}])
+        packet = build_packet(self.conn, self.brief("prev.json", PREV), self.brief("curr.json", CURR),
+                              "ALFA", registry=reg)
+        self.assertEqual(packet["subject_registry"]["status"], "ambiguous")
+        self.assertIn("subject symbol is ambiguous in the instrument registry",
+                      " ".join(packet["comparability"]["warnings"]))
+
+    def test_unregistered_subject_is_reported_without_blocking(self):
+        reg = self.registry([])
+        packet = build_packet(self.conn, self.brief("prev.json", PREV), self.brief("curr.json", CURR),
+                              "ALFA", registry=reg)
+        self.assertEqual(packet["subject_registry"]["status"], "unknown")
+        self.assertTrue(packet["comparability"]["configuration_comparable"])
+
+
 class NoteTests(PacketCase):
     def packet_with_change(self):
         prev = self.brief("prev.json", PREV)
