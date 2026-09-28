@@ -1,0 +1,81 @@
+{
+  "case": "B",
+  "subject": "BRAV",
+  "description": "SYNTHETIC. Bravo Therapeutics (fictitious): a trial enrollment count amended after two reports repeated it, plus a scheduled advisory meeting and a conflicting approval report.",
+  "resolver": {"rule_version": "study-manual-1", "introduced_at": "2026-09-01T00:00:00Z",
+               "description": "study reviewer decisions (synthetic)"},
+  "briefs": {
+    "previous": {
+      "file": "brief-2026-09-21.json",
+      "generated_at": "2026-09-21T22:00:00Z",
+      "prices": [{"ticker": "BRAV", "price": 50.0, "change_pct": -0.4,
+                  "as_of": "2026-09-21T13:30:00Z", "observed_at": "2026-09-21T21:59:00Z",
+                  "source_session": "2026-09-21", "session_complete": true,
+                  "source": "synthetic-fixture"}],
+      "sources": {"sec_edgar": {"exceptions": 0, "failed_requests": [], "no_cik_tickers": []},
+                  "news": {"fetch_error": null}}
+    },
+    "current": {
+      "file": "brief-2026-09-22.json",
+      "generated_at": "2026-09-22T22:00:00Z",
+      "prices": [{"ticker": "BRAV", "price": 53.0, "change_pct": 6.0,
+                  "as_of": "2026-09-22T13:30:00Z", "observed_at": "2026-09-22T21:59:00Z",
+                  "source_session": "2026-09-22", "session_complete": true,
+                  "source": "synthetic-fixture"}],
+      "sources": {"sec_edgar": {"exceptions": 0, "failed_requests": [], "no_cik_tickers": []},
+                  "news": {"fetch_error": "synthetic provider timeout"}}
+    }
+  },
+  "extracts": [
+    {"file": "extract-2026-09-21-filing.json", "generated_at": "2026-09-21T14:10:00Z",
+     "extracts": [{"source_key": "study:B:filing:F1", "kind": "filing", "subject_id": "issuer:BRAV",
+                   "origin_hint": "issuer-disclosure:BRAV:trial-update-2026-09",
+                   "published_at": "2026-09-21T14:00:00Z",
+                   "title": "Bravo Therapeutics trial update, 8-K (F1)",
+                   "claims": {"enrolled_patients": {"value": "120", "unit": "patients",
+                                                    "period": "as_of_2026-09-15"},
+                              "cash": {"value": "45", "unit": "USD_million", "period": "2026-Q2"}}}]},
+    {"file": "extract-2026-09-21-news.json", "generated_at": "2026-09-21T14:20:00Z",
+     "extracts": [
+       {"source_key": "study:B:news:N1", "kind": "news", "subject_id": "issuer:BRAV",
+        "origin_hint": "issuer-disclosure:BRAV:trial-update-2026-09",
+        "published_at": "2026-09-21T14:12:00Z",
+        "title": "Bravo trial fully enrolls 120 patients (N1)",
+        "claims": {"enrolled_patients": {"value": "120", "unit": "patients",
+                                         "period": "as_of_2026-09-15", "attribution": "F1"}}},
+       {"source_key": "study:B:news:N2", "kind": "news", "subject_id": "issuer:BRAV",
+        "origin_hint": "issuer-disclosure:BRAV:trial-update-2026-09",
+        "published_at": "2026-09-21T14:16:00Z",
+        "title": "Bravo Therapeutics reaches 120-patient enrollment, filing shows (N2)",
+        "claims": {"enrolled_patients": {"value": "120", "unit": "patients",
+                                         "period": "as_of_2026-09-15", "attribution": "F1"}}}]},
+    {"file": "extract-2026-09-22-amendment.json", "generated_at": "2026-09-22T10:00:00Z",
+     "extracts": [{"source_key": "study:B:filing:F2", "kind": "filing", "subject_id": "issuer:BRAV",
+                   "origin_hint": "issuer-disclosure:BRAV:trial-update-2026-09",
+                   "published_at": "2026-09-22T09:55:00Z",
+                   "title": "Bravo Therapeutics amended trial update, 8-K/A (F2): enrollment restated",
+                   "claims": {"enrolled_patients": {"value": "112", "unit": "patients",
+                                                    "period": "as_of_2026-09-15"}}}]},
+    {"file": "extract-2026-09-22-regulatory.json", "generated_at": "2026-09-22T12:00:00Z",
+     "extracts": [
+       {"source_key": "study:B:notice:M1", "kind": "notice", "subject_id": "issuer:BRAV",
+        "published_date": "2026-09-22", "event_date": "2026-10-12",
+        "title": "Advisory committee meeting scheduled for Bravo's application (M1)"},
+       {"source_key": "study:B:news:A1", "kind": "news", "subject_id": "issuer:BRAV",
+        "published_at": "2026-09-22T11:30:00Z",
+        "title": "Report: Bravo drug approval granted, unnamed sources say (A1)"}]}
+  ],
+  "decisions": [
+    {"from": "study:B:news:N1", "to": "study:B:filing:F1", "type": "reproduces",
+     "from_claim": "/claims/enrolled_patients", "to_claim": "/claims/enrolled_patients",
+     "decision": "accepted", "decision_at": "2026-09-21T14:30:00Z"},
+    {"from": "study:B:news:N2", "to": "study:B:filing:F1", "type": "reproduces",
+     "from_claim": "/claims/enrolled_patients", "to_claim": "/claims/enrolled_patients",
+     "decision": "accepted", "decision_at": "2026-09-21T14:30:00Z"},
+    {"from": "study:B:filing:F2", "to": "study:B:filing:F1", "type": "supersedes_claim",
+     "from_claim": "/claims/enrolled_patients", "to_claim": "/claims/enrolled_patients",
+     "decision": "accepted", "decision_at": "2026-09-22T10:05:00Z"},
+    {"from": "study:B:news:A1", "to": "study:B:notice:M1", "type": "contradicts",
+     "decision": "accepted", "decision_at": "2026-09-22T12:30:00Z"}
+  ]
+}

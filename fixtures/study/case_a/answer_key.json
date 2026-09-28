@@ -1,0 +1,43 @@
+{
+  "case": "A",
+  "subject": "ALFA",
+  "facilitator_only": "Do not show this file to participants. build_case never copies it into a participant folder.",
+  "questions": {
+    "what_changed": [
+      "Q2 2026 revenue was restated from USD 20 million (F1) to USD 18 million by the amended report F2.",
+      "A new operations notice (R1) says the mill restarts, and a news report (D1) says the restart is delayed; the two conflict."
+    ],
+    "supported": [
+      "Revenue for Q2 2026 is USD 18 million according to F2, which explicitly supersedes F1's revenue figure.",
+      "EPS for Q2 2026 is USD 1.20 according to F1; F2 does not amend EPS.",
+      "R1 and D1 exist as attributed reports. Neither the restart nor the delay is established."
+    ],
+    "origins": [
+      "The revenue figure has one underlying disclosure origin (the issuer). N1 and N2 are two coverage reports of the superseded USD 20 million figure, not independent confirmations. Independence is not assessed."
+    ],
+    "cannot_conclude": [
+      "Whether the mill restart happened or was delayed.",
+      "Whether R1 came before or after the 2026-09-22 session open: its time is known only to the day.",
+      "That the -4% price change between the briefs was caused by the restatement or by the operations news.",
+      "That no other filings occurred: the SEC source was degraded in the current run."
+    ]
+  },
+  "critical_errors": [
+    "States that current revenue is USD 20 million.",
+    "States that EPS changed.",
+    "Counts N1 and N2 as independent confirmations of revenue.",
+    "Treats the restart, or the delay, as established.",
+    "Attributes the price change to the restatement or the operations news.",
+    "States that no other filings occurred."
+  ],
+  "machine_checks": {
+    "corrected": {"claim": "revenue", "from": "20", "to": "18", "source_key": "study:A:filing:F2",
+                  "superseded_source_key": "study:A:filing:F1"},
+    "unchanged": {"claim": "eps", "value": "1.2", "source_key": "study:A:filing:F1"},
+    "origin_cutoff": "2026-09-21T22:00:00Z",
+    "conflict": ["study:A:news:D1", "study:A:notice:R1"],
+    "notice": {"source_key": "study:A:notice:R1", "limitations": ["event_time_day_only"]},
+    "gap": {"source": "sec_edgar", "state": "degraded"},
+    "price_change_pct": -4.0
+  }
+}

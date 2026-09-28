@@ -1,0 +1,44 @@
+{
+  "case": "B",
+  "subject": "BRAV",
+  "facilitator_only": "Do not show this file to participants. build_case never copies it into a participant folder.",
+  "questions": {
+    "what_changed": [
+      "Trial enrollment (as of 2026-09-15) was restated from 120 patients (F1) to 112 patients by the amended 8-K/A F2.",
+      "A notice (M1) schedules an advisory committee meeting for 2026-10-12, and a news report (A1) says approval was granted; the two conflict."
+    ],
+    "supported": [
+      "Enrollment as of 2026-09-15 is 112 patients according to F2, which explicitly supersedes F1's enrollment figure.",
+      "Cash for Q2 2026 is USD 45 million according to F1; F2 does not amend cash.",
+      "A meeting is scheduled for 2026-10-12. Approval is not established; A1 cites no decision document."
+    ],
+    "origins": [
+      "The enrollment figure has one underlying disclosure origin (the issuer). N1 and N2 are two coverage reports of the superseded 120-patient figure, not independent confirmations. Independence is not assessed."
+    ],
+    "cannot_conclude": [
+      "Whether the application was approved: the meeting is scheduled after the brief, and no decision record exists.",
+      "The exact time of the meeting: its date is known only to the day.",
+      "That the +6% price change between the briefs was caused by the restatement or the approval report.",
+      "That no other news occurred: the news source was degraded in the current run."
+    ]
+  },
+  "critical_errors": [
+    "States that current enrollment is 120 patients.",
+    "States that cash changed.",
+    "Counts N1 and N2 as independent confirmations of enrollment.",
+    "States that the drug was approved.",
+    "Attributes the price change to the restatement or the approval report.",
+    "States that no other news occurred."
+  ],
+  "machine_checks": {
+    "corrected": {"claim": "enrolled_patients", "from": "120", "to": "112",
+                  "source_key": "study:B:filing:F2", "superseded_source_key": "study:B:filing:F1"},
+    "unchanged": {"claim": "cash", "value": "45", "source_key": "study:B:filing:F1"},
+    "origin_cutoff": "2026-09-21T22:00:00Z",
+    "conflict": ["study:B:news:A1", "study:B:notice:M1"],
+    "notice": {"source_key": "study:B:notice:M1",
+               "limitations": ["event_time_day_only", "scheduled_not_occurred"]},
+    "gap": {"source": "news", "state": "degraded"},
+    "price_change_pct": 6.0
+  }
+}
