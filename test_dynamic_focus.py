@@ -330,8 +330,8 @@ assert timestamp_tie[0]["primary_evidence_id"] == "tie:newer-roku"
 assert timestamp_tie[0]["ticker"] == "ROKU"
 
 # Separate stories for one issuer never lend each other component maxima or
-# count as independent corroboration. Only merged same-story publisher
-# provenance may increment the corroboration component.
+# add publisher breadth. Only merged same-story publisher provenance may
+# increment the breadth component (legacy key independent_corroboration).
 high_impact = tie_row("ROKU", "story:impact", "impact.example")
 high_impact["source_class"] = "global_discovery"
 high_impact["score_components"]["authority"] = 1
@@ -358,7 +358,7 @@ assert merged_candidate["evidence"][0]["duplicate_publishers"] == [
 ]
 
 # Case variants and publisher-domain aliases describe one publisher, not
-# independent corroboration. Invalid lineage elements are discarded rather
+# additional publisher breadth. Invalid lineage elements are discarded rather
 # than stringified (notably, None must never become the publisher "None").
 alias_story = tie_row("ROKU", "story:aliases", "primary.example")
 alias_story["publisher"] = "Primary News"
@@ -411,8 +411,8 @@ assert focus_signals[0]["family"] == "confluence"
 
 # PR3 is editorial-only: public schema and signal/ledger eras do not advance.
 assert SCHEMA_VERSION == "2.8"
-assert PIPELINE_VERSION == "2.6.4"
-assert LEDGER_VERSION == "2.6.4"
+assert PIPELINE_VERSION == "2.6.5"
+assert LEDGER_VERSION == "2.6.5"
 assert FOCUS_CONTRACT_VERSION == "2.7-editorial-focus-1"
 
 print("PR3 deterministic editorial-focus acceptance checks passed")

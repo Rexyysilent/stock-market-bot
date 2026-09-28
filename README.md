@@ -39,6 +39,7 @@ A successful export writes:
 
 - `daily_brief.json` — typed schema 2.8 data for scripts and dashboards; additional uses require source-purpose approval
 - `daily_brief.txt` — human-readable rendering of the same run
+- `lean_brief.json` — the lean brief, a labelled projection (about 5% of the full size) for an operator who chooses to share a brief with a language model: market sections, summary, field conventions, compact health warnings and reading rules, without per-source diagnostics or data-quality records. It is not the canonical record and is not for redistribution; a dated copy of each run is kept in `lean_briefs/` for 7 days (measured from each brief's `generated_at`), while the full briefs remain in the permanent archive; sending source content to a model remains the operator's source-purpose decision. `python lean_brief.py <brief.json>` projects any saved brief.
 - `briefs/YYYY-MM-DD/` — point-in-time snapshots
 - `archive/briefs/` — append-only canonical JSON copies
 
@@ -49,7 +50,7 @@ The JSON includes source health, run context, timestamps, coverage gaps, retries
 ## Current pipeline
 
 This public research-tooling checkout implements the current collection pipeline (`schema_version=2.8`,
-`pipeline_version=2.6.4`):
+`pipeline_version=2.6.5`):
 
 - publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill; and explicit universe, macro, and impact-gated discovery lanes
 - separate ordered universes: 29 instrumented/signal-eligible tickers and 13
@@ -100,13 +101,20 @@ interpretation. `doctor` shows credential presence only, never values.
 explicit 1–64 instrument universe without mixing legacy state or archives.
 Profile exports use schema **2.9**, carry the normalized profile, and disable the
 legacy editorial expansion. Default runs preserve schema **2.8** and OMNI-02.
-Both use measurement era **2.6.4**; historical 2.6/2.7/2.8 exports remain readable.
+Both use measurement era **2.6.5**; historical 2.6/2.7/2.8 exports, including
+the 2.6.4 era, remain readable.
 The 45-symbol profile is an example, not verified coverage or a portfolio.
 
 Basket and pair returns require exact completed-session windows and full fixed
 membership. Missing is unavailable, not neutral. Empty price responses leave
 ledger outcomes pending for a later retry. Directional statistics have their own
 sample gate and disclose overlapping horizons and same-session dependence.
+
+Era 2.6.5 binds each ledger return window to one immutable price acquisition,
+so overlapping provider revisions cannot combine endpoints from different
+adjustment vintages. Cash-runway measurements expose missing operating cash flow,
+period mismatch, currency ambiguity and missing debt as typed unknowns; they do
+not use an infinite-runway sentinel or treat missing financials as zero.
 
 The six-scenario Windows launcher regression checks real exit-code handling:
 stderr warnings alone do not fail a run. Profile-aware scheduling remains a
@@ -284,13 +292,48 @@ Windows users can install the UTC-gated current-user task:
 .\run_scheduled.ps1 -ValidateOnly
 ```
 
-The launcher runs the exporter and matures the separate outcome ledger. Ledger commands are research diagnostics, not performance promises or execution logic:
+The launcher first checks this machine's clock against network time (NTP, with an HTTPS `Date` fallback) and refuses the run if it is more than 5 minutes off or cannot be verified, because every timestamp the stages write comes from the local clock; the result is kept in `state/clock_check.json`. It then runs the exporter and matures the separate outcome ledger. Ledger commands are research diagnostics, not performance promises or execution logic:
 
 ```powershell
 python -m ledger ingest
 python -m ledger update
 python -m ledger rebuild
 python -m ledger import-legacy
+```
+
+## Evidence history (sidecar)
+
+`python -m event_history import` indexes archived briefs into a separate,
+append-only database (`history/event_history.db`). It reads archives and never
+writes them, the ledger, state, or any collector, and makes no network calls.
+
+- One archive identity per exact byte content; every path a copy was found at
+  is kept. Documents of an unknown schema are quarantined, not guessed.
+- SEC filing rows and validated OMNI-02 intake records become evidence versions
+  with JSON pointers back into the archive. Schemas 2.8/2.9 are native; 2.0 and
+  2.5-2.7 have documented legacy adapters. A zone-less `generated_at` (2.0) is
+  not established knowledge time, so strict views exclude those sightings.
+- Capture policy stays with each sighting as the archive recorded it; today's
+  policy is never applied to an older capture.
+- Interpretation (event anchors, memberships, amendments, contradictions,
+  aliases) is appended with a decision time and a registered resolver. Cycles,
+  out-of-order corrections and decisions made before a resolver existed are
+  refused. Ambiguous links stay candidates; nothing is merged automatically.
+- `view --cutoff T` is the as-operated view: evidence known by T, interpreted
+  only by decisions made by T. `--mode retrospective` applies later resolvers and
+  is labelled as a reconstruction, not what the system knew. Conflicting values
+  keep their attributions; nothing is voted on or averaged, and independence of
+  origins is not assessed. A date with unknown timezone never becomes UTC
+  midnight: ordering it against an instant on the same day abstains.
+- `annotate <archive_sha> --observed-not-before T --reason ...` records that an
+  archive's own time label was earlier than its real capture (for example a
+  skewed host clock); views then treat its contents as known from T.
+
+```powershell
+python -m event_history import
+python -m event_history anchor
+python -m event_history view --cutoff 2026-09-23T00:00:00Z
+python -m event_history status
 ```
 
 ## Tests

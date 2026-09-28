@@ -33,7 +33,7 @@ def _choice_env(name, default, choices):
 # Release identity. schema_version describes the public JSON contract.
 # Bump pipeline_version when signal, event, or ledger eligibility/populations
 # change; editorial-only headline ranking does not start a new era.
-PIPELINE_VERSION = "2.6.4"
+PIPELINE_VERSION = "2.6.5"
 SCHEMA_VERSION = "2.8"
 UNIVERSE_PROFILE = None
 BRIEF_ARCHIVE_DIR = os.getenv("BRIEF_ARCHIVE_DIR", os.path.join("archive", "briefs"))
@@ -430,7 +430,7 @@ APEWISDOM_FILTERS = [
 ]
 # Universe-first scan: paginate all-stocks this deep (~100 rows/page) to locate
 # every universe ticker whatever its rank. Beyond this depth a ticker is
-# treated as mentions=0 / in_leaderboard=false.
+# censored (mentions=null, in_leaderboard=null), not a measured zero.
 APEWISDOM_UNIVERSE_PAGES = 5
 # Filters whose source has no upvote mechanic: ApeWisdom reports upvotes=0
 # there, so attention_score (upvotes/mentions) is emitted as null, not 0.0.

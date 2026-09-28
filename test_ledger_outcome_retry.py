@@ -66,6 +66,18 @@ class OutcomeRetryTests(unittest.TestCase):
                                  schedule_provider=self.schedule, universe=[])
         self.assertEqual(second, {"filled": 1, "unpriceable": 0})
         self.assertEqual(self.status(), "filled")
+        conn = connect(self.db_path)
+        try:
+            outcome = conn.execute(
+                """SELECT entry_open,exit_close,ret,spy_ret,excess
+                   FROM outcomes"""
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertEqual((outcome["entry_open"], outcome["exit_close"]), (100, 110))
+        self.assertAlmostEqual(outcome["ret"], 0.1)
+        self.assertAlmostEqual(outcome["spy_ret"], 0.1)
+        self.assertAlmostEqual(outcome["excess"], 0.0)
 
 
 if __name__ == "__main__":

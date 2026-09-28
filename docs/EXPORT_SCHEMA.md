@@ -11,7 +11,7 @@ Top-level fields:
 
 - `generated_at` - ISO timestamp for the export
 - `schema_version` - public JSON contract (`2.8`)
-- `pipeline_version` - upstream logic era (`2.6.4`; historical `2.6.3` remains valid); ledger statistics never pool eras
+- `pipeline_version` - upstream logic era (`2.6.5`; historical `2.6.3` and `2.6.4` remain valid); ledger statistics never pool eras
 - `run_context` - immutable UTC/NYSE clock shared by all stages, including
   market state and the latest completed/settled session
 - `pipeline_time_seconds` - total runtime
@@ -350,13 +350,20 @@ Important section keys:
 - `social_attention` (structured ApeWisdom ticker heat: mentions, upvotes,
   mention_velocity_24h, rank_delta_24h, attention_score, is_low_volume.
   Universe-first: one row per universe ticker whatever its leaderboard rank —
-  `universe_member`/`in_leaderboard` flags, mentions=0 when absent from the
-  scanned depth (~500 rows), plus `burst_ratio` = mentions today /
-  trailing-20-run median, null until 5 prior runs. Market-color top-N rows
-  kept with `universe_member: false`)
+  `universe_member`/`in_leaderboard` flags. Since 2.6.5 each row carries
+  `observation_status` (observed / explicit_zero / censored / partial /
+  unavailable / disabled) with reason and collection/coverage status; a
+  ticker absent from the scanned depth (~500 rows) is `censored` with null
+  mentions, not zero, and failed pages never become measured absence. Plus
+  `burst_ratio` = mentions today / trailing-20-run median of measured
+  mentions, null until 5 prior measured runs (reason in `burst_ratio_reason`).
+  Market-color top-N rows kept with `universe_member: false`)
 - `social_alerts` (SOCIAL_BURST: burst_ratio >= 3.0 and mentions >= 10;
-  ATTENTION_BIRTH: entered ApeWisdom top-200 after >=5 runs absent, mcap <
-  $2000M; empty until state/social_history_2.6.3.json warms up over 5 runs)
+  TOP200_ENTRANCE: entered the ApeWisdom top-200 after >=5 complete
+  comparable top-200 snapshots absent, mcap < $2000M — archives before 2.6.5
+  label this ATTENTION_BIRTH under the looser any-run rule; empty until the
+  `social_history_<pipeline>_validity1.json` state warms up over 5 complete
+  runs)
 - `fda_catalysts` (keyword-mined FDA regulatory events — PDUFA_DATE, ADCOM,
   CRL, ACCEPTANCE, PRIORITY_REVIEW, DESIGNATION — from SEC filing metadata,
   biotech_news titles, CEO.ca posts, and the FDA AdCom calendar when its page
@@ -415,13 +422,14 @@ omits the focus card instead of emitting an empty ticker shell.
 A selected focus exposes separate integer components rather than a weighted
 score: `impact` (editorial materiality, not expected return), `confidence`,
 `novelty`, `source_authority`, `audience_relevance`, `timeliness`,
-`independent_corroboration`, and `unresolved_contradiction_penalty`. Ranking is
-lexicographic and deterministic: higher impact, confidence, source authority,
-timeliness, independent corroboration, audience relevance, and novelty; then a
+`independent_corroboration` (publisher breadth; legacy key name), and
+`unresolved_contradiction_penalty`. Ranking is lexicographic and deterministic:
+higher impact, confidence, source authority, timeliness, publisher breadth,
+audience relevance, and novelty; then a
 lower unresolved-contradiction penalty; then newer exact source `as_of`; then
 ticker and primary evidence ID as stable tie-breakers. Each candidate represents
 one selected story. Separate headlines for one issuer cannot lend each other
-component maxima or corroboration. Source class contributes to confidence only; it
+component maxima or publisher breadth. Source class contributes to confidence only; it
 does not state licensing, redistribution, or commercial-use rights.
 
 Each `what_changed` and `why_it_matters` claim carries one or more
@@ -437,15 +445,20 @@ class, and `timeliness` from the evidence `as_of` relative to `generated_at`.
 The top-level focus `score_components` must exactly match the primary evidence
 row identified by the focus `headline` and `as_of`; its contradiction penalty
 is the capped primary-evidence contradiction count. `evidence_grade` is likewise
-derived from the primary evidence's authority and same-story independent
-corroboration, so jointly rewriting the evidence and focus-level fields cannot
+derived from the primary evidence's authority and same-story publisher
+breadth, so jointly rewriting the evidence and focus-level fields cannot
 bypass lineage validation. A row present in `headlines_dropped` cannot supply
 focus evidence. Evidence must also remain inside the selector's trailing
 three-day window. These checks prevent stale, dropped, unmapped, invalid, or
 rewritten rows from entering the editorial focus.
-`independent_corroboration` counts distinct duplicate publisher identities for
-the same selected story, capped at three; duplicate acquisition providers do not
-increase it.
+`independent_corroboration` is a legacy key name retained for schema
+compatibility. Its value is publisher breadth: distinct duplicate publisher
+identities for the same selected story, capped at three; duplicate acquisition
+providers do not increase it. It does not assess whether those publishers had
+independent reporting origins — a filing and two articles repeating it score 2
+while sharing one origin — and the text rendering labels it `publisher_breadth`.
+`multiple_selected_sources` likewise means more than one publisher carried the
+story, not independent confirmation.
 
 `market_reaction` and `next_checkpoint` remain null in this PR because their
 timestamp/window and provenance contracts belong to later roadmap work.
@@ -652,7 +665,7 @@ lanes, and scores, not unavailable source bodies or all dropped-only shadow labe
 ## Optional profile contract (schema 2.9)
 
 Legacy/default configuration still emits 2.8. Explicit profile launches emit 2.9
-with `universe_contract_version=2.9-profile-universe-1`, pipeline 2.6.4, and a
+with `universe_contract_version=2.9-profile-universe-1`, pipeline 2.6.5, and a
 normalized `universe.profile`. The full configuration SHA-256 is part of
 `universe.name`; ordered membership has its own eight-character fingerprints.
 All 1–64 profile members are instrumented; editorial-only membership is empty
@@ -664,7 +677,18 @@ from the embedded profile, independently of local operator settings. A profile
 cannot relax the existing default 2.8 cohort contract. Profile aliases and symbols
 are unverified user assertions, not an instrument identity certification.
 
-Measurement era 2.6.4 uses exact five/twenty-session basket return intervals,
+Measurement era 2.6.5 retains exact five/twenty-session basket return intervals,
 full fixed membership, explicit missing coverage and endpoint-aware ledger prices.
 `UNAVAILABLE` is distinct from legacy descriptive regime labels. Historical
 archives and fixtures retain their original measurement eras.
+
+Ledger price windows in 2.6.5 reference one immutable acquisition identity with
+provider, interval, range, adjustment basis, currency when known, acquisition
+time and content hash. Legacy session-only price rows remain readable storage but
+cannot satisfy a new coherent-window calculation without a complete refetch.
+
+Cash-runway rows distinguish unavailable, positive, zero and negative operating
+cash flow. They carry the selected source fields, statement periods, currency
+availability, valid-quarter count and an explicit reason when a derived runway is
+unavailable. Missing cash flow, debt or market capitalization is null, not zero;
+free cash flow is not substituted for operating cash flow.

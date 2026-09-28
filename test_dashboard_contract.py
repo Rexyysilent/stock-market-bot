@@ -13,6 +13,10 @@ assert "document.write(" not in source
 assert "eval(" not in source
 assert "tech.rsi || 50" not in source
 assert "DATA.universe?.instrumented_tickers" in source
+# Non-negative operating cash flow is a measurement, not a missing runway.
+assert "cash_flow_status === 'positive'" in source
+assert "not burning cash (positive operating cash flow)" in source
+assert "not burning cash (zero operating cash flow)" in source
 assert "instrumented members" in source
 html = (ROOT / "dashboard/index.html").read_text(encoding="utf-8")
 assert "fonts.googleapis.com" not in html

@@ -82,6 +82,66 @@ def _strict_eligibility_applies(pipeline_version):
     return version >= ELIGIBILITY_GATE_VERSION
 
 
+def _archive_cohort(data, pipeline_version):
+    """Return validated archive-native benchmark membership and weights."""
+    universe = data.get("universe")
+    universe = universe if isinstance(universe, dict) else {}
+    key = "instrumented_tickers"
+    if key not in universe and not _strict_eligibility_applies(pipeline_version):
+        key = "tickers"
+    if key not in universe:
+        status = "refused" if _strict_eligibility_applies(pipeline_version) else "legacy_unfrozen"
+        reason = ("missing_instrumented_membership" if status == "refused"
+                  else "pre_archive_cohort_contract")
+        members = []
+    else:
+        raw_members = universe.get(key)
+        valid = isinstance(raw_members, list) and bool(raw_members)
+        members = []
+        if valid:
+            for raw in raw_members:
+                symbol = str(raw) if isinstance(raw, str) else ""
+                if not symbol or symbol != symbol.strip().upper() or symbol in members:
+                    valid = False
+                    break
+                members.append(symbol)
+        if valid:
+            status, reason = "valid", None
+        else:
+            status, reason, members = "refused", "invalid_instrumented_membership", []
+    weight = 1.0 / len(members) if members else None
+    weights = {ticker: weight for ticker in members}
+    identity = {
+        "status": status,
+        "reason": reason,
+        "members": members,
+        "weights": weights,
+        "weight_method": "equal_weight" if members else "unavailable",
+    }
+    return {**identity, "cohort_sha256": _digest(_canonical(identity))}
+
+
+def _store_run_cohort(conn, run_id, cohort):
+    stored = (
+        cohort["status"], cohort["reason"], _canonical(cohort["members"]),
+        _canonical(cohort["weights"]), cohort["weight_method"],
+        cohort["cohort_sha256"],
+    )
+    existing = conn.execute(
+        """SELECT status,reason,members_json,weights_json,weight_method,cohort_sha256
+           FROM run_cohorts WHERE run_id=?""",
+        (run_id,),
+    ).fetchone()
+    if existing and tuple(existing) != stored:
+        raise ValueError(f"archive cohort mutation detected for run {run_id}")
+    conn.execute(
+        """INSERT OR IGNORE INTO run_cohorts(
+             run_id,status,reason,members_json,weights_json,weight_method,cohort_sha256
+           ) VALUES(?,?,?,?,?,?,?)""",
+        (run_id, *stored),
+    )
+
+
 def _generated_at(data, path):
     raw = data.get("generated_at")
     text = str(raw or "")
@@ -101,10 +161,27 @@ def _generated_at(data, path):
     raise ValueError(f"brief has no usable generated_at: {path}")
 
 
-def _iter_signals(data, run_id, pipeline_version):
+def _iter_signals(data, run_id, pipeline_version, cohort=None):
     sections = data.get("sections")
     if not isinstance(sections, dict):
         raise TypeError("sections must be an object")
+    if cohort is None:
+        cohort = _archive_cohort(data, pipeline_version)
+        # Some focused callers pass only a sections projection. Keep that
+        # compatibility path separate from ingest_file, which always supplies
+        # the validated archive-native cohort and never consults runtime state.
+        if cohort["status"] == "refused" and "universe" not in data:
+            cohort = {
+                "status": "valid",
+                "reason": None,
+                "members": list(UNIVERSE_TICKER_SET),
+            }
+    if _strict_eligibility_applies(pipeline_version) and cohort["status"] != "valid":
+        logger.warning(
+            "run %s refused signal extraction: %s", run_id, cohort["reason"]
+        )
+        return
+    eligible_tickers = frozenset(cohort["members"])
 
     def records(name):
         value = sections.get(name, [])
@@ -192,13 +269,16 @@ def _iter_signals(data, run_id, pipeline_version):
         explicit_attention = set()
         for row in records("social_alerts"):
             tag = str(row.get("tag") or "")
-            if tag not in ("SOCIAL_BURST", "ATTENTION_BIRTH"):
+            # TOP200_ENTRANCE (2.6.5+) requires complete comparable snapshots;
+            # legacy ATTENTION_BIRTH archives keep their own subtype.
+            if tag not in ("SOCIAL_BURST", "ATTENTION_BIRTH", "TOP200_ENTRANCE"):
                 continue
             ticker = row.get("ticker")
             explicit_attention.add(ticker)
             strength = _bucket(row.get("burst_ratio"), BURST_BUCKETS,
                                ("3-5x", "5-10x", "10x+"))
-            yield row, "attention", "ATTENTION_BIRTH" if tag == "ATTENTION_BIRTH" else "BURST", "none", strength
+            subtype = "BURST" if tag == "SOCIAL_BURST" else tag
+            yield row, "attention", subtype, "none", strength
         for row in records("social_attention"):
             ticker = row.get("ticker")
             if (
@@ -240,9 +320,9 @@ def _iter_signals(data, run_id, pipeline_version):
                     logger.warning("%s row missing ticker; skipped", section_name)
                     continue
                 if (_strict_eligibility_applies(pipeline_version)
-                        and ticker not in UNIVERSE_TICKER_SET):
+                        and ticker not in eligible_tickers):
                     logger.warning(
-                        "%s row ticker %s outside signal-eligible universe; skipped",
+                        "%s row ticker %s outside archived instrumented cohort; skipped",
                         section_name, ticker,
                     )
                     continue
@@ -263,12 +343,46 @@ def _iter_signals(data, run_id, pipeline_version):
             logger.warning("%s extraction failed: %s", section_name, exc)
 
 
+def _retain_sighting(conn, signal, run_id, generated_at, regime):
+    conn.execute(
+        """INSERT OR IGNORE INTO signal_sightings(
+             record_id,run_id,observed_at,source_record_id,family,subtype,ticker,
+             direction,strength,regime_at_emission,as_of,asset_class,payload
+           ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (signal["record_id"], run_id, generated_at, signal["source_record_id"],
+         signal["family"], signal["subtype"], signal["ticker"],
+         signal["direction"], signal["strength"], regime, signal["as_of"],
+         signal["asset_class"], signal["payload"]),
+    )
+    first = conn.execute(
+        """SELECT * FROM signal_sightings WHERE record_id=?
+           ORDER BY observed_at,run_id LIMIT 1""",
+        (signal["record_id"],),
+    ).fetchone()
+    last = conn.execute(
+        """SELECT run_id FROM signal_sightings WHERE record_id=?
+           ORDER BY observed_at DESC,run_id DESC LIMIT 1""",
+        (signal["record_id"],),
+    ).fetchone()
+    conn.execute(
+        """UPDATE signals SET source_record_id=?,family=?,subtype=?,ticker=?,
+             direction=?,strength=?,regime_at_emission=?,first_seen_run=?,
+             last_seen_run=?,as_of=?,asset_class=?,payload=?
+           WHERE record_id=?""",
+        (first["source_record_id"], first["family"], first["subtype"],
+         first["ticker"], first["direction"], first["strength"],
+         first["regime_at_emission"], first["run_id"], last["run_id"],
+         first["as_of"], first["asset_class"], first["payload"], signal["record_id"]),
+    )
+
+
 def ingest_file(path, conn=None):
     path = Path(path)
     raw = path.read_bytes()
     data = json.loads(raw.decode("utf-8"))
     generated_at = _generated_at(data, path)
     pipeline_version = str(data.get("pipeline_version") or LEGACY_PIPELINE_VERSION)
+    cohort = _archive_cohort(data, pipeline_version)
     run_id = path.stem
     sections = data.get("sections") if isinstance(data.get("sections"), dict) else {}
     regime_section = sections.get("regime") if isinstance(sections.get("regime"), dict) else {}
@@ -286,7 +400,8 @@ def ingest_file(path, conn=None):
             "INSERT OR IGNORE INTO runs(run_id,generated_at,regime,brief_sha256,pipeline_version) VALUES(?,?,?,?,?)",
             (run_id, generated_at, regime, sha, pipeline_version),
         )
-        for signal in _iter_signals(data, run_id, pipeline_version):
+        _store_run_cohort(conn, run_id, cohort)
+        for signal in _iter_signals(data, run_id, pipeline_version, cohort):
             inserted = conn.execute(
                 """INSERT OR IGNORE INTO signals(
                      record_id,source_record_id,family,subtype,ticker,direction,strength,
@@ -302,12 +417,7 @@ def ingest_file(path, conn=None):
                     "INSERT INTO outcomes(record_id,horizon,status) VALUES(?,?,'pending')",
                     ((signal["record_id"], horizon) for horizon in HORIZONS),
                 )
-            else:
-                conn.execute(
-                    """UPDATE signals SET last_seen_run=?
-                       WHERE record_id=? AND last_seen_run<>?""",
-                    (run_id, signal["record_id"], run_id),
-                )
+            _retain_sighting(conn, signal, run_id, generated_at, regime)
         conn.commit()
     finally:
         if owns_connection:

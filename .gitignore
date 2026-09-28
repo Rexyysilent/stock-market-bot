@@ -23,6 +23,8 @@ __pycache__/
 # Generated exports and local data
 daily_brief.json
 daily_brief.txt
+lean_brief.json
+lean_briefs/
 gemini_daily_brief.json
 gemini_daily_brief.txt
 deep_dive_*.json
@@ -34,6 +36,7 @@ state/
 *.sqlite
 *.sqlite3
 backups/
+history/
 archive/
 briefs/
 ledger/ledger.db

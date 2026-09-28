@@ -74,6 +74,8 @@ def state_projection(mode):
             attention = [{
                 "ticker": ticker, "filter": "all-stocks", "universe_member": True,
                 "mentions": 50 if day == 7 else 10, "upvotes": 1,
+                "observation_status": "observed",
+                "collection_status": "observed",
             } for ticker in ("TSLA",) + blocked]
             social_alerts = signals.update_social_signals(
                 attention, [], date, mcap_lookup=lambda *a, **k: None,
@@ -97,7 +99,10 @@ def state_projection(mode):
         assert social_alerts and confluence and registry
         assert all(r["ticker"] not in blocked for r in social_alerts + baseline_alerts + confluence)
         doc = {"schema_version": "2.8", "pipeline_version": "2.6.4",
-               "generated_at": "2026-08-07T21:00:00Z", "sections": {
+               "generated_at": "2026-08-07T21:00:00Z",
+               # As exported: the ledger freezes this archived cohort.
+               "universe": {"instrumented_tickers": list(SIGNAL_ELIGIBLE_TICKERS)},
+               "sections": {
                    "social_alerts": social_alerts, "confluence": confluence,
                    "insider_clusters": [{"ticker": t, "cluster_direction": "buy",
                                          "record_id": "insider-" + t}
@@ -113,7 +118,7 @@ def state_projection(mode):
         state = {p.name: json.loads(p.read_text()) for p in root.glob("*.json")
                  if p.name != file.name}
         assert set(state["social.json"]["tickers"]) == {"TSLA"}
-        assert set(state["baselines.json"]["versions"]["2.6.4"]) == {"TSLA"}
+        assert set(state["baselines.json"]["versions"]["2.6.5"]) == {"TSLA"}
         return state, social_alerts, baseline_alerts, registry, confluence, ledger
 
 original = (signals.SOCIAL_HISTORY_FILE, signals.CTGOV_SNAPSHOT_FILE,

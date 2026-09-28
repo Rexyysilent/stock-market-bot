@@ -1,6 +1,7 @@
 # Public pipeline parity and boundaries
 
-The public implementation follows the current private runtime through OMNI-02,
+The public implementation follows the current private runtime through the
+2.6.5 measurement-integrity release (which includes OMNI-02),
 with public-facing documentation and neutral research-tooling constraints. It is
 not an advisory product, a signal subscription, or a regulatory exemption.
 
@@ -20,8 +21,8 @@ classification/state/ledger paths through discovery or social mentions.
 
 ## Operational parity
 
-- Pipeline and ledger version 2.6.4; daily schema 2.8, with version-dispatched
-  legacy schema 2.6/2.7 validation.
+- Pipeline and ledger version 2.6.5; daily schema 2.8, with version-dispatched
+  legacy schema 2.6/2.7 validation and readable 2.6.4-era archives.
 - Shared run-scoped OpenInsider acquisition, bounded retries, explicit health,
   stale-cache exclusion, SEC EDGAR fallback, and HTTP narrative-only degradation.
 - Source-purpose policy and registry fingerprints, zero-spend defaults, and
@@ -80,4 +81,4 @@ Publishing artifacts requires separate source-rights and privacy review. Source
 text may itself contain directional language; it remains attributed input, never
 the tool's own recommendation.
 
-See [INTEGRATION_2_6_4.md](INTEGRATION_2_6_4.md) for the reconciled observability, measurement and optional schema 2.9 profile changes.
+See [INTEGRATION_2_6_4.md](INTEGRATION_2_6_4.md) for the reconciled observability, measurement and optional schema 2.9 profile changes, and [INTEGRATION_2_6_5.md](INTEGRATION_2_6_5.md) for the measurement-integrity release.

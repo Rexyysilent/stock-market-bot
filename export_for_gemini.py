@@ -58,6 +58,7 @@ from editorial_focus import (
 )
 import signals
 from coverage_policy import coverage_policy_manifest
+from lean_brief import LEAN_BRIEF_FILENAME, write_dated_lean_brief, write_lean_brief
 from stateutil import (
     atomic_text_writer,
     atomic_write_json,
@@ -130,6 +131,72 @@ HEADLINE_CONTRACT_VERSION = "2.7-headline-lanes-1"
 SIGNAL_ELIGIBILITY_AUDIT_VERSION = "2.7-signal-eligibility-1"
 
 
+def _baseline_session(row):
+    return row.get("session") or row.get("date")
+
+
+def baseline_prior(history, target_session, known_by=None, strict=False):
+    """Read-only eligible baseline rows for ``target_session``.
+
+    Only sessions strictly earlier than the target participate, and a row
+    observed after ``known_by`` is excluded even when its session is earlier.
+    Rows are ordered chronologically before the trailing window is taken, so
+    append order and later-appended history cannot change the result.
+    Returns ``(rows, reason)``. In ``strict`` mode a candidate row without an
+    observation time cannot prove it was known at the cutoff; the whole view
+    is refused with ``missing_knowledge_time`` rather than silently narrowed.
+    """
+    cutoff = to_utc_z(known_by)
+    if strict and cutoff is None:
+        raise ValueError("strict baseline view requires a known_by cutoff")
+    target = str(target_session or "")
+    rows = []
+    for row in history:
+        session = _baseline_session(row)
+        if not session or not target or str(session) >= target:
+            continue
+        observed = to_utc_z(row.get("observed_at"))
+        if observed is None:
+            if strict:
+                return [], "missing_knowledge_time"
+        elif cutoff is not None and observed > cutoff:
+            continue
+        rows.append(row)
+    rows.sort(key=lambda row: (str(_baseline_session(row)),
+                               to_utc_z(row.get("observed_at")) or ""))
+    return rows[-BASELINE_WINDOW:], None
+
+
+def score_against_baseline(value, prior_rows):
+    """Pure z-score of ``value`` against already-eligible prior rows."""
+    prior = [row["value"] for row in prior_rows]
+    z = None
+    if len(prior) >= BASELINE_MIN_POINTS:
+        mean = sum(prior) / len(prior)
+        std = (sum((v - mean) ** 2 for v in prior) / len(prior)) ** 0.5
+        # floor the std at 5% of the mean so a flat history (std=0) still
+        # yields a finite z instead of swallowing genuine deviations
+        std = max(std, abs(mean) * 0.05)
+        if std > 1e-9:
+            z = (value - mean) / std
+            if len(prior) < BASELINE_MATURE_POINTS:
+                z = max(-BASELINE_IMMATURE_Z_CAP,
+                        min(BASELINE_IMMATURE_Z_CAP, z))
+            z = round(z, 2)
+    inputs = [
+        [str(_baseline_session(row)), to_utc_z(row.get("observed_at")), row["value"]]
+        for row in prior_rows
+    ]
+    return {
+        "z": z,
+        "sample_size": len(prior),
+        "baseline_immature": len(prior) < BASELINE_MATURE_POINTS,
+        "input_sha256": hashlib.sha256(
+            json.dumps(inputs, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
+    }
+
+
 def update_baselines_and_score(options_flow, technicals, run_date,
                                pipeline_version=PIPELINE_VERSION):
     """P2-10: score put/call and volume ratios against each ticker's own
@@ -166,44 +233,32 @@ def update_baselines_and_score(options_flow, technicals, run_date,
                 "baseline_updated": False,
             }
         history = version_state.setdefault(ticker, {}).setdefault(metric, [])
-        prior_rows = [
-            row for row in history
-            if (row.get("session") or row.get("date")) != observation_key
-        ]
-        prior = [row["value"] for row in prior_rows]
+        prior_rows, _ = baseline_prior(history, observation_key, known_by=observed_at)
         if (not eligible or not observation_key
                 or not isinstance(value, (int, float)) or value != value):
             return {
                 "z": None,
-                "sample_size": len(prior),
-                "baseline_immature": len(prior) < BASELINE_MATURE_POINTS,
+                "sample_size": len(prior_rows),
+                "baseline_immature": len(prior_rows) < BASELINE_MATURE_POINTS,
                 "baseline_updated": False,
             }
-        z = None
-        if len(prior) >= BASELINE_MIN_POINTS:
-            mean = sum(prior) / len(prior)
-            std = (sum((v - mean) ** 2 for v in prior) / len(prior)) ** 0.5
-            # floor the std at 5% of the mean so a flat history (std=0) still
-            # yields a finite z instead of swallowing genuine deviations
-            std = max(std, abs(mean) * 0.05)
-            if std > 1e-9:
-                z = (value - mean) / std
-                if len(prior) < BASELINE_MATURE_POINTS:
-                    z = max(-BASELINE_IMMATURE_Z_CAP,
-                            min(BASELINE_IMMATURE_Z_CAP, z))
-                z = round(z, 2)
-        history[:] = prior_rows
-        history.append({
+        score = score_against_baseline(value, prior_rows)
+        # Retain later sessions too: a stale or backfilled observation must
+        # not delete history, only be excluded from earlier scores.
+        retained = [row for row in history
+                    if _baseline_session(row) != observation_key]
+        retained.append({
             "session": observation_key,
             "as_of": to_utc_z(as_of),
             "observed_at": to_utc_z(observed_at),
             "value": value,
         })
-        history[:] = history[-BASELINE_WINDOW:]
+        retained.sort(key=lambda row: str(_baseline_session(row) or ""))
+        history[:] = retained[-BASELINE_WINDOW:]
         return {
-            "z": z,
-            "sample_size": len(prior),
-            "baseline_immature": len(prior) < BASELINE_MATURE_POINTS,
+            "z": score["z"],
+            "sample_size": score["sample_size"],
+            "baseline_immature": score["baseline_immature"],
             "baseline_updated": True,
         }
 
@@ -420,7 +475,7 @@ def build_cash_runway_record(fin):
         return round(val / 1e6, 1)
 
     runway = fin.get("runway_quarters")
-    cash_flow_positive = runway == 999
+    cash_flow_positive = fin.get("cash_flow_positive")
     burn = fin.get("quarterly_burn")
     return {
         "ticker": fin.get("ticker"),
@@ -428,8 +483,24 @@ def build_cash_runway_record(fin):
         "cash_musd": _musd(fin.get("cash_and_equivalents")),
         "burn_musd": _musd(-burn) if burn is not None else None,
         "debt_musd": _musd(fin.get("total_debt")),
-        "runway_quarters": None if cash_flow_positive else runway,
+        "runway_quarters": runway,
         "cash_flow_positive": cash_flow_positive,
+        "cash_flow_status": fin.get("cash_flow_status"),
+        "measurement_reason": fin.get("reason"),
+        "cash_metric": fin.get("cash_metric"),
+        "debt_metric": fin.get("debt_metric"),
+        "cash_flow_metric": fin.get("cash_flow_metric"),
+        "cash_period_end": fin.get("cash_period_end"),
+        "debt_period_end": fin.get("debt_period_end"),
+        "cash_flow_period_end": fin.get("cash_flow_period_end"),
+        "cash_flow_period_ends": fin.get("cash_flow_period_ends") or [],
+        "valid_quarter_count": fin.get("valid_quarter_count", 0),
+        "non_finite_quarter_count": fin.get("non_finite_quarter_count", 0),
+        "period_match": fin.get("period_match"),
+        "currency": fin.get("currency"),
+        "currency_available": fin.get("currency_available"),
+        "currency_ambiguous": fin.get("currency_ambiguous"),
+        "source_time_available": fin.get("source_time_available"),
         "market_cap_musd": _musd(fin.get("market_cap")),
     }
 
@@ -1612,7 +1683,15 @@ def _generate_daily_brief():
             f.write("\n--- CASH RUNWAY SUMMARY ---\n")
             for ticker, data in sorted(financials.items()):
                 risk_tag = {"GREEN": "[OK]", "YELLOW": "[CAUTION]", "RED": "[DANGER]"}.get(data.get('risk_level', ''), "[?]")
-                runway = f"{data['runway_quarters']}Q" if data.get('runway_quarters', 999) < 999 else "CF+"
+                runway_value = data.get('runway_quarters')
+                if runway_value is not None:
+                    runway = f"{runway_value}Q"
+                elif data.get('cash_flow_status') == 'positive':
+                    runway = "N/A (positive operating cash flow)"
+                elif data.get('cash_flow_status') == 'zero':
+                    runway = "N/A (zero operating cash flow)"
+                else:
+                    runway = f"Unavailable ({data.get('reason') or 'insufficient data'})"
                 f.write(
                     f"- {risk_tag} {ticker}: Cash {data.get('cash_formatted', 'N/A')} | "
                     f"Burn {data.get('burn_formatted', 'N/A')}/Q | Runway {runway} | "
@@ -1863,15 +1942,16 @@ def _generate_daily_brief():
             "mention_velocity_24h": "mentions minus mentions_24h_ago; null when either side is unknown",
             "rank_delta_24h": "rank_24h_ago minus rank; positive = climbed the leaderboard",
             "attention_score": "upvotes / max(mentions, 1) — engagement quality: viral concentration vs broad low-effort chatter; null for filters with no upvote mechanic (4chan)",
-            "is_low_volume": f"mentions unknown or < {APEWISDOM_LOW_VOLUME_MENTIONS}; velocity/rank moves are noise at that size",
-            "burst_ratio": "mentions today / trailing-20-run median of own mentions; null until 5 prior runs exist",
-            "ATTENTION_BIRTH": "entered ApeWisdom top-200 after >=5 runs absent; small/mid caps only (mcap < $2000M)",
+            "is_low_volume": f"mentions < {APEWISDOM_LOW_VOLUME_MENTIONS}; velocity/rank moves are noise at that size; null when mentions were not measured",
+            "observation_status": "observed / explicit_zero / censored (absent beyond scanned leaderboard depth) / partial / unavailable / disabled; censored and unavailable counts are null, never zero",
+            "burst_ratio": "mentions today / trailing-20-run median of own measured mentions; null until 5 prior measured runs exist or when today's count was not measured (see burst_ratio_reason)",
+            "TOP200_ENTRANCE": "entered the ApeWisdom top-200 after >=5 complete comparable top-200 snapshots absent; small/mid caps only (mcap < $2000M); a leaderboard entrance, not the start of all market attention (legacy archives: ATTENTION_BIRTH)",
             "social_whispers": "narrative context for the human reader (HN/Substack/ZeroHedge/Reddit-narrative); no per-ticker signal fields; excluded from confluence",
             "fda_catalysts": "keyword-mined from primary sources (SEC filing metadata, biotech news, CEO.ca, FDA AdCom calendar); event_date null when no parseable date sits near the keyword; alert FDA_CATALYST_NEAR when 0-90 days out",
             "fda_advisory_meetings": "official FDA meeting rows enriched from each meeting agenda; sponsor/product/application are preserved and ticker is emitted only through a deterministic sponsor map",
             "registry_changes": "day-over-day CT.gov diffs (STATUS_FLIP / DATE_SLIP >14d / ENROLLMENT_CHANGE >10%); observation time = event time; empty on quiet days and on the seeding run",
             "fragility": "on catalyst records: runway_risk from cash_runway, market_cap_musd (financials -> weekly mcap cache -> null); fragility_flag = runway RED/YELLOW and mcap < $2000M; fragile_alert FRAGILE_CATALYST when flagged and event 0-90 days out",
-            "confluence_score": "count of distinct source-timestamped alert families active in an exact trailing 48h UTC window; persistent stale conditions are de-duplicated and cannot refresh on rerun; records require >=2 families",
+            "confluence_score": "count of distinct source-timestamped alert families active in an exact trailing 48h UTC window; persistent stale conditions are de-duplicated and cannot refresh on rerun; records require >=2 families. Families can share underlying inputs (price history, one option chain), so coincidence is descriptive, not independent corroboration",
             "headlines.relevance": "compatibility score retained for existing consumers; editorial selection uses explicit universe/macro/discovery lanes and separate issuer, macro, vertical, authority, novelty, and impact components rather than treating the composite as ground truth",
             "headlines.novelty": "uniqueness within the current fetched candidate pool after normalized-title comparison; it is not longitudinal novelty and does not claim the event is historically new",
             "headlines.lanes": "universe requires a configured ticker or alias; macro requires a true macro subject after stripping exchange listing metadata; discovery requires explicit high-impact evidence plus a covered vertical or official authority",
@@ -1879,6 +1959,7 @@ def _generate_daily_brief():
             "headlines.recency": f"hard cutoff, not a decay: headlines whose as_of is older than {NewsAgent.HEADLINES_MAX_AGE_DAYS} days are dropped before the top-5 selection, so a stale high-relevance item cannot outrank a fresh one; survivors keep the relevance sort. Headlines with NO as_of are dropped too — unprovable freshness fails a freshness gate. That is a deliberate exception to the brief-wide null-preserving convention and applies to this section only; everywhere else a missing source time is exported as null and listed in data_quality.as_of_nulled. Drops are listed in data_quality.headlines_dropped, so an empty section is distinguishable from a slow news day",
             "headlines.provenance": "provider is the acquisition path; publisher/publisher_domain identify the underlying newsroom; source_time_kind distinguishes published, event_time, and provider_seen; scoring is followed by freshness gating, syndication dedupe, and lane-scoped publisher/provider diversity selection",
             "editorial_focus": "presentation-only configured or deterministic dynamic focus from fresh selected mapped headline evidence; impact is a materiality component, not expected return; this section never changes signals, confluence, ledger, or universe membership",
+            "deep_dive.score_components.independent_corroboration": "legacy key name retained for schema compatibility; the value is publisher breadth: distinct additional publishers that carried the same selected story, capped at 3. independence of reporting origins is not assessed: one filing repeated by two outlets scores 2 while having one origin. The text rendering labels it publisher_breadth",
             "insider_clusters": "a cluster is >=2 DISTINCT filers transacting the same open-market direction in the window; insider_count = distinct filers in the cluster direction; buyers/sellers = distinct filers with any P / any S; filing_count = Form 4 documents; code_counts are transaction codes as filed; cluster_direction = buy/sell by filer majority, mixed on tie; BUY clusters are HIGH at >=3 buyers and MEDIUM at 2, mixed is MEDIUM, SELL clusters are LOW context and excluded from confluence; filer identity = rptOwnerCik or insider name; filings whose XML could not be fetched count toward filing_count only",
         },
         "health": health,
@@ -2189,10 +2270,28 @@ def _generate_daily_brief():
     snapshot_dt = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
     archive_path, mirror_path = archive_brief(filename_json, iso_timestamp)
     snapshot_path = write_snapshot(filename_json, snapshot_dt)
+    # Derived convenience file; the canonical brief above is already durable,
+    # so a projection failure must never fail the export.
+    lean_brief_path = dated_lean_path = None
+    pruned_lean = []
+    try:
+        lean_brief_path = write_lean_brief(filename_json, LEAN_BRIEF_FILENAME)
+    except Exception as exc:
+        print(f"  [warn] lean brief not written: {exc}")
+    if lean_brief_path:
+        try:
+            dated_lean_path, pruned_lean = write_dated_lean_brief(lean_brief_path)
+        except Exception as exc:
+            print(f"  [warn] dated lean copy not written: {exc}")
 
     print(f"\nDone! Exported to:")
     print(f"  - {filename_txt} (human readable)")
     print(f"  - {filename_json} (structured JSON)")
+    if lean_brief_path:
+        print(f"  - {lean_brief_path} (lean brief for sharing with models)")
+    if dated_lean_path:
+        print(f"  - {dated_lean_path} (dated lean copy; "
+              f"{len(pruned_lean)} older than 7 days removed)")
     print(f"  - {snapshot_path} (point-in-time snapshot)")
     print(f"  - {archive_path} (canonical append-only archive)")
     if mirror_path:

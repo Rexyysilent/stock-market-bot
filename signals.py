@@ -13,6 +13,7 @@ history exists — no fake backfill.
 """
 import hashlib
 import logging
+import math
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -32,8 +33,9 @@ logger = logging.getLogger("Signals")
 STATE_DIR = "state"
 _STATE_VERSION_TOKEN = re.sub(r"[^A-Za-z0-9_.-]+", "_", PIPELINE_VERSION)
 SOCIAL_HISTORY_FILE = os.path.join(
-    STATE_DIR, f"social_history_{_STATE_VERSION_TOKEN}.json"
+    STATE_DIR, f"social_history_{_STATE_VERSION_TOKEN}_validity1.json"
 )
+SOCIAL_STATE_CONTRACT_VERSION = "social-validity-1"
 MCAP_CACHE_FILE = os.path.join(STATE_DIR, "mcap_cache.json")
 
 
@@ -65,8 +67,14 @@ def _save_state(path, state):
     atomic_write_json(path, state, indent=1)
 
 
-def get_mcap_musd(ticker, now=None):
-    """Market cap in $M via a weekly cache; None on fetch failure (not cached)."""
+def get_mcap_musd(ticker, now=None, allow_fetch=True):
+    """Market cap in $M via a weekly cache; None on fetch failure (not cached).
+
+    A cache entry is usable only when fetched at or before ``now`` and within
+    the maximum age; a future-dated entry is not fresh. Historical or strict
+    replay callers pass ``allow_fetch=False``: a live value cannot stand in
+    for a historical one, so an unusable cache yields None (unknown).
+    """
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -80,10 +88,13 @@ def get_mcap_musd(ticker, now=None):
             )
             if fetched.tzinfo is None:
                 fetched = fetched.replace(tzinfo=timezone.utc)
-            if (now - fetched).days <= MCAP_CACHE_MAX_AGE_DAYS:
+            age = now - fetched
+            if timedelta(0) <= age and age.days <= MCAP_CACHE_MAX_AGE_DAYS:
                 return entry["market_cap_musd"]
         except (KeyError, TypeError, ValueError):
             pass
+    if not allow_fetch:
+        return None
     try:
         import yfinance as yf
         from yfinance_util import configure_yfinance_cache
@@ -105,13 +116,17 @@ def get_mcap_musd(ticker, now=None):
 
 def update_social_signals(social_attention, top200_rows, run_date,
                           mcap_lookup=get_mcap_musd, observed_at=None):
-    """Burst ratios + entrances from the pipeline-versioned social state.
+    """Burst ratios + top-200 entrances from typed social observations.
 
-    Mutates universe all-stocks rows in social_attention (adds burst_ratio),
-    appends today's history (same-date replace, trim), and returns the list of
-    social alert records (SOCIAL_BURST / ATTENTION_BIRTH).
+    Only ``observed`` and ``explicit_zero`` count rows advance baselines. Only
+    complete, comparable ApeWisdom top-200 snapshots advance certified absence
+    history. Legacy untyped inputs fail closed rather than becoming zeros.
     """
     state = _load_state(SOCIAL_HISTORY_FILE)
+    if state.get("contract_version") != SOCIAL_STATE_CONTRACT_VERSION:
+        # A separate filename already avoids consuming pre-fix history. This
+        # guard also fails closed if an unversioned file is copied into place.
+        state = {"contract_version": SOCIAL_STATE_CONTRACT_VERSION}
     tickers_state = state.setdefault("tickers", {})
     alerts = []
     observed_at = to_utc_z(observed_at)
@@ -123,16 +138,49 @@ def update_social_signals(social_attention, top200_rows, run_date,
         ticker = str(rec.get("ticker") or "").strip().upper()
         if not is_signal_eligible_ticker(ticker):
             continue
-        history = tickers_state.setdefault(ticker, [])
-        prior = [h for h in history if h.get("date") != run_date]
-        mentions_today = rec.get("mentions") or 0
+        status = rec.get("observation_status")
+        mentions_today = rec.get("mentions")
+        valid_count = (
+            status in {"observed", "explicit_zero"}
+            and rec.get("collection_status") == "observed"
+            and isinstance(mentions_today, (int, float))
+            and not isinstance(mentions_today, bool)
+            and math.isfinite(mentions_today)
+            and mentions_today >= 0
+        )
+        if not valid_count:
+            rec["burst_ratio"] = None
+            rec["burst_ratio_reason"] = (
+                rec.get("observation_reason") or "observation_not_measured"
+            )
+            continue
 
-        prior_mentions = [h.get("mentions") or 0 for h in prior[-SOCIAL_BURST_BASELINE:]]
+        history = tickers_state.get(ticker, [])
+        # Strictly earlier dates, chronologically ordered: a backfilled or
+        # out-of-order run never scores against later observations.
+        prior = sorted(
+            (h for h in history if h.get("date") and str(h["date"]) < run_date),
+            key=lambda h: str(h.get("date")),
+        )
+        typed_prior = [
+            h for h in prior
+            if h.get("observation_status") in {"observed", "explicit_zero"}
+            and isinstance(h.get("mentions"), (int, float))
+            and not isinstance(h.get("mentions"), bool)
+            and math.isfinite(h["mentions"])
+            and h["mentions"] >= 0
+        ]
+        prior_mentions = [
+            h["mentions"] for h in typed_prior[-SOCIAL_BURST_BASELINE:]
+        ]
         if len(prior_mentions) >= SOCIAL_MIN_HISTORY:
             burst = round(mentions_today / max(median(prior_mentions), 1), 2)
         else:
             burst = None  # warm-up: no fake backfill
         rec["burst_ratio"] = burst
+        rec["burst_ratio_reason"] = (
+            None if burst is not None else "insufficient_measured_history"
+        )
 
         if (burst is not None and burst >= SOCIAL_BURST_RATIO
                 and mentions_today >= SOCIAL_BURST_MIN_MENTIONS):
@@ -146,24 +194,52 @@ def update_social_signals(social_attention, top200_rows, run_date,
                            f"{SOCIAL_BURST_BASELINE} median"),
             })
 
-        prior.append({"date": run_date,
-                      "mentions": mentions_today,
-                      "upvotes": rec.get("upvotes") or 0})
-        tickers_state[ticker] = prior[-SOCIAL_HISTORY_WINDOW:]
+        retained = [h for h in history if h.get("date") != run_date]
+        retained.append({
+            "date": run_date,
+            "mentions": mentions_today,
+            "upvotes": rec.get("upvotes"),
+            "observation_status": status,
+        })
+        retained.sort(key=lambda h: str(h.get("date") or ""))
+        tickers_state[ticker] = retained[-SOCIAL_HISTORY_WINDOW:]
 
     # --- 1c: top-200 entrances ---------------------------------------------
+    snapshot = top200_rows if isinstance(top200_rows, dict) else {}
+    snapshot_comparable = (
+        snapshot.get("source") == "ApeWisdom"
+        and snapshot.get("filter") == "all-stocks"
+        and snapshot.get("scope") == "top-200"
+        and snapshot.get("observation_status") == "observed"
+        and snapshot.get("coverage_status") == "complete"
+        and snapshot.get("comparable") is True
+        and isinstance(snapshot.get("rows"), list)
+    )
+    snapshot_rows = snapshot.get("rows", []) if snapshot_comparable else []
     eligible_top200_rows = [
-        row for row in (top200_rows or [])
+        row for row in snapshot_rows
         if isinstance(row, dict)
         and is_signal_eligible_ticker(row.get("ticker"))
+        and isinstance(row.get("rank"), int)
+        and 1 <= row["rank"] <= 200
     ]
     top200_tickers = sorted({
         str(row["ticker"]).strip().upper() for row in eligible_top200_rows
     })
-    history_runs = [h for h in state.get("top200_history", [])
-                    if h.get("date") != run_date]
-    prior_runs = history_runs[-ENTRANCE_ABSENT_RUNS:]
-    if len(prior_runs) >= ENTRANCE_ABSENT_RUNS:
+    history_runs = [
+        h for h in state.get("top200_history", [])
+        if h.get("observation_status") == "observed"
+        and h.get("coverage_status") == "complete"
+        and h.get("comparable") is True
+        and h.get("source") == "ApeWisdom"
+        and h.get("filter") == "all-stocks"
+        and h.get("scope") == "top-200"
+    ]
+    prior_runs = sorted(
+        (h for h in history_runs if h.get("date") and str(h["date"]) < run_date),
+        key=lambda h: str(h.get("date")),
+    )[-ENTRANCE_ABSENT_RUNS:]
+    if snapshot_comparable and len(prior_runs) >= ENTRANCE_ABSENT_RUNS:
         seen_before = set()
         for run in prior_runs:
             seen_before.update(run.get("tickers", []))
@@ -180,17 +256,33 @@ def update_social_signals(social_attention, top200_rows, run_date,
             row = by_ticker[ticker]
             alerts.append({
                 "ticker": ticker,
-                "tag": "ATTENTION_BIRTH",
+                "tag": "TOP200_ENTRANCE",
                 "rank": row.get("rank"),
                 "mentions": row.get("mentions"),
                 "market_cap_musd": mcap,
                 "observed_at": row.get("observed_at") or observed_at,
                 "detail": (f"entered ApeWisdom top-200 at rank {row.get('rank')} "
-                           f"after >={ENTRANCE_ABSENT_RUNS} runs absent "
+                           f"after >={ENTRANCE_ABSENT_RUNS} complete comparable "
+                           f"snapshots absent "
                            f"(mcap ${mcap}M)"),
             })
 
-    history_runs.append({"date": run_date, "tickers": top200_tickers})
+    if snapshot_comparable:
+        history_runs = [
+            h for h in history_runs if h.get("date") != run_date
+        ]
+        history_runs.append({
+            "date": run_date,
+            "tickers": top200_tickers,
+            "source": "ApeWisdom",
+            "filter": "all-stocks",
+            "scope": "top-200",
+            "observation_status": "observed",
+            "coverage_status": "complete",
+            "comparable": True,
+            "observed_at": snapshot.get("observed_at") or observed_at,
+        })
+    history_runs.sort(key=lambda h: str(h.get("date") or ""))
     state["top200_history"] = history_runs[-TOP200_HISTORY_RUNS:]
     _save_state(SOCIAL_HISTORY_FILE, state)
     return alerts

@@ -176,7 +176,7 @@ class ProfilePipelineTests(unittest.TestCase):
             document = json.loads(payload)
 
             self.assertEqual(document["schema_version"], "2.9")
-            self.assertEqual(document["pipeline_version"], "2.6.4")
+            self.assertEqual(document["pipeline_version"], "2.6.5")
             self.assertEqual(document["universe"]["profile"], PROFILE)
             self.assertEqual(document["universe"]["instrumented_tickers"], ["AAA", "BBB", "SPY"])
             self.assertEqual(document["universe"]["editorial_only_tickers"], [])
@@ -202,6 +202,23 @@ class ProfilePipelineTests(unittest.TestCase):
             self.assertEqual(len(snapshots), 1)
             self.assertEqual(hashlib.sha256(archives[0].read_bytes()).hexdigest(), canonical_hash)
             self.assertEqual(hashlib.sha256(snapshots[0].read_bytes()).hexdigest(), canonical_hash)
+
+            # The lean lean brief is derived from the exact
+            # canonical bytes, labelled, and never archived or snapshotted.
+            share = json.loads(
+                (workspace / "lean_brief.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(share["artifact"]["kind"], "lean_brief")
+            self.assertEqual(share["artifact"]["source_brief_sha256"], canonical_hash)
+            self.assertNotIn("data_quality", share)
+            self.assertEqual(share["sections"], document["sections"])
+            self.assertEqual(share["health_summary"]["status"], document["health"]["status"])
+            dated = list((workspace / "lean_briefs").glob("*Z.json"))
+            self.assertEqual(len(dated), 1)
+            self.assertEqual(
+                dated[0].read_bytes(),
+                (workspace / "lean_brief.json").read_bytes(),
+            )
 
 
 if __name__ == "__main__":

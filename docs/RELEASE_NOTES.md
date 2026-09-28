@@ -1,10 +1,27 @@
 # Integrated public release notes
 
+## 2.6.5 — measurement integrity
+
+Prepared September 23, 2026. Era 2.6.5 repairs how the ledger, statistics,
+social attention, baselines and cash runway measure, following an external
+methodology review of 2.6.4. Export schema identifiers stay 2.8/2.9; historical
+archives are not rewritten. It also adds the lean brief, a clock guard for
+scheduled runs and an append-only evidence history, and disables the legacy
+model narrative route. Details, acceptance IDs and remaining limits are in
+[INTEGRATION_2_6_5.md](INTEGRATION_2_6_5.md).
+
+Upgrading: pull, then let the next `python -m ledger update` migrate the ledger
+additively. Optionally run `python -m ledger rebuild` to regenerate outcomes
+filled before the revision contract, and `python -m event_history import` to
+build the evidence history. Intervals remain withheld by design.
+
+## 2.6.4 — evidence workbench
+
 Prepared September 19, 2026 for the reconciled public release candidate. These
 notes describe repository behavior; they do not claim that a release was
 published or that external provider checks passed.
 
-## Data and compatibility
+### Data and compatibility
 
 - Default exports use schema 2.8 and pipeline/measurement era 2.6.4. Explicit
   profile workspaces use schema 2.9. Historical schema 2.6, 2.7, and 2.8
@@ -23,7 +40,7 @@ published or that external provider checks passed.
   have different eligibility. Narrative fallback does not become signal,
   confluence, state, trusted cache, or ledger evidence.
 
-## Viewer and local server
+### Viewer and local server
 
 The dashboard now puts run health, coverage, missing values, source timestamps,
 and provenance before interpretation. It preserves the previous snapshot after a
@@ -34,7 +51,7 @@ configuration, rejects cross-origin and unsafe Host/path requests (including
 Windows drive paths), limits file size and concurrent requests, and provides a
 credential-free `--demo` mode.
 
-## Historical roadmap phase called “PR 3”
+### Historical roadmap phase called “PR 3”
 
 The August v3.5 roadmap uses “PR 3” as an internal phase name for planned
 editorial-focus work. It is not GitHub pull request #3. Its deferred statement
@@ -53,7 +70,7 @@ historical roadmap remains in `Roadmap/v3.5/`; it should not be treated as a
 separate implementation waiting to merge. Later roadmap items are complete only
 where the current roadmap or code and tests say so.
 
-## GitHub pull request #3
+### GitHub pull request #3
 
 [GitHub PR #3](https://github.com/Rexyysilent/stock-market-bot/pull/3), represented
 by commit `c2e107f` (`feat: harden market evidence, session returns and isolated
@@ -72,7 +89,7 @@ its intended boundaries:
 The integrated release therefore supersedes GitHub PR #3; merging that older
 snapshot afterward would reintroduce obsolete versions of these surfaces.
 
-## Reproduction
+### Reproduction
 
 Run `python marketbot.py demo` (or `python serve_dump.py --demo`) to open the
 viewer over its bundled synthetic fixture. This does not create a new export.

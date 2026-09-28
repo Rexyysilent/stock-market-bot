@@ -14,7 +14,7 @@ from config import (
 from discord_guard import BoundedChatHistory, RequestGate
 from agents.news_agent import NewsAgent
 from agents.social_agent import SocialAgent
-from agents.analyst_agent import AnalystAgent
+from agents.analyst_agent import AnalystAgent, NARRATIVE_DISABLED_MESSAGE
 from agents.watcher_agent import WatcherAgent
 from agents.research_agent import ResearchAgent
 from agents.twitter_agent import TwitterAgent
@@ -91,7 +91,15 @@ def _collect_live_context():
     )
 
 
+async def _send_narrative_disabled(channel):
+    """Explain the disabled model route instead of collecting a prompt."""
+    await channel.send(NARRATIVE_DISABLED_MESSAGE)
+
+
 async def _handle_mention(message):
+    if not analyst_agent.enabled:
+        await _send_narrative_disabled(message.channel)
+        return
     user_text = message.content.replace(f'<@{bot.user.id}>', '').strip()
     if not user_text:
         return
@@ -247,13 +255,16 @@ async def daily_report(ctx):
     # ═══════════════════════════════════════════════════════════════════
     embed_summary = discord.Embed(title="📊 INTELLIGENCE SUMMARY", color=0x95a5a6)
     embed_summary.add_field(name="Data Collected", value=f"• {len(headlines)} headlines\n• {len(whispers)} social items\n• {len(prices)} price points", inline=True)
-    embed_summary.add_field(name="Commands", value="`!whisper` - More items\n`!dump` - Export daily brief\n`!analyze <ticker>` - Deep dive", inline=True)
+    embed_summary.add_field(name="Commands", value="`!whisper` - More items\n`!dump` - Export daily brief\n`!pdufa` - FDA/trial events", inline=True)
     embed_summary.set_footer(text="Raw data dump complete. Use !dump to export for deeper AI analysis.")
     await ctx.send(embed=embed_summary)
 
 @bot.command(name='analyze')
 async def analyze_ticker(ctx, query: str):
     """Quick constructive/cautionary evidence review for a topic or ticker."""
+    if not analyst_agent.enabled:
+        await _send_narrative_disabled(ctx)
+        return
     await ctx.send(f"Reviewing evidence for **{query}**...")
 
     sentiment = await asyncio.to_thread(
@@ -271,6 +282,9 @@ async def analyze_ticker(ctx, query: str):
 @bot.command(name='debate')
 async def full_debate(ctx, ticker: str):
     """Full constructive/cautionary review with live market data."""
+    if not analyst_agent.enabled:
+        await _send_narrative_disabled(ctx)
+        return
     ticker = ticker.upper()
     await ctx.send(f"⚖️ **EVIDENCE REVIEW: {ticker}** — Gathering live data...")
 
@@ -432,7 +446,15 @@ async def pdufa_scan(ctx):
         )
         for ticker, data in sorted(pdufa_data['financials'].items()):
             risk_emoji = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(data['risk_level'], "⚪")
-            runway = f"{data['runway_quarters']}Q" if data['runway_quarters'] < 999 else "CF+"
+            runway_value = data.get('runway_quarters')
+            if runway_value is not None:
+                runway = f"{runway_value}Q"
+            elif data.get('cash_flow_status') == 'positive':
+                runway = "N/A (positive operating cash flow)"
+            elif data.get('cash_flow_status') == 'zero':
+                runway = "N/A (zero operating cash flow)"
+            else:
+                runway = f"Unavailable ({data.get('reason') or 'insufficient data'})"
             embed_cash.add_field(
                 name=f"{risk_emoji} {ticker}",
                 value=f"Cash: {data['cash_formatted']}\nBurn: {data['burn_formatted']}/Q\nRunway: {runway}\nMCap: {data['mcap_formatted']}",
