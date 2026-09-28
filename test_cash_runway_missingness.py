@@ -189,13 +189,41 @@ assert currency_ambiguous["currency_ambiguous"] is True, currency_ambiguous
 
 
 # Keep source priority explicit rather than selecting the largest cash figure.
+# Runway counts liquid resources, so the combined cash + short-term investments
+# line comes first: many biotechs hold most of their cash in short-term
+# investments (live 2026-09-23: CRSP read GREEN 25.6Q -> RED 3.2Q and NTLA
+# YELLOW 5.1Q -> RED 1.2Q when only the narrow cash line was used).
 priority = _check(
     _balance_sheet(cash=10_000_000, extra_cash=20_000_000),
     _cash_flow("Operating Cash Flow", [-2_000_000] * 4),
     {"financialCurrency": "USD"},
 )
-assert priority["cash_and_equivalents"] == 10_000_000, priority
-assert priority["cash_metric"] == "Cash And Cash Equivalents", priority
+assert priority["cash_and_equivalents"] == 20_000_000, priority
+assert priority["cash_metric"] == (
+    "Cash Cash Equivalents And Short Term Investments"
+), priority
+assert priority["runway_quarters"] == 10.0, priority
+assert priority["risk_level"] == "GREEN", priority
+
+# Priority, not magnitude: the combined line wins even when it is smaller.
+not_largest = _check(
+    _balance_sheet(cash=30_000_000, extra_cash=20_000_000),
+    _cash_flow("Operating Cash Flow", [-2_000_000] * 4),
+    {"financialCurrency": "USD"},
+)
+assert not_largest["cash_and_equivalents"] == 20_000_000, not_largest
+assert not_largest["cash_metric"] == (
+    "Cash Cash Equivalents And Short Term Investments"
+), not_largest
+
+# A non-finite combined line falls through to the next named metric.
+nan_combined = _check(
+    _balance_sheet(cash=10_000_000, extra_cash=float("nan")),
+    _cash_flow("Operating Cash Flow", [-2_000_000] * 4),
+    {"financialCurrency": "USD"},
+)
+assert nan_combined["cash_and_equivalents"] == 10_000_000, nan_combined
+assert nan_combined["cash_metric"] == "Cash And Cash Equivalents", nan_combined
 
 
 # Finite quarters remain usable when sibling cells are non-finite.

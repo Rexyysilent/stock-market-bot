@@ -1059,14 +1059,17 @@ class ResearchAgent:
                 bs.columns[0] if len(bs.columns) else None
             )
             
-            # Extract cash position (try multiple field names)
+            # Extract cash position by explicit priority (never the largest
+            # figure). Runway counts liquid resources, so lines that include
+            # short-term investments come first; the narrow cash line alone
+            # turned biotechs holding investments into false RED flags.
             cash = None
             cash_metric = None
             cash_fields = [
-                'Cash And Cash Equivalents',
                 'Cash Cash Equivalents And Short Term Investments',
-                'Cash Equivalents',
                 'Cash And Short Term Investments',
+                'Cash And Cash Equivalents',
+                'Cash Equivalents',
                 'Cash Financial',
             ]
             for field in cash_fields:
