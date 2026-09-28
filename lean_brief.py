@@ -93,14 +93,22 @@ def build_lean_brief(brief, source_sha256=None):
 
 
 def write_lean_brief(brief_path="daily_brief.json", out_path=LEAN_BRIEF_FILENAME):
-    """Project an on-disk brief; the share records the brief's exact bytes."""
-    raw = Path(brief_path).read_bytes()
-    share = build_lean_brief(
-        json.loads(raw.decode("utf-8")),
-        source_sha256=hashlib.sha256(raw).hexdigest(),
-    )
-    # Single-line JSON: indentation whitespace costs model tokens.
-    atomic_write_json(os.fspath(out_path), share, indent=None)
+    """Project an on-disk brief; the share records the brief's exact bytes.
+
+    On failure the previous share at ``out_path`` is removed before the error
+    propagates, so an earlier run's projection never passes for this run's.
+    """
+    try:
+        raw = Path(brief_path).read_bytes()
+        share = build_lean_brief(
+            json.loads(raw.decode("utf-8")),
+            source_sha256=hashlib.sha256(raw).hexdigest(),
+        )
+        # Single-line JSON: indentation whitespace costs model tokens.
+        atomic_write_json(os.fspath(out_path), share, indent=None)
+    except Exception:
+        Path(out_path).unlink(missing_ok=True)
+        raise
     return out_path
 
 

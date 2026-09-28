@@ -259,9 +259,10 @@ function renderCash(id, items, countId) {
     el(countId).textContent = items.length;
     boundedList(id, items, (container, r) => {
         const currency = r.currency || 'currency unavailable';
-        const runway = r.runway_quarters == null
-            ? `Unavailable (${text(r.measurement_reason || r.cash_flow_status || 'insufficient data')})`
-            : `${number(r.runway_quarters)} quarters`;
+        const runway = r.runway_quarters != null ? `${number(r.runway_quarters)} quarters`
+            : r.cash_flow_status === 'positive' ? 'not burning cash (positive operating cash flow)'
+            : r.cash_flow_status === 'zero' ? 'not burning cash (zero operating cash flow)'
+            : `Unavailable (${text(r.measurement_reason || r.cash_flow_status || 'insufficient data')})`;
         card(container, `${text(r.ticker)} · ${text(r.risk_level)}`,
             `Runway ${runway} · Cash ${number(r.cash_musd)} ${text(currency)} million · Burn ${number(r.burn_musd)} ${text(currency)} million/quarter · Operating cash-flow status: ${text(r.cash_flow_status)} · ${meta(r)}`,
             r.risk_level === 'RED' ? 'danger' : r.risk_level === 'YELLOW' ? 'warning' : 'info');

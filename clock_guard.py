@@ -124,6 +124,12 @@ def check_clock(probes=None, *, max_skew=MAX_SKEW_SECONDS):
     if not measurements:
         result["message"] = "no time source reachable; clock not verified"
         return result
+    # One coarse, unauthenticated Date header (a proxy or captive portal can
+    # set it) cannot verify the clock alone; a single NTP reply can.
+    if len(measurements) == 1 and not measurements[0]["source"].startswith("ntp:"):
+        result["message"] = ("only one non-NTP time source answered "
+                             f"({measurements[0]['source']}); clock not verified")
+        return result
     offsets = [m["offset_seconds"] for m in measurements]
     middle = statistics.median(offsets)
     agreeing = [o for o in offsets if abs(o - middle) <= AGREEMENT_SECONDS]

@@ -133,9 +133,30 @@ class CheckClockTests(unittest.TestCase):
         self.assertIn("w32tm /resync", result["message"])
 
     def test_clock_ahead_is_refused_too(self):
-        result = check_clock([("a", _probe(-900.0))])
+        result = check_clock([("ntp:a", _probe(-900.0))])
         self.assertEqual(result["status"], "skewed")
         self.assertIn("ahead", result["message"])
+
+    def test_a_single_ntp_source_can_verify(self):
+        result = check_clock([("ntp:a", _probe(0.2))])
+        self.assertEqual(result["status"], "ok")
+
+    def test_a_lone_http_date_cannot_verify(self):
+        # A single coarse, unauthenticated Date header (a proxy or captive
+        # portal can set it) is not enough on its own, in either direction.
+        for offset in (0.2, BEHIND):
+            result = check_clock([("ntp:a", _probe(OSError("udp blocked"))),
+                                  ("http-date:b", _probe(offset))])
+            self.assertEqual(result["status"], "unverified")
+            self.assertIsNone(result["offset_seconds"])
+            self.assertIn("NTP", result["message"])
+            self.assertEqual(result["measurements"][0]["source"], "http-date:b")
+
+    def test_two_agreeing_http_dates_can_verify(self):
+        result = check_clock([("ntp:a", _probe(OSError("udp blocked"))),
+                              ("http-date:b", _probe(0.4)),
+                              ("http-date:c", _probe(0.6))])
+        self.assertEqual(result["status"], "ok")
 
     def test_no_reachable_source_is_unverified_not_ok(self):
         result = check_clock([("a", _probe(OSError("timed out"))),
@@ -169,12 +190,13 @@ class MainTests(unittest.TestCase):
             return code, json.loads(state.read_text(encoding="utf-8"))
 
     def test_exit_codes_and_state_record(self):
-        code, record = self.run_main([("a", _probe(0.2))])
+        code, record = self.run_main([("ntp:a", _probe(0.2))])
         self.assertEqual((code, record["status"]), (0, "ok"))
         self.assertEqual(record["max_skew_seconds"], clock_guard.MAX_SKEW_SECONDS)
         self.assertTrue(record["checked_at_local"].endswith("Z"))
-        self.assertEqual(self.run_main([("a", _probe(BEHIND))])[0], 2)
-        self.assertEqual(self.run_main([("a", _probe(OSError("down")))])[0], 3)
+        self.assertEqual(self.run_main([("ntp:a", _probe(BEHIND))])[0], 2)
+        self.assertEqual(self.run_main([("ntp:a", _probe(OSError("down")))])[0], 3)
+        self.assertEqual(self.run_main([("http-date:a", _probe(0.2))])[0], 3)
 
 
 if __name__ == "__main__":

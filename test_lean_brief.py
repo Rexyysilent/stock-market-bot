@@ -78,6 +78,21 @@ class LeanBriefTests(unittest.TestCase):
             self.assertEqual(main([str(FIXTURE), "-o", str(out)]), 0)
             self.assertLess(out.stat().st_size, FIXTURE.stat().st_size)
 
+    def test_failed_projection_removes_the_previous_share(self):
+        # An earlier run's share must not stay behind looking like this run's.
+        with TemporaryDirectory() as tmp:
+            out = Path(tmp) / "lean_brief.json"
+            write_lean_brief(FIXTURE, out)
+            broken = Path(tmp) / "daily_brief.json"
+            broken.write_text("{not json", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                write_lean_brief(broken, out)
+            self.assertFalse(out.exists())
+            write_lean_brief(FIXTURE, out)
+            with self.assertRaises(FileNotFoundError):
+                write_lean_brief(Path(tmp) / "missing.json", out)
+            self.assertFalse(out.exists())
+
 
 class DatedLeanBriefTests(unittest.TestCase):
     def write_lean(self, root, generated_at):
