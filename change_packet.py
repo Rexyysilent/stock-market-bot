@@ -24,7 +24,9 @@ import hashlib
 import json
 import math
 import os
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from brief_tools import diff_briefs, load_brief
 from event_history import knowledge_view, origin_summary
@@ -49,9 +51,14 @@ def _subject_ids(subject):
     subject = str(subject).strip()
     if not subject:
         raise ValueError("choose a subject, for example ALFA or issuer:ALFA")
+    # Listing symbols are upper case everywhere (SEC rows, universes, prices);
+    # other subject-id namespaces keep their recorded spelling.
     if ":" in subject:
-        return {subject}, subject.split(":", 1)[1]
-    return {f"issuer:{subject}", f"symbol:{subject}"}, subject
+        kind, _, value = subject.partition(":")
+        if kind == "symbol":
+            subject = f"symbol:{value.upper()}"
+        return {subject}, value.upper()
+    return {f"issuer:{subject.upper()}", f"symbol:{subject.upper()}"}, subject.upper()
 
 
 def _subject_match(subject_id):
@@ -246,6 +253,24 @@ def _record_change(record, cutoff):
             "limitations": limitations, "next_evidence": needs}
 
 
+def _coverage_change(record, relations, sources):
+    """A new report repeating a disclosure whose claim itself did not change."""
+    targets = []
+    for relation in relations:
+        target = sources.evidence.get(relation["to"], {}).get("source_key", relation["to"])
+        claim = (relation["to_claim"] or "").rpartition("/")[2] or "document"
+        targets.append(f"{target} ({claim})")
+    public_targets = [sources.public(r["to"]) for r in relations if r["to"] in sources.evidence]
+    return {"kind": "new_coverage",
+            "what_changed": f"New coverage report {record['source_key']} of {', '.join(targets)}.",
+            "sources": [sources.public(record["version_id"]), *public_targets],
+            "limitations": [_limitation(
+                "coverage_not_confirmation",
+                "A coverage report repeats an existing disclosure; it is not a separate "
+                "confirmation, and the underlying claim did not change.")],
+            "next_evidence": []}
+
+
 def _conflict_change(relation, sources):
     ends = [relation["from"], relation["to"]]
     keys = []
@@ -353,7 +378,10 @@ def _subject_registry(registry, ticker, cutoff):
     registry learned it after the brief); `as_operated_status` uses only what
     it knew by the brief's time.
     """
-    day = cutoff[:10]
+    # Listing validity is an exchange date. The registry's listings are U.S.
+    # (XNYS calendar), so a 01:30Z brief is still the previous New York day.
+    stamp = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+    day = stamp.astimezone(ZoneInfo("America/New_York")).date().isoformat()
     now = registry.resolve(ticker, on=day)
     then = registry.resolve(ticker, on=day, known_by=cutoff)
     result = {"registry_version": registry.version, "registry_fingerprint": registry.fingerprint(),
@@ -398,10 +426,19 @@ def build_packet(conn, previous_path, current_path, subject, *, registry=None):
                   "current": _in_universe(current, ticker)}
     if not all(membership.values()):
         warnings.append("subject is not in both briefs' universes; coverage differs")
+    registry_error = None
     if registry is None:
-        from instrument_registry import load_registry
-        registry = load_registry()
-    subject_registry = _subject_registry(registry, ticker, curr_meta["cutoff"])
+        import instrument_registry
+        try:
+            registry = instrument_registry.load_registry()
+        except (OSError, ValueError) as error:
+            # A stale or unreadable registry must not stop a read-only packet.
+            registry_error = str(error)
+    if registry is None:
+        subject_registry = {"status": "registry_unavailable", "reason": registry_error,
+                            "symbol": ticker, "label": "instrument registry unavailable"}
+    else:
+        subject_registry = _subject_registry(registry, ticker, curr_meta["cutoff"])
     if subject_registry["status"] == "ambiguous":
         warnings.append("subject symbol is ambiguous in the instrument registry "
                         f"({', '.join(subject_registry['candidates'])}); identity not established")
@@ -425,14 +462,25 @@ def build_packet(conn, previous_path, current_path, subject, *, registry=None):
             continue
         changes.append(_claim_change(key, group, before, sources, curr_view))
 
-    coverage_versions = {r["from"] for r in curr_view["relations"]
-                         if r["decision"] == "accepted"
-                         and r["type"] in ("reproduces", "derived_from")}
+    coverage_of = {}
+    for relation in curr_view["relations"]:
+        if relation["decision"] == "accepted" and relation["type"] in ("reproduces", "derived_from"):
+            coverage_of.setdefault(relation["from"], []).append(relation)
+    # A claim change already lists its coverage reports under its origins.
+    changed_claims = {(source["version_id"], change["claim"]) for change in changes
+                      if "claim" in change for source in change["sources"]}
     records = []
     for version_id in sorted(set(sources.evidence) - prev_evidence):
         record = sources.record(version_id)
-        if record["has_claims"] or version_id in coverage_versions:
-            continue  # shown under its claim change, or as coverage of another claim
+        if version_id in coverage_of:
+            targets = [r for r in coverage_of[version_id]
+                       if (r["to"], (r["to_claim"] or "").rpartition("/")[2]) not in changed_claims]
+            if targets:
+                change = _coverage_change(record, targets, sources)
+                records.append((record["first_known_at"] or "", record["source_key"], change))
+            continue
+        if record["has_claims"]:
+            continue  # shown under its claim change
         change = _record_change(record, curr_meta["cutoff"])
         change["sources"] = [sources.public(version_id)]
         records.append((record["first_known_at"] or "", record["source_key"], change))
@@ -488,6 +536,8 @@ def render_note(packet):
         lines += [f"Registry: {registry['symbol']} -> {registry['legal_name'] or 'issuer unknown'} "
                   f"(CIK {registry['cik'] or 'n/a'}{share_class}, {registry['type']}, "
                   f"{registry['verification']}); {registry['label']}.", ""]
+    elif registry and registry["status"] == "registry_unavailable":
+        lines += [f"Registry: unavailable ({registry['reason']}); identity not resolved.", ""]
     elif registry:
         lines += [f"Registry: {registry['symbol']} is {registry['status']} in registry "
                   f"{registry['registry_version']}.", ""]

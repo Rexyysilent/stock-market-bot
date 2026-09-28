@@ -38,8 +38,7 @@ from pathlib import Path
 CONTRACT = "instrument-registry-1"
 DEFAULT_PATH = Path(__file__).resolve().parent / "registry" / "instrument-registry.json"
 SEED_VERSION = "seed-config-2026-09-28"
-SEED_KNOWN_FROM = "2026-09-28T00:00:00Z"
-TIERS = ("instrumented", "editorial_only", "catalogue_candidate")
+TIERS =("instrumented", "editorial_only", "catalogue_candidate")
 TYPES = ("common_stock", "preferred_stock", "adr", "exchange_traded_product", "index",
          "future", "continuous_future_proxy", "option", "unknown")
 VERIFICATION = ("primary_verified", "snapshot_matched", "legacy_profile", "unverified")
@@ -64,6 +63,11 @@ def _instant(value):
     if stamp.tzinfo is None:
         raise ValueError(f"instant {value!r} needs an explicit time zone")
     return stamp.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _now():
+    """Knowledge time for facts the registry learns now; never a fixed past date."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _canonical(value):
@@ -234,6 +238,7 @@ class Registry:
     def with_candidates(self, candidates):
         """A new registry with catalogue-only candidates; nothing is activated."""
         data = self.to_dict()
+        learned = _now()
         registered = {r["symbol"].upper() for r in self.listings if r["valid_to"] is None}
         for candidate in candidates:
             symbol = str(candidate["symbol"]).strip().upper()
@@ -255,23 +260,25 @@ class Registry:
                 "listing_id": f"candidate:{symbol}", "instrument_id": instrument_id,
                 "venue": candidate.get("venue"), "symbol": symbol, "calendar": None,
                 "currency": None, "price_scale": None, "valid_from": None, "valid_to": None,
-                "known_from": candidate.get("known_from", SEED_KNOWN_FROM), "terminal": None,
+                "known_from": candidate.get("known_from") or learned, "terminal": None,
                 "evidence": candidate["evidence"], "verification": "unverified"})
         data["version"] = f"{self.version}+candidates"
         return Registry(data)
 
     # ------------------------------------------------------------ seed
     @classmethod
-    def from_config(cls):
+    def from_config(cls, known_from=None):
         """Seed the protected cohort from config at its existing verification level.
 
         Nothing is upgraded by guessing: instruments without an issuer profile
         stay unverified with unknown venue, calendar and currency until an
-        approved snapshot establishes them.
+        approved snapshot establishes them. Knowledge starts when the seed is
+        built (or the explicit known_from), never at a fixed earlier date.
         """
         from config import EDITORIAL_ONLY_TICKERS, SIGNAL_ELIGIBLE_TICKERS
         from coverage_policy import IDENTITY_EVIDENCE, SECURITY_CAPABILITIES
 
+        known_from = _instant(known_from) if known_from else _now()
         issuers, instruments, listings = {}, [], []
         for ticker in (*SIGNAL_ELIGIBLE_TICKERS, *EDITORIAL_ONLY_TICKERS):
             security = SECURITY_CAPABILITIES[ticker]
@@ -298,7 +305,7 @@ class Registry:
                 "listing_id": f"seed1:{ticker}", "instrument_id": instrument_id, "venue": venue,
                 "symbol": ticker, "calendar": "XNYS" if us_equity else None,
                 "currency": "USD" if us_equity else None, "price_scale": 1 if us_equity else None,
-                "valid_from": None, "valid_to": None, "known_from": SEED_KNOWN_FROM,
+                "valid_from": None, "valid_to": None, "known_from": known_from,
                 "terminal": None, "evidence": evidence, "verification": verification})
         return cls({"contract": CONTRACT, "version": SEED_VERSION,
                     "issuers": list(issuers.values()), "instruments": instruments,
@@ -308,16 +315,17 @@ class Registry:
 def load_registry(path=None):
     """The committed registry, or the config seed when no file exists.
 
-    A file whose protected tiers no longer match config is refused: a cohort
-    change must regenerate the registry, not silently mix identities.
+    A file whose protected tiers no longer contain the configured symbols is
+    refused: a cohort change must regenerate the registry, not silently mix
+    identities. Order is not identity, so a reordered config is accepted.
     """
     from config import EDITORIAL_ONLY_TICKERS, SIGNAL_ELIGIBLE_TICKERS
     path = Path(path) if path is not None else DEFAULT_PATH
     if not path.is_file():
         return Registry.from_config()
     registry = Registry(json.loads(path.read_text(encoding="utf-8")))
-    if (registry.tier_symbols("instrumented") != list(SIGNAL_ELIGIBLE_TICKERS)
-            or registry.tier_symbols("editorial_only") != list(EDITORIAL_ONLY_TICKERS)):
+    if (sorted(registry.tier_symbols("instrumented")) != sorted(SIGNAL_ELIGIBLE_TICKERS)
+            or sorted(registry.tier_symbols("editorial_only")) != sorted(EDITORIAL_ONLY_TICKERS)):
         raise ValueError(f"{path} does not match the configured cohorts; regenerate it with "
                          "registry_snapshot.py enrich")
     return registry
