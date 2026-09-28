@@ -60,9 +60,10 @@ class SnapshotCase(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def captured(self, fail=None):
-        bodies = {"sec_company_tickers_exchange": json.dumps(SEC).encode(),
-                  "nasdaq_listed": NASDAQ.encode(), "nasdaq_other_listed": OTHER.encode()}
+    def captured(self, fail=None, sec=None, nasdaq=None, other=None):
+        bodies = {"sec_company_tickers_exchange": json.dumps(sec or SEC).encode(),
+                  "nasdaq_listed": (nasdaq or NASDAQ).encode(),
+                  "nasdaq_other_listed": (other or OTHER).encode()}
         calls = []
 
         def opener(request, timeout):
@@ -152,6 +153,80 @@ class EnrichTests(SnapshotCase):
         self.assertEqual(len(reg.to_dict()["snapshots"]), 3)
         self.assertNotEqual(reg.fingerprint(), Registry(base).fingerprint())
 
+
+class ReviewFixTests(SnapshotCase):
+    """Code review of T9 (2026-09-28)."""
+
+    def test_enrich_write_builds_on_the_committed_registry(self):
+        # Finding 1: history already in the file must survive a refresh.
+        from registry_snapshot import main
+        base = seed().to_dict()
+        base["instruments"].append({"instrument_id": "inst:gone", "issuer_id": None,
+                                    "type": "common_stock", "share_class": None,
+                                    "tier": "instrumented", "evidence": ["x"],
+                                    "verification": "snapshot_matched"})
+        base["listings"].append({"listing_id": "l:gone", "instrument_id": "inst:gone",
+                                 "venue": "XNAS", "symbol": "GONE", "calendar": "XNYS",
+                                 "currency": "USD", "price_scale": 1, "valid_from": "2020-01-01",
+                                 "valid_to": "2024-01-01", "known_from": "2026-09-01T00:00:00Z",
+                                 "terminal": {"state": "delisted", "asserted_at": "2024-01-02",
+                                              "evidence": ["notice"]},
+                                 "evidence": ["x"], "verification": "snapshot_matched"})
+        base["snapshots"] = [{"part": "earlier", "sha256": "0" * 64}]
+        target = self.dir / "registry.json"
+        target.write_text(json.dumps(base), encoding="utf-8")
+        self.captured()
+        main(["enrich", str(self.dir), "--write", str(target), "--no-config-check"])
+        written = Registry(json.loads(target.read_text(encoding="utf-8")))
+        self.assertEqual(written.listing_state("inst:gone", on="2025-01-01")["state"], "delisted")
+        self.assertEqual([s["part"] for s in written.snapshots][:1], ["earlier"])
+        self.assertEqual(len(written.snapshots), 4)
+        self.assertEqual(written.instrument("seed1:ALFA")["verification"], "snapshot_matched")
+
+    def test_unknown_type_keeps_the_existing_type_and_unmapped_venue_changes_nothing(self):
+        # Finding 2.
+        base = seed().to_dict()
+        for item in base["instruments"]:
+            if item["instrument_id"] in ("seed1:ALFA", "seed1:DLTA"):
+                item["type"] = "common_stock"
+        nasdaq = NASDAQ.replace("Alpha Holdings, LLC - Class A Common Stock", "Alpha Holdings Units")
+        other = OTHER.replace("|Delta Mining Corp Ordinary Shares (Canada)|A|",
+                              "|Delta Mining Corp Ordinary Shares (Canada)|Q|")
+        self.captured(nasdaq=nasdaq, other=other)
+        reg, report = enrich(Registry(base), self.dir)
+        self.assertEqual(reg.instrument("seed1:ALFA")["type"], "common_stock")
+        self.assertEqual(report["conflicts"]["DLTA"], "unmapped_venue")
+        listing = reg.resolve("DLTA", on="2026-09-28")["listing"]
+        self.assertEqual((listing["venue"], listing["calendar"], listing["currency"]),
+                         (None, None, None))
+
+    def test_issuer_names_must_agree_beyond_the_first_word(self):
+        # Finding 3: a symbol moving between "American ..." issuers is a conflict.
+        sec = {"fields": SEC["fields"], "data": [[2001, "American Express Co", "AMRX", "NYSE"]]}
+        other = OTHER.replace(
+            "File Creation Time",
+            "AMRX|American Airlines Group Inc. Common Stock|N|AMRX|N|100|N|AMRX\nFile Creation Time")
+        base = seed().to_dict()
+        base["instruments"].append({"instrument_id": "seed1:AMRX", "issuer_id": None,
+                                    "type": "unknown", "share_class": None, "tier": "instrumented",
+                                    "evidence": ["config"], "verification": "unverified"})
+        base["listings"].append(dict(base["listings"][0], listing_id="seed1:AMRX",
+                                     instrument_id="seed1:AMRX", symbol="AMRX"))
+        self.captured(sec=sec, other=other)
+        _, report = enrich(Registry(base), self.dir)
+        self.assertEqual(report["conflicts"]["AMRX"], "issuer_name_disagrees")
+
+    def test_evidence_names_only_the_sources_consulted(self):
+        # Finding 4.
+        self.captured()
+        reg, _ = enrich(seed(), self.dir)
+
+        def parts(symbol):
+            return {e.split("@")[0] for e in reg.resolve(symbol, on="2026-09-28")["listing"]["evidence"]
+                    if e.startswith("snapshot:")}
+        self.assertEqual(parts("ALFA"), {"snapshot:sec_company_tickers_exchange",
+                                         "snapshot:nasdaq_listed"})
+        self.assertEqual(parts("FUND"), {"snapshot:nasdaq_other_listed"})
 
 if __name__ == "__main__":
     unittest.main()

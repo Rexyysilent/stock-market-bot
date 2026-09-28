@@ -30,7 +30,7 @@ import re
 import sys
 import urllib.request
 
-from instrument_registry import Registry, reconcile_listing_snapshot
+from instrument_registry import DEFAULT_PATH, Registry, load_registry, reconcile_listing_snapshot
 
 MAX_PART_BYTES = 20 * 1024 * 1024
 PARTS = {
@@ -47,8 +47,11 @@ PARTS = {
 OTHER_VENUES = {"A": "XASE", "N": "XNYS", "P": "ARCX", "Z": "BATS", "V": "IEXG"}
 VERIFICATION_RANK = {"unverified": 0, "legacy_profile": 1, "snapshot_matched": 2,
                      "primary_verified": 3}
-NAME_STOPWORDS = {"the", "inc", "corp", "corporation", "co", "company", "ltd", "llc", "lp",
-                  "plc", "ag", "sa", "nv", "holdings", "holding", "group", "de", "ma"}
+NAME_STOPWORDS = {"the", "inc", "incorporated", "corp", "corporation", "co", "company", "ltd",
+                  "llc", "lp", "plc", "ag", "sa", "nv", "holdings", "holding", "group", "de", "ma"}
+SECURITY_DESCRIPTOR = re.compile(
+    r"\b(?:class\s+[a-z]\b|american\s+depositary\s+shares?|common\s+stock|common\s+shares|"
+    r"ordinary\s+shares|subordinate\s+voting\s+shares|units?|when[-\s]issued)\b")
 
 
 def _now():
@@ -115,9 +118,23 @@ def _directory(text, symbol_column):
 
 
 def _name_key(name):
-    tokens = [t for t in re.split(r"[^a-z0-9]+", str(name).casefold()) if t]
-    tokens = [t for t in tokens if t not in NAME_STOPWORDS]
-    return tokens[0] if tokens else ""
+    """Significant issuer-name tokens, without the directory's security descriptor."""
+    text = str(name).casefold().split(" - ", 1)[0]
+    text = re.sub(r"\([^)]*\)", " ", text)
+    text = SECURITY_DESCRIPTOR.sub(" ", text)
+    tokens = [t for t in re.split(r"[^a-z0-9]+", text) if t]
+    return [t for t in tokens if t not in NAME_STOPWORDS]
+
+
+def _names_agree(sec_name, directory_name):
+    """The first two significant tokens must agree (one when a name has only one).
+
+    A single shared first word is too weak: "American Express" and "American
+    Airlines" would pass.
+    """
+    a, b = _name_key(sec_name), _name_key(directory_name)
+    k = min(2, len(a), len(b))
+    return k > 0 and a[:k] == b[:k]
 
 
 def _security_type(name, etf):
@@ -153,8 +170,8 @@ def enrich(registry, folder):
                 venue = "XNAS" if part == "nasdaq_listed" else OTHER_VENUES.get(row.get("Exchange"))
                 directory[symbol] = dict(row, _part=part, _venue=venue)
 
-    evidence = [f"snapshot:{part}@{record['sha256'][:16]}"
-                for part, record in manifest["parts"].items() if part in parts]
+    refs = {part: f"snapshot:{part}@{record['sha256'][:16]}"
+            for part, record in manifest["parts"].items() if part in parts}
     data = registry.to_dict()
     data["snapshots"] = data.get("snapshots", []) + [
         {"part": part, **{k: record.get(k) for k in ("source", "url", "captured_at", "status",
@@ -175,9 +192,14 @@ def enrich(registry, folder):
         if row is None:
             report["not_in_directory"].append(symbol)
             continue
+        if row["_venue"] is None:
+            # An exchange code this tool does not map: no venue, calendar or currency.
+            report["conflicts"][symbol] = "unmapped_venue"
+            continue
         kind = _security_type(row["Security Name"], row.get("ETF"))
         sec_rows = sec.get(symbol, [])
         issuer_id = instrument["issuer_id"]
+        evidence = [refs[row["_part"]]]     # only the sources actually consulted
         if kind != "exchange_traded_product":
             if len(sec_rows) != 1:
                 reason = "no_sec_row" if not sec_rows else "several_sec_rows"
@@ -186,9 +208,10 @@ def enrich(registry, folder):
                 report["conflicts"][symbol] = reason
                 continue
             filer = sec_rows[0]
-            if _name_key(filer["name"]) != _name_key(row["Security Name"]):
+            if not _names_agree(filer["name"], row["Security Name"]):
                 report["conflicts"][symbol] = "issuer_name_disagrees"
                 continue
+            evidence = [refs["sec_company_tickers_exchange"], *evidence]
             cik = f"{int(filer['cik']):010d}"
             existing = issuers.get(issuer_id) if issuer_id else None
             if existing and existing.get("cik") and existing["cik"] != cik:
@@ -206,7 +229,9 @@ def enrich(registry, folder):
         verification = instrument["verification"]
         if VERIFICATION_RANK[verification] < VERIFICATION_RANK["snapshot_matched"]:
             verification = "snapshot_matched"
-        instrument.update(issuer_id=issuer_id, type=kind,
+        # A name the heuristic cannot type keeps the registry's existing type.
+        instrument.update(issuer_id=issuer_id,
+                          type=instrument["type"] if kind == "unknown" else kind,
                           share_class=share_class.group(1).upper() if share_class else instrument["share_class"],
                           verification=verification,
                           evidence=list(dict.fromkeys(instrument["evidence"] + evidence)))
@@ -235,7 +260,10 @@ def main(argv=None):
     cap.add_argument("out", type=Path)
     enr = sub.add_parser("enrich")
     enr.add_argument("folder", type=Path)
-    enr.add_argument("--write", type=Path, help="write the enriched registry JSON here")
+    enr.add_argument("--write", type=Path,
+                     help="registry JSON to build on (if it exists) and write back")
+    enr.add_argument("--no-config-check", action="store_true",
+                     help="skip the configured-cohort check (synthetic registries)")
     args = parser.parse_args(argv)
     if args.command == "capture":
         from config import SEC_USER_AGENT
@@ -243,7 +271,14 @@ def main(argv=None):
         print(json.dumps({k: v for k, v in manifest.items() if k != "parts"}
                          | {"parts": {p: r["status"] for p, r in manifest["parts"].items()}}, indent=2))
         return 0 if manifest["complete"] else 1
-    registry, report = enrich(Registry.from_config(), args.folder)
+    # Build on the existing registry so dated listings, terminal assertions,
+    # bindings, capabilities and earlier snapshot records survive a refresh.
+    base_path = args.write or DEFAULT_PATH
+    if base_path.is_file() and args.no_config_check:
+        base = Registry(json.loads(base_path.read_text(encoding="utf-8")))
+    else:
+        base = load_registry(base_path)
+    registry, report = enrich(base, args.folder)
     if args.write:
         args.write.parent.mkdir(parents=True, exist_ok=True)
         args.write.write_text(json.dumps(registry.to_dict(), indent=1, ensure_ascii=False) + "\n",

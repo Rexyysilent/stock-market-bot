@@ -448,5 +448,61 @@ class CliTests(PacketCase):
         self.assertFalse(absent.parent.exists())
 
 
+class ReviewFixTests(PacketCase):
+    """Code review of T8/T9 (2026-09-28)."""
+
+    def test_a_drifted_registry_degrades_instead_of_failing_the_packet(self):
+        # Finding 5.
+        from unittest import mock
+        import instrument_registry
+        with mock.patch.object(instrument_registry, "load_registry",
+                               side_effect=ValueError("does not match the configured cohorts")):
+            packet = build_packet(self.conn, self.brief("prev.json", PREV),
+                                  self.brief("curr.json", CURR), "ALFA")
+        self.assertEqual(packet["subject_registry"]["status"], "registry_unavailable")
+        self.assertIn("configured cohorts", packet["subject_registry"]["reason"])
+        self.assertIn("unavailable", render_note(packet))
+
+    def test_listing_date_is_the_new_york_date_not_the_utc_date(self):
+        # Finding 7: 2026-09-23T01:30Z is still 2026-09-22 in New York.
+        reg = RegistryTests.registry(self, [
+            {"listing_id": "l:old", "instrument_id": "inst:alfa", "symbol": "ALFA",
+             "valid_to": "2026-09-23"},
+            {"listing_id": "l:new", "instrument_id": "inst:alfa", "symbol": "ALFB",
+             "valid_from": "2026-09-23"}])
+        prev = self.brief("prev.json", PREV)
+        late = self.brief("late.json", "2026-09-23T01:30:00Z")
+        subject = build_packet(self.conn, prev, late, "ALFA", registry=reg)["subject_registry"]
+        self.assertEqual((subject["on"], subject["status"]), ("2026-09-22", "resolved"))
+
+    def test_a_new_coverage_report_of_an_unchanged_claim_is_shown(self):
+        # Finding 8: coverage of a claim that did not change was dropped entirely.
+        self.extract("f1.json", "2026-09-21T14:10:00Z", [{
+            "source_key": "synthetic:sec:F1", "kind": "filing", "subject_id": "issuer:ALFA",
+            "origin_hint": "issuer-disclosure:ALFA:Q2", "published_at": "2026-09-21T14:00:00Z",
+            "claims": {"revenue": claim("20")}}])
+        prev = self.brief("prev.json", PREV)
+        self.extract("n3.json", "2026-09-22T09:00:00Z", [{
+            "source_key": "synthetic:news:N3", "kind": "news", "subject_id": "issuer:ALFA",
+            "published_at": "2026-09-22T08:50:00Z", "title": "Alfa revenue USD 20M (N3)",
+            "claims": {"revenue": claim("20")}}])
+        self.relate("synthetic:news:N3", "synthetic:sec:F1", "reproduces", "2026-09-22T09:30:00Z",
+                    from_claim="/claims/revenue", to_claim="/claims/revenue")
+        packet = self.packet(prev, self.brief("curr.json", CURR))
+        coverage = self.changes(packet, "new_coverage")
+        self.assertEqual(len(coverage), 1)
+        self.assertEqual(coverage[0]["sources"][0]["source_key"], "synthetic:news:N3")
+        self.assertIn("synthetic:sec:F1", coverage[0]["what_changed"])
+        self.assertIn("coverage_not_confirmation", [l["code"] for l in coverage[0]["limitations"]])
+
+    def test_subject_symbols_are_case_insensitive(self):
+        # Finding 9.
+        prev = self.brief("prev.json", PREV)
+        curr = self.brief("curr.json", CURR, sec=[sec_row("0000000001-26-000101")])
+        lower = self.packet(prev, curr, subject="alfa")
+        self.assertEqual(len(self.changes(lower, "new_record")), 1)
+        self.assertTrue(lower["comparability"]["subject_in_universe"]["current"])
+        self.assertEqual(self.packet(prev, curr, subject="symbol:alfa")["subject_ids"], ["symbol:ALFA"])
+
 if __name__ == "__main__":
     unittest.main()

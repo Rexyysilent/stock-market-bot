@@ -41,8 +41,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -53,8 +52,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -65,8 +63,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -77,8 +74,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -89,8 +85,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -101,7 +96,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -113,7 +107,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -125,7 +118,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -137,7 +129,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -149,8 +140,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -161,8 +151,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -173,8 +162,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -185,7 +173,6 @@
    "evidence": [
     "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "primary_verified"
@@ -196,8 +183,7 @@
    "cik": "0001318605",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -207,8 +193,7 @@
    "cik": "0001428439",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -218,8 +203,7 @@
    "cik": "0001321655",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -229,8 +213,7 @@
    "cik": "0001674416",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -240,7 +223,6 @@
    "cik": "0001824502",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -251,8 +233,7 @@
    "cik": "0001594805",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -262,7 +243,6 @@
    "cik": "0001001838",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -273,8 +253,7 @@
    "cik": "0001652130",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -284,7 +263,6 @@
    "cik": "0000831259",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -295,7 +273,6 @@
    "cik": "0001674101",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -306,8 +283,7 @@
    "cik": "0001679788",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -317,8 +293,7 @@
    "cik": "0001874178",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -328,8 +303,7 @@
    "cik": "0000006951",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -339,8 +313,7 @@
    "cik": "0001347178",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -350,7 +323,6 @@
    "cik": "0001385849",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -361,7 +333,6 @@
    "cik": "0001009001",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -372,7 +343,6 @@
    "cik": "0001698535",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -383,7 +353,6 @@
    "cik": "0001063259",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -394,7 +363,6 @@
    "cik": "0000936468",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -405,7 +373,6 @@
    "cik": "0001133421",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -416,8 +383,7 @@
    "cik": "0001590877",
    "evidence": [
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   }
@@ -432,8 +398,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -446,8 +411,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -460,8 +424,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -485,8 +448,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -499,7 +461,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -513,8 +474,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -527,7 +487,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -541,8 +500,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -555,7 +513,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -569,7 +526,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -583,8 +539,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -597,8 +552,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -611,8 +565,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -625,8 +578,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -649,8 +601,6 @@
    "tier": "instrumented",
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -663,8 +613,6 @@
    "tier": "instrumented",
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -677,8 +625,6 @@
    "tier": "instrumented",
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -691,8 +637,6 @@
    "tier": "instrumented",
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -706,7 +650,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -720,7 +663,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -734,7 +676,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -748,7 +689,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -762,7 +702,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -776,7 +715,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -789,8 +727,6 @@
    "tier": "instrumented",
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -804,8 +740,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -829,8 +764,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -843,8 +777,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -857,8 +790,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -871,8 +803,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -885,8 +816,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -899,7 +829,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -913,7 +842,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -927,7 +855,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -941,7 +868,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -955,8 +881,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -969,8 +894,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -983,8 +907,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -997,7 +920,6 @@
    "evidence": [
     "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "primary_verified"
@@ -1019,8 +941,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1039,8 +960,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1059,8 +979,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1074,7 +993,7 @@
    "price_scale": null,
    "valid_from": null,
    "valid_to": null,
-   "known_from": "2026-09-28T00:00:00Z",
+   "known_from": "2026-09-28T14:42:33Z",
    "terminal": null,
    "evidence": [
     "config:instrumented"
@@ -1096,8 +1015,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1116,7 +1034,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1136,8 +1053,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1156,7 +1072,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1176,8 +1091,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1196,7 +1110,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1216,7 +1129,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1236,8 +1148,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1256,8 +1167,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1276,8 +1186,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1296,8 +1205,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1311,7 +1219,7 @@
    "price_scale": null,
    "valid_from": null,
    "valid_to": null,
-   "known_from": "2026-09-28T00:00:00Z",
+   "known_from": "2026-09-28T14:42:33Z",
    "terminal": null,
    "evidence": [
     "config:instrumented"
@@ -1332,8 +1240,6 @@
    "terminal": null,
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1352,8 +1258,6 @@
    "terminal": null,
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1372,8 +1276,6 @@
    "terminal": null,
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1392,8 +1294,6 @@
    "terminal": null,
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1413,7 +1313,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1433,7 +1332,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1453,7 +1351,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1473,7 +1370,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1493,7 +1389,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1513,7 +1408,6 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1532,8 +1426,6 @@
    "terminal": null,
    "evidence": [
     "config:instrumented",
-    "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1553,8 +1445,7 @@
    "evidence": [
     "config:instrumented",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1568,7 +1459,7 @@
    "price_scale": null,
    "valid_from": null,
    "valid_to": null,
-   "known_from": "2026-09-28T00:00:00Z",
+   "known_from": "2026-09-28T14:42:33Z",
    "terminal": null,
    "evidence": [
     "config:instrumented"
@@ -1590,8 +1481,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1610,8 +1500,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1630,8 +1519,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1650,8 +1538,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1670,8 +1557,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1690,7 +1576,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1710,7 +1595,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1730,7 +1614,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1750,7 +1633,6 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "snapshot_matched"
@@ -1770,8 +1652,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1790,8 +1671,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1810,8 +1690,7 @@
    "evidence": [
     "config:editorial_only",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
-    "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+    "snapshot:nasdaq_listed@4853eac77f624227"
    ],
    "verification": "snapshot_matched"
   },
@@ -1830,7 +1709,6 @@
    "evidence": [
     "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
     "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
-    "snapshot:nasdaq_listed@4853eac77f624227",
     "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
    ],
    "verification": "primary_verified"

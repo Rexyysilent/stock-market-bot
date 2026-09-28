@@ -151,7 +151,8 @@ def score_sheet(path):
 
     completions = [r for r in packet if _yes(r.get("completed_unaided"))
                    and _yes(r.get("all_four_correct"))
-                   and (_minutes(r.get("minutes")) or TIME_LIMIT_MINUTES + 1) <= TIME_LIMIT_MINUTES]
+                   and _minutes(r.get("minutes")) is not None
+                   and _minutes(r.get("minutes")) <= TIME_LIMIT_MINUTES]
     verified = {name: [m for r in group if _yes(r.get("all_four_correct"))
                        for m in [_minutes(r.get("minutes"))] if m is not None]
                 for name, group in (("packet", packet), ("manual", manual))}

@@ -259,5 +259,34 @@ def json_text(value):
     return json.dumps(value)
 
 
+class ReviewFixTests(unittest.TestCase):
+    """Code review of T9 (2026-09-28)."""
+
+    def test_cohort_order_does_not_invalidate_the_registry(self):
+        # Finding 5 (part): order is not identity.
+        import json
+        import tempfile
+        from pathlib import Path
+        from instrument_registry import load_registry
+        data = Registry.from_config().to_dict()
+        data["instruments"].reverse()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "registry.json"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            self.assertEqual(sorted(load_registry(path).tier_symbols("instrumented")),
+                             sorted(SIGNAL_ELIGIBLE_TICKERS))
+
+    def test_knowledge_starts_when_the_registry_learns_it(self):
+        # Finding 6: no backdating to a fixed seed date.
+        from datetime import datetime, timezone
+        before = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        seeded = Registry.from_config()
+        self.assertTrue(all(r["known_from"] >= before for r in seeded.listings))
+        pinned = Registry.from_config(known_from="2026-10-01T09:00:00Z")
+        self.assertEqual({r["known_from"] for r in pinned.listings}, {"2026-10-01T09:00:00Z"})
+        extended = pinned.with_candidates([{"symbol": "CNDX", "legal_name": "C", "venue": "XNAS",
+                                            "evidence": ["x"]}])
+        self.assertGreaterEqual(extended.resolve("CNDX")["listing"]["known_from"], before)
+
 if __name__ == "__main__":
     unittest.main()

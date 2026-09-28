@@ -178,5 +178,11 @@ class ScoreTests(unittest.TestCase):
         self.assertEqual(result["excluded_without_consent"], 1)
 
 
+class ReviewFixTests(ScoreTests):
+    def test_zero_minutes_is_a_recorded_time_not_a_missing_one(self):
+        # Finding 10.
+        result = score_sheet(self.sheet(self.full([0, 10, 10, 10, 10, 10], [14] * 6)))
+        self.assertEqual(result["gates"]["unaided_completion"]["count"], 6)
+
 if __name__ == "__main__":
     unittest.main()
