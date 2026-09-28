@@ -222,6 +222,32 @@ class SeedAndIsolationTests(unittest.TestCase):
             base.with_candidates([{"symbol": "TSLA", "legal_name": "x", "venue": "XNAS",
                                    "evidence": ["x"]}])
 
+    def test_committed_registry_matches_the_configured_cohorts(self):
+        from instrument_registry import DEFAULT_PATH, load_registry
+        self.assertTrue(DEFAULT_PATH.is_file())
+        reg = load_registry()
+        self.assertEqual(reg.tier_symbols("instrumented"), list(SIGNAL_ELIGIBLE_TICKERS))
+        self.assertEqual(reg.tier_symbols("editorial_only"), list(EDITORIAL_ONLY_TICKERS))
+        self.assertTrue(reg.snapshots)
+        mrk = reg.instrument(reg.resolve("MRK", on="2026-09-28")["instrument_id"])
+        self.assertEqual(mrk["verification"], "primary_verified")
+
+    def test_a_registry_that_drifted_from_config_is_refused(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from instrument_registry import load_registry
+        data = Registry.from_config().to_dict()
+        data["instruments"] = [i for i in data["instruments"] if i["instrument_id"] != "seed1:TSLA"]
+        data["listings"] = [r for r in data["listings"] if r["instrument_id"] != "seed1:TSLA"]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "registry.json"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "regenerate"):
+                load_registry(path)
+            self.assertEqual(load_registry(Path(tmp) / "missing.json").version,
+                             Registry.from_config().version)
+
     def test_registry_file_round_trips_with_a_stable_fingerprint(self):
         reg = Registry.from_config()
         again = Registry(reg.to_dict())

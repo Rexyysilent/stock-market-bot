@@ -65,6 +65,7 @@ CHECKS = (
     'test_change_packet.py',
     'test_change_packet_study.py',
     'test_instrument_registry.py',
+    'test_registry_snapshot.py',
     'test_profile_export_contract.py',
     'test_profile_pipeline.py',
     'test_diagnostics.py',

@@ -33,8 +33,10 @@ import copy
 import hashlib
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 CONTRACT = "instrument-registry-1"
+DEFAULT_PATH = Path(__file__).resolve().parent / "registry" / "instrument-registry.json"
 SEED_VERSION = "seed-config-2026-09-28"
 SEED_KNOWN_FROM = "2026-09-28T00:00:00Z"
 TIERS = ("instrumented", "editorial_only", "catalogue_candidate")
@@ -78,6 +80,7 @@ class Registry:
         data = copy.deepcopy(data)
         _require(data.get("contract") == CONTRACT, f"registry contract must be {CONTRACT}")
         self.version = data.get("version")
+        self.snapshots = list(data.get("snapshots", []))
         self.issuers = {i["issuer_id"]: i for i in data.get("issuers", [])}
         self.instruments = {}
         for item in data.get("instruments", []):
@@ -120,7 +123,7 @@ class Registry:
 
     # ------------------------------------------------------------ identity
     def to_dict(self):
-        return {"contract": CONTRACT, "version": self.version,
+        return {"contract": CONTRACT, "version": self.version, "snapshots": self.snapshots,
                 "issuers": list(self.issuers.values()),
                 "instruments": list(self.instruments.values()),
                 "listings": self.listings, "provider_bindings": self.bindings,
@@ -300,6 +303,24 @@ class Registry:
         return cls({"contract": CONTRACT, "version": SEED_VERSION,
                     "issuers": list(issuers.values()), "instruments": instruments,
                     "listings": listings, "provider_bindings": [], "capabilities": []})
+
+
+def load_registry(path=None):
+    """The committed registry, or the config seed when no file exists.
+
+    A file whose protected tiers no longer match config is refused: a cohort
+    change must regenerate the registry, not silently mix identities.
+    """
+    from config import EDITORIAL_ONLY_TICKERS, SIGNAL_ELIGIBLE_TICKERS
+    path = Path(path) if path is not None else DEFAULT_PATH
+    if not path.is_file():
+        return Registry.from_config()
+    registry = Registry(json.loads(path.read_text(encoding="utf-8")))
+    if (registry.tier_symbols("instrumented") != list(SIGNAL_ELIGIBLE_TICKERS)
+            or registry.tier_symbols("editorial_only") != list(EDITORIAL_ONLY_TICKERS)):
+        raise ValueError(f"{path} does not match the configured cohorts; regenerate it with "
+                         "registry_snapshot.py enrich")
+    return registry
 
 
 def reconcile_listing_snapshot(registry, snapshot):
