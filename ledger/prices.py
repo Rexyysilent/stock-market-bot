@@ -99,34 +99,53 @@ def _ensure_cache_schema(conn):
     conn.executescript(_CACHE_SCHEMA)
 
 
-def _miss_skip(conn, ticker, first, last, provider_name, now):
-    """The remembered state when this window should not be fetched yet."""
+def _as_utc(value):
+    return (value.replace(tzinfo=timezone.utc) if value.tzinfo is None
+            else value.astimezone(timezone.utc))
+
+
+def _series_key(provider_name, interval, adjustment_basis, currency):
+    """Miss identity: the same series identity ensure_window enforces."""
+    return f"{provider_name}|{interval}|{adjustment_basis}|{currency or ''}"
+
+
+def _miss_skip(conn, ticker, first, last, series, now):
+    """The remembered state when this window should not be fetched yet.
+
+    yfinance returns an empty frame on rate limits and network blips, so one
+    miss is not trusted: backoff starts after misses on two different days.
+    The backoff counts calendar days, so a run starting a few minutes
+    earlier than a week ago is not pushed to an eighth day.
+    """
     row = conn.execute(
-        """SELECT last_state, last_attempt_at FROM price_fetch_misses
+        """SELECT last_state, last_attempt_at, attempts FROM price_fetch_misses
            WHERE ticker=? AND requested_start=? AND requested_end=? AND provider=?""",
-        (ticker, first, last, provider_name),
+        (ticker, first, last, series),
     ).fetchone()
-    if row is None:
+    if row is None or row[2] < 2:
         return None
-    attempted = datetime.fromisoformat(row[1])
-    window_age = (now.date() - date.fromisoformat(last)).days
-    if window_age <= PRICE_MISS_RECENT_DAYS:
+    if (now.date() - date.fromisoformat(last)).days <= PRICE_MISS_RECENT_DAYS:
         return None
-    return row[0] if now - attempted < timedelta(days=PRICE_MISS_BACKOFF_DAYS) else None
+    attempted = _as_utc(datetime.fromisoformat(row[1]))
+    if (now.date() - attempted.date()).days >= PRICE_MISS_BACKOFF_DAYS:
+        return None
+    return row[0]
 
 
-def _record_miss(conn, ticker, first, last, provider_name, state, now):
+def _record_miss(conn, ticker, first, last, series, state, now):
+    """Count a miss once per calendar day. The caller commits."""
     stamp = now.isoformat()
     conn.execute(
         """INSERT INTO price_fetch_misses(ticker, requested_start, requested_end, provider,
                                           last_state, attempts, first_missed_at, last_attempt_at)
            VALUES (?,?,?,?,?,1,?,?)
            ON CONFLICT(ticker, requested_start, requested_end, provider) DO UPDATE SET
-             last_state=excluded.last_state, attempts=attempts+1,
+             last_state=excluded.last_state,
+             attempts=attempts + (substr(last_attempt_at, 1, 10)
+                                  != substr(excluded.last_attempt_at, 1, 10)),
              last_attempt_at=excluded.last_attempt_at""",
-        (ticker, first, last, provider_name, state, stamp, stamp),
+        (ticker, first, last, series, state, stamp, stamp),
     )
-    conn.commit()
 
 
 def _utc_timestamp(value=None):
@@ -319,28 +338,36 @@ def ensure_window(
             return "error"
         if get_open_close(conn, ticker, first, last) is not None:
             return "ok"
-    memo_key = (ticker, first, last, expected_provider)
+    if now is not None:
+        now = _as_utc(now)
+    series = _series_key(expected_provider, interval, adjustment_basis, currency)
+    memo_key = (ticker, first, last, series)
     if run_memo is not None and memo_key in run_memo:
         return run_memo[memo_key]
     if now is not None:
-        _ensure_cache_schema(conn)
-        remembered = _miss_skip(conn, ticker, first, last, expected_provider, now)
+        # get_window_metadata above has ensured the cache schema.
+        remembered = _miss_skip(conn, ticker, first, last, series, now)
         if remembered is not None:
             return remembered
+
+    def finish(state, *, remember):
+        if remember and now is not None:
+            _record_miss(conn, ticker, first, last, series, state, now)
+        if run_memo is not None:
+            run_memo[memo_key] = state
+        return state
+
     try:
         rows = _clean_rows(provider(ticker, start, end))
     except Exception as exc:
         logger.warning("price fetch failed for %s: %s", ticker, exc)
-        return "error"
+        return finish("error", remember=False)   # never stored as a miss
     endpoints = {row["session"]: row for row in rows}
-    if not rows or (endpoints.get(first, {}).get("open") is None
-                    or endpoints.get(last, {}).get("close") is None):
-        state = "empty" if not rows else "incomplete"
-        if now is not None:
-            _record_miss(conn, ticker, first, last, expected_provider, state, now)
-        if run_memo is not None:
-            run_memo[memo_key] = state
-        return state
+    if not rows:
+        return finish("empty", remember=True)
+    if (endpoints.get(first, {}).get("open") is None
+            or endpoints.get(last, {}).get("close") is None):
+        return finish("incomplete", remember=True)
     cache_rows(
         conn,
         ticker,
@@ -351,19 +378,19 @@ def ensure_window(
         requested_end=last,
         adjustment_basis=adjustment_basis,
         currency=currency,
-        acquired_at=acquired_at,
+        acquired_at=acquired_at or now,
     )
     if get_open_close(conn, ticker, first, last) is None:
-        if now is not None:
-            _record_miss(conn, ticker, first, last, expected_provider, "incomplete", now)
-        if run_memo is not None:
-            run_memo[memo_key] = "incomplete"
+        # Both endpoints arrived, yet the window cannot be read: an existing
+        # binding is stale. Surface it every run rather than backing off.
+        logger.warning("price window %s %s..%s stays unreadable after a complete "
+                       "fetch; check its price_windows binding", ticker, first, last)
         conn.commit()
-        return "incomplete"
+        return finish("incomplete", remember=False)
     conn.execute(
         """DELETE FROM price_fetch_misses
            WHERE ticker=? AND requested_start=? AND requested_end=? AND provider=?""",
-        (ticker, first, last, expected_provider),
+        (ticker, first, last, series),
     )
     conn.commit()
     return "ok"

@@ -207,7 +207,17 @@ def _append_revision(conn, record_id, horizon, latest, state, now):
     return True
 
 
-def _needs_work(row, latest, now):
+def _first_revision_at(conn, record_id, horizon, basis_run_id):
+    row = conn.execute(
+        """SELECT revised_at FROM outcome_revisions
+           WHERE record_id=? AND horizon=? AND basis_run_id=?
+           ORDER BY revision_number LIMIT 1""",
+        (record_id, horizon, basis_run_id),
+    ).fetchone()
+    return row["revised_at"] if row else None
+
+
+def _needs_work(row, latest, now, first_published=None):
     if row["status"] == "pending":
         return True
     if latest is None:
@@ -218,11 +228,12 @@ def _needs_work(row, latest, now):
         return True
     if latest["benchmark_status"] not in _RETRYABLE_BENCHMARK:
         return False
-    # Bounded retry: BENCHMARK_RETRY_DAYS after this revision was published,
-    # it stands (stats already exclude partial/unavailable benchmarks). The
-    # window starts at publication, not the exit session, so an outcome that
-    # first matures late (e.g. after weeks without runs) still gets retries.
-    published = _parse_utc(latest["revised_at"])
+    # Bounded retry: BENCHMARK_RETRY_DAYS after the first revision for this
+    # basis was published, the latest stands (stats already exclude
+    # partial/unavailable benchmarks). Counting from publication, not the
+    # exit session, gives a late-maturing outcome its retries; counting from
+    # the first revision stops each partial improvement restarting the clock.
+    published = _parse_utc(first_published or latest["revised_at"])
     return now - published <= timedelta(days=BENCHMARK_RETRY_DAYS)
 
 
@@ -253,7 +264,12 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
         run_memo = {}  # empty/incomplete price windows already fetched in this run
         for row in candidates:
             latest = _latest_revision(conn, row["record_id"], row["horizon"])
-            if not _needs_work(row, latest, now):
+            first_published = (
+                _first_revision_at(conn, row["record_id"], row["horizon"], row["basis_run_id"])
+                if latest is not None and latest["benchmark_status"] in _RETRYABLE_BENCHMARK
+                else None
+            )
+            if not _needs_work(row, latest, now, first_published):
                 continue
             generated = _parse_utc(row["generated_at"])
             cache_key = generated.date().isoformat()

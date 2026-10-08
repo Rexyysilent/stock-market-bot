@@ -139,3 +139,15 @@ class RetryCapIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FirstPublicationAnchorTests(unittest.TestCase):
+    def test_partial_improvements_do_not_restart_the_window(self):
+        # First published partial on day 0; a member recovered on day 10 and
+        # published another partial revision. Day 15 is past the window
+        # measured from the first publication.
+        latest = _latest("partial", revised_at="2026-10-02T12:00:00Z")
+        now = datetime(2026, 9, 22, 12, tzinfo=timezone.utc) + timedelta(days=BENCHMARK_RETRY_DAYS + 1)
+        self.assertFalse(_needs_work(_row(), latest, now,
+                                     first_published="2026-09-22T12:00:00Z"))
+        self.assertTrue(_needs_work(_row(), latest, now))   # without the anchor: latest only

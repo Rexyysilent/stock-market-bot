@@ -54,14 +54,17 @@ class FetchBackoffTests(unittest.TestCase):
     def test_old_empty_window_is_retried_at_most_once_per_backoff(self):
         provider = Recorder()
         first = _at(30)
-        self.assertEqual(ensure_window(self.conn, "TWO", START, END, provider, now=first), "empty")
-        for day in range(1, PRICE_MISS_BACKOFF_DAYS):
+        # Misses on two different days start the backoff.
+        for day in (0, 1):
             self.assertEqual(ensure_window(self.conn, "TWO", START, END, provider,
                                            now=first + timedelta(days=day)), "empty")
-        self.assertEqual(provider.calls, 1)
-        ensure_window(self.conn, "TWO", START, END, provider,
-                      now=first + timedelta(days=PRICE_MISS_BACKOFF_DAYS))
+        for day in range(2, 1 + PRICE_MISS_BACKOFF_DAYS):
+            self.assertEqual(ensure_window(self.conn, "TWO", START, END, provider,
+                                           now=first + timedelta(days=day)), "empty")
         self.assertEqual(provider.calls, 2)
+        ensure_window(self.conn, "TWO", START, END, provider,
+                      now=first + timedelta(days=1 + PRICE_MISS_BACKOFF_DAYS))
+        self.assertEqual(provider.calls, 3)
 
     def test_recent_empty_window_is_retried_every_run_but_once_per_run(self):
         provider = Recorder()
@@ -117,9 +120,10 @@ class PendingOutcomeBackoffTests(unittest.TestCase):
             for day in range(14):
                 mature_outcomes(db_path, now=first + timedelta(days=day),
                                 provider=provider, schedule_provider=_schedule)
-            # The horizon-1 window ended 2026-09-22, long ago: two attempts in
-            # fourteen daily runs (days 0 and 7) instead of fourteen.
-            self.assertEqual(calls.count("AAA"), 2)
+            # The horizon-1 window ended 2026-09-22, long ago: three attempts in
+            # fourteen daily runs (days 0 and 1 start the backoff, then day 8)
+            # instead of fourteen.
+            self.assertEqual(calls.count("AAA"), 3)
             conn = connect(db_path)
             try:
                 status = conn.execute(
@@ -131,3 +135,74 @@ class PendingOutcomeBackoffTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FetchBackoffReviewTests(unittest.TestCase):
+    """Second review of the backoff (b382311)."""
+
+    def setUp(self):
+        self.tempdir = TemporaryDirectory()
+        self.conn = connect(Path(self.tempdir.name) / "ledger.db")
+
+    def tearDown(self):
+        self.conn.close()
+        self.tempdir.cleanup()
+
+    def test_one_empty_result_does_not_start_a_backoff(self):
+        # yfinance returns an empty frame on rate limits and network blips.
+        provider = Recorder()
+        ensure_window(self.conn, "SPY", START, END, provider, now=_at(30))
+        ensure_window(self.conn, "SPY", START, END, provider, now=_at(31))
+        self.assertEqual(provider.calls, 2)
+        ensure_window(self.conn, "SPY", START, END, provider, now=_at(32))
+        self.assertEqual(provider.calls, 2)   # two misses on different days: back off
+
+    def test_backoff_counts_calendar_days(self):
+        provider = Recorder()
+        first = datetime(2026, 10, 1, 9, 5, tzinfo=timezone.utc)
+        ensure_window(self.conn, "TWO", START, END, provider, now=first)
+        ensure_window(self.conn, "TWO", START, END, provider, now=first + timedelta(days=1))
+        # A week later the scheduled run starts five minutes earlier.
+        ensure_window(self.conn, "TWO", START, END, provider,
+                      now=first + timedelta(days=1 + PRICE_MISS_BACKOFF_DAYS, minutes=-5))
+        self.assertEqual(provider.calls, 3)
+
+    def test_errors_are_fetched_once_per_run(self):
+        calls = []
+
+        def broken(ticker, start, end):
+            calls.append(ticker)
+            raise RuntimeError("timeout")
+        memo = {}
+        for _ in range(3):
+            self.assertEqual(ensure_window(self.conn, "SPY", START, END, broken,
+                                           now=_at(30), run_memo=memo), "error")
+        self.assertEqual(len(calls), 1)
+
+    def test_naive_and_aware_clocks_both_work(self):
+        provider = Recorder()
+        ensure_window(self.conn, "TWO", START, END, provider, now=_at(30))
+        naive = _at(31).replace(tzinfo=None)
+        self.assertEqual(ensure_window(self.conn, "TWO", START, END, provider, now=naive), "empty")
+
+    def test_a_different_series_identity_is_not_suppressed(self):
+        provider = Recorder()
+        for day in (30, 31):
+            ensure_window(self.conn, "TWO", START, END, provider, now=_at(day))
+        ensure_window(self.conn, "TWO", START, END, provider, now=_at(32), adjustment_basis="raw")
+        self.assertEqual(provider.calls, 3)
+
+    def test_a_stuck_binding_is_not_hidden_behind_the_backoff(self):
+        good = Recorder([{"session": "2026-08-20", "open": 10, "close": 10},
+                         {"session": "2026-08-27", "open": 11, "close": 11}])
+        self.assertEqual(ensure_window(self.conn, "AAA", START, END, good, now=_at(30)), "ok")
+        # Corrupt the bound acquisition's endpoint so it can never satisfy the window.
+        self.conn.execute("UPDATE price_points SET close=NULL WHERE session='2026-08-27'")
+        self.conn.execute("DELETE FROM price_windows")
+        self.conn.execute(
+            "INSERT INTO price_windows SELECT 'AAA','2026-08-20','2026-08-27',acquisition_id "
+            "FROM price_acquisitions LIMIT 1")
+        self.conn.commit()
+        with self.assertLogs("SignalLedger.Prices", level="WARNING"):
+            ensure_window(self.conn, "AAA", START, END, good, now=_at(31))
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM price_fetch_misses").fetchone()[0], 0)
