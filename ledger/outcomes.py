@@ -12,7 +12,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from .config import BENCHMARK, DB_PATH, UNIVERSE_TICKERS
+from .config import BENCHMARK, BENCHMARK_RETRY_DAYS, DB_PATH, UNIVERSE_TICKERS
 from .db import connect
 from .prices import ensure_window, fetch_yfinance, get_open_close, get_window_metadata
 
@@ -207,7 +207,7 @@ def _append_revision(conn, record_id, horizon, latest, state, now):
     return True
 
 
-def _needs_work(row, latest):
+def _needs_work(row, latest, now):
     if row["status"] == "pending":
         return True
     if latest is None:
@@ -216,7 +216,12 @@ def _needs_work(row, latest):
         return False
     if latest["basis_run_id"] != row["basis_run_id"]:
         return True
-    return latest["benchmark_status"] in _RETRYABLE_BENCHMARK
+    if latest["benchmark_status"] not in _RETRYABLE_BENCHMARK:
+        return False
+    # Bounded retry: after BENCHMARK_RETRY_DAYS the last revision stands
+    # (stats already exclude partial/unavailable benchmarks).
+    exit_date = date.fromisoformat(latest["exit_session"])
+    return (now.date() - exit_date).days <= BENCHMARK_RETRY_DAYS
 
 
 def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
@@ -245,7 +250,7 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
         schedule_cache = {}
         for row in candidates:
             latest = _latest_revision(conn, row["record_id"], row["horizon"])
-            if not _needs_work(row, latest):
+            if not _needs_work(row, latest, now):
                 continue
             generated = _parse_utc(row["generated_at"])
             cache_key = generated.date().isoformat()

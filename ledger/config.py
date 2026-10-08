@@ -8,6 +8,10 @@ from config import (
 
 HORIZONS = (1, 5, 20)
 BENCHMARK = "SPY"
+# A partial or unavailable frozen-cohort benchmark is retried for this many
+# calendar days after the outcome's exit session, then left as published.
+# Without a bound, a delisted cohort member was re-downloaded on every run.
+BENCHMARK_RETRY_DAYS = 14
 BURST_MIN = 3.0
 BURST_MIN_MENTIONS = 10
 BURST_BUCKETS = (5.0, 10.0)
