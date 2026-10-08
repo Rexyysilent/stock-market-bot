@@ -71,9 +71,15 @@ def get_mcap_musd(ticker, now=None, allow_fetch=True):
     """Market cap in $M via a weekly cache; None on fetch failure (not cached).
 
     A cache entry is usable only when fetched at or before ``now`` and within
-    the maximum age; a future-dated entry is not fresh. Historical or strict
-    replay callers pass ``allow_fetch=False``: a live value cannot stand in
-    for a historical one, so an unusable cache yields None (unknown).
+    the maximum age; a future-dated entry is not fresh.
+
+    No current caller passes ``allow_fetch=False``. It is reached through
+    the live export's ``mcap_lookup`` and through ``update_social_signals``'
+    default ``mcap_lookup`` (which also fetches, on the wall clock). Any
+    future replay or backfill caller MUST pass an ``mcap_lookup`` that sets
+    ``allow_fetch=False`` and the historical ``now``, because a live value
+    cannot stand in for a historical one; an unusable cache then yields None
+    (unknown).
     """
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:

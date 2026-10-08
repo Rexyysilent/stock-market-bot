@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from .config import DB_PATH
+from .prices import _CACHE_SCHEMA
 
 
 SCHEMA = """
@@ -65,36 +66,11 @@ CREATE TABLE IF NOT EXISTS prices (
   PRIMARY KEY (ticker, session)
 );
 
--- Additive coherent price cache. The legacy prices table remains untouched;
--- its rows have no acquisition/basis identity and cannot satisfy new windows.
-CREATE TABLE IF NOT EXISTS price_acquisitions (
-  acquisition_id TEXT PRIMARY KEY,
-  ticker TEXT NOT NULL,
-  provider TEXT NOT NULL,
-  interval TEXT NOT NULL,
-  requested_start TEXT NOT NULL,
-  requested_end TEXT NOT NULL,
-  adjustment_basis TEXT NOT NULL,
-  currency TEXT,
-  acquired_at TEXT NOT NULL,
-  content_sha256 TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS price_points (
-  acquisition_id TEXT NOT NULL REFERENCES price_acquisitions(acquisition_id),
-  session TEXT NOT NULL,
-  open REAL,
-  close REAL,
-  PRIMARY KEY (acquisition_id, session)
-);
-
-CREATE TABLE IF NOT EXISTS price_windows (
-  ticker TEXT NOT NULL,
-  entry_session TEXT NOT NULL,
-  exit_session TEXT NOT NULL,
-  acquisition_id TEXT NOT NULL REFERENCES price_acquisitions(acquisition_id),
-  PRIMARY KEY (ticker, entry_session, exit_session)
-);
+-- The additive coherent price cache (price_acquisitions, price_points,
+-- price_windows) is defined once, in ledger/prices.py _CACHE_SCHEMA, and
+-- created by connect() before this schema. The legacy prices table above
+-- remains untouched; its rows have no acquisition/basis identity and cannot
+-- satisfy new windows.
 
 CREATE TABLE IF NOT EXISTS outcomes (
   record_id TEXT NOT NULL REFERENCES signals(record_id),
@@ -160,8 +136,6 @@ CREATE INDEX IF NOT EXISTS idx_signal_sightings_observed
 CREATE INDEX IF NOT EXISTS idx_outcomes_status ON outcomes(status);
 CREATE INDEX IF NOT EXISTS idx_outcome_revisions_latest
   ON outcome_revisions(record_id, horizon, revision_number);
-CREATE INDEX IF NOT EXISTS idx_price_acquisitions_ticker_range
-  ON price_acquisitions(ticker, requested_start, requested_end);
 """
 
 
@@ -172,6 +146,9 @@ def connect(path=DB_PATH):
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    # The price cache is defined once, in ledger/prices.py. (Order is not
+    # required by SQLite: a foreign key may name a table created later.)
+    conn.executescript(_CACHE_SCHEMA)
     conn.executescript(SCHEMA)
     cohort_columns = {
         row["name"] for row in conn.execute("PRAGMA table_info(run_cohorts)")

@@ -1448,6 +1448,7 @@ def _generate_daily_brief():
         social_attention,
         social_agent.get_apewisdom_top200(),
         run_date,
+        # Live export only: fetching is allowed here (replay must pass allow_fetch=False).
         mcap_lookup=lambda ticker: signals.get_mcap_musd(ticker, now=run_now),
         observed_at=run_context.started_at,
     )

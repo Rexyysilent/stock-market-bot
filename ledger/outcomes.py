@@ -12,7 +12,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from .config import BENCHMARK, DB_PATH, UNIVERSE_TICKERS
+from .config import BENCHMARK, BENCHMARK_RETRY_DAYS, DB_PATH, UNIVERSE_TICKERS
 from .db import connect
 from .prices import ensure_window, fetch_yfinance, get_open_close, get_window_metadata
 
@@ -77,7 +77,7 @@ def _window(sessions, generated, horizon, now):
     return sessions[entry_index][0], exit_session
 
 
-def _benchmark(conn, cohort, entry_session, exit_session, provider):
+def _benchmark(conn, cohort, entry_session, exit_session, provider, now=None, run_memo=None):
     """Frozen-cohort benchmark; never renormalizes a partial basket."""
     if cohort is None:
         return {"status": "refused", "reason": "no_archive_cohort",
@@ -101,7 +101,7 @@ def _benchmark(conn, cohort, entry_session, exit_session, provider):
     members, missing = {}, []
     contribution = covered_weight = 0.0
     for ticker in json.loads(cohort["members_json"]):
-        state = ensure_window(conn, ticker, entry_date, exit_date, provider)
+        state = ensure_window(conn, ticker, entry_date, exit_date, provider, now=now, run_memo=run_memo)
         value = None
         if state == "ok":
             value = _ret(get_open_close(conn, ticker, entry_session, exit_session))
@@ -207,7 +207,17 @@ def _append_revision(conn, record_id, horizon, latest, state, now):
     return True
 
 
-def _needs_work(row, latest):
+def _first_revision_at(conn, record_id, horizon, basis_run_id):
+    row = conn.execute(
+        """SELECT revised_at FROM outcome_revisions
+           WHERE record_id=? AND horizon=? AND basis_run_id=?
+           ORDER BY revision_number LIMIT 1""",
+        (record_id, horizon, basis_run_id),
+    ).fetchone()
+    return row["revised_at"] if row else None
+
+
+def _needs_work(row, latest, now, first_published=None):
     if row["status"] == "pending":
         return True
     if latest is None:
@@ -216,7 +226,15 @@ def _needs_work(row, latest):
         return False
     if latest["basis_run_id"] != row["basis_run_id"]:
         return True
-    return latest["benchmark_status"] in _RETRYABLE_BENCHMARK
+    if latest["benchmark_status"] not in _RETRYABLE_BENCHMARK:
+        return False
+    # Bounded retry: BENCHMARK_RETRY_DAYS after the first revision for this
+    # basis was published, the latest stands (stats already exclude
+    # partial/unavailable benchmarks). Counting from publication, not the
+    # exit session, gives a late-maturing outcome its retries; counting from
+    # the first revision stops each partial improvement restarting the clock.
+    published = _parse_utc(first_published or latest["revised_at"])
+    return now - published <= timedelta(days=BENCHMARK_RETRY_DAYS)
 
 
 def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
@@ -243,9 +261,15 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
                ORDER BY r.generated_at,o.record_id,o.horizon"""
         ).fetchall()
         schedule_cache = {}
+        run_memo = {}  # empty/incomplete price windows already fetched in this run
         for row in candidates:
             latest = _latest_revision(conn, row["record_id"], row["horizon"])
-            if not _needs_work(row, latest):
+            first_published = (
+                _first_revision_at(conn, row["record_id"], row["horizon"], row["basis_run_id"])
+                if latest is not None and latest["benchmark_status"] in _RETRYABLE_BENCHMARK
+                else None
+            )
+            if not _needs_work(row, latest, now, first_published):
                 continue
             generated = _parse_utc(row["generated_at"])
             cache_key = generated.date().isoformat()
@@ -260,8 +284,8 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
             entry_session, exit_session = window
             entry_date = date.fromisoformat(entry_session)
             exit_date = date.fromisoformat(exit_session)
-            ticker_state = ensure_window(conn, row["ticker"], entry_date, exit_date, provider)
-            benchmark_state = ensure_window(conn, BENCHMARK, entry_date, exit_date, provider)
+            ticker_state = ensure_window(conn, row["ticker"], entry_date, exit_date, provider, now=now, run_memo=run_memo)
+            benchmark_state = ensure_window(conn, BENCHMARK, entry_date, exit_date, provider, now=now, run_memo=run_memo)
             if "error" in (ticker_state, benchmark_state):
                 continue
             ticker_pair = get_open_close(conn, row["ticker"], entry_session, exit_session)
@@ -277,7 +301,7 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
             cohort = conn.execute(
                 "SELECT * FROM run_cohorts WHERE run_id=?", (row["basis_run_id"],)
             ).fetchone()
-            benchmark = _benchmark(conn, cohort, entry_session, exit_session, provider)
+            benchmark = _benchmark(conn, cohort, entry_session, exit_session, provider, now=now, run_memo=run_memo)
             signal_ret = _ret(ticker_pair)
             spy_ret = _ret(spy_pair)
             excess = None
