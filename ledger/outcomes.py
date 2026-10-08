@@ -77,7 +77,7 @@ def _window(sessions, generated, horizon, now):
     return sessions[entry_index][0], exit_session
 
 
-def _benchmark(conn, cohort, entry_session, exit_session, provider):
+def _benchmark(conn, cohort, entry_session, exit_session, provider, now=None, run_memo=None):
     """Frozen-cohort benchmark; never renormalizes a partial basket."""
     if cohort is None:
         return {"status": "refused", "reason": "no_archive_cohort",
@@ -101,7 +101,7 @@ def _benchmark(conn, cohort, entry_session, exit_session, provider):
     members, missing = {}, []
     contribution = covered_weight = 0.0
     for ticker in json.loads(cohort["members_json"]):
-        state = ensure_window(conn, ticker, entry_date, exit_date, provider)
+        state = ensure_window(conn, ticker, entry_date, exit_date, provider, now=now, run_memo=run_memo)
         value = None
         if state == "ok":
             value = _ret(get_open_close(conn, ticker, entry_session, exit_session))
@@ -218,10 +218,12 @@ def _needs_work(row, latest, now):
         return True
     if latest["benchmark_status"] not in _RETRYABLE_BENCHMARK:
         return False
-    # Bounded retry: after BENCHMARK_RETRY_DAYS the last revision stands
-    # (stats already exclude partial/unavailable benchmarks).
-    exit_date = date.fromisoformat(latest["exit_session"])
-    return (now.date() - exit_date).days <= BENCHMARK_RETRY_DAYS
+    # Bounded retry: BENCHMARK_RETRY_DAYS after this revision was published,
+    # it stands (stats already exclude partial/unavailable benchmarks). The
+    # window starts at publication, not the exit session, so an outcome that
+    # first matures late (e.g. after weeks without runs) still gets retries.
+    published = _parse_utc(latest["revised_at"])
+    return now - published <= timedelta(days=BENCHMARK_RETRY_DAYS)
 
 
 def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
@@ -248,6 +250,7 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
                ORDER BY r.generated_at,o.record_id,o.horizon"""
         ).fetchall()
         schedule_cache = {}
+        run_memo = {}  # empty/incomplete price windows already fetched in this run
         for row in candidates:
             latest = _latest_revision(conn, row["record_id"], row["horizon"])
             if not _needs_work(row, latest, now):
@@ -265,8 +268,8 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
             entry_session, exit_session = window
             entry_date = date.fromisoformat(entry_session)
             exit_date = date.fromisoformat(exit_session)
-            ticker_state = ensure_window(conn, row["ticker"], entry_date, exit_date, provider)
-            benchmark_state = ensure_window(conn, BENCHMARK, entry_date, exit_date, provider)
+            ticker_state = ensure_window(conn, row["ticker"], entry_date, exit_date, provider, now=now, run_memo=run_memo)
+            benchmark_state = ensure_window(conn, BENCHMARK, entry_date, exit_date, provider, now=now, run_memo=run_memo)
             if "error" in (ticker_state, benchmark_state):
                 continue
             ticker_pair = get_open_close(conn, row["ticker"], entry_session, exit_session)
@@ -282,7 +285,7 @@ def mature_outcomes(db_path=DB_PATH, now=None, provider=fetch_yfinance,
             cohort = conn.execute(
                 "SELECT * FROM run_cohorts WHERE run_id=?", (row["basis_run_id"],)
             ).fetchone()
-            benchmark = _benchmark(conn, cohort, entry_session, exit_session, provider)
+            benchmark = _benchmark(conn, cohort, entry_session, exit_session, provider, now=now, run_memo=run_memo)
             signal_ret = _ret(ticker_pair)
             spy_ret = _ret(spy_pair)
             excess = None

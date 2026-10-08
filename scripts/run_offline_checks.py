@@ -60,6 +60,7 @@ CHECKS = (
     'test_ledger_benchmark_revisions.py',
     'test_ledger_benchmark_retry_cap.py',
     'test_ledger_price_schema.py',
+    'test_ledger_price_fetch_backoff.py',
     'test_evaluation_holdout.py',
     'test_scheduled_launcher.py',
     'test_clock_guard.py',

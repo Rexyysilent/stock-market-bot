@@ -9,9 +9,15 @@ from config import (
 HORIZONS = (1, 5, 20)
 BENCHMARK = "SPY"
 # A partial or unavailable frozen-cohort benchmark is retried for this many
-# calendar days after the outcome's exit session, then left as published.
+# calendar days after that revision was published, then left as published.
 # Without a bound, a delisted cohort member was re-downloaded on every run.
 BENCHMARK_RETRY_DAYS = 14
+# Price windows that came back empty or incomplete: retried every run while
+# the window ended within PRICE_MISS_RECENT_DAYS, then at most once every
+# PRICE_MISS_BACKOFF_DAYS. A miss is never terminal (no unpriceable claim);
+# it only bounds re-downloads, e.g. of a delisted signal ticker.
+PRICE_MISS_RECENT_DAYS = 14
+PRICE_MISS_BACKOFF_DAYS = 7
 BURST_MIN = 3.0
 BURST_MIN_MENTIONS = 10
 BURST_BUCKETS = (5.0, 10.0)

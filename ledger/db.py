@@ -146,8 +146,8 @@ def connect(path=DB_PATH):
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
-    # outcome_revisions references price_acquisitions, so the price cache's
-    # single definition is created first.
+    # The price cache is defined once, in ledger/prices.py. (Order is not
+    # required by SQLite: a foreign key may name a table created later.)
     conn.executescript(_CACHE_SCHEMA)
     conn.executescript(SCHEMA)
     cohort_columns = {
