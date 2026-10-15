@@ -1,5 +1,32 @@
 # Integrated public release notes
 
+## Unreleased — brief quality (main after v2.6.5)
+
+Pipeline era stays 2.6.5 and schema identifiers stay 2.8/2.9; these are
+editorial and presentation changes, not measurement changes.
+
+- **Focus authority floor.** An editorial-focus candidate needs
+  `source_authority >= 1`. Rows whose source class has no authority score (the
+  Google aggregated-news fallback) or whose components are missing can no
+  longer be the focus, dynamically or through a pin. A pin with only such
+  evidence reports the existing `no_usable_fresh_evidence` reason; the focus
+  contract marker is unchanged.
+- **Publication projection.** After intake selection the exporter withholds
+  headlines already published on an earlier day inside the three-day window
+  (`publication_repeat`) and Nasdaq halt-feed records for instruments outside
+  the configured universe (`publication_unrelated_halt`). Withheld rows are
+  accounted in `headlines_dropped`, slots are not refilled, and
+  `data_quality.headline_publication` records the history inputs, counts and
+  every withheld row. `health.sources.news` reports the published rows with a
+  compact `publication` summary, and `health.warnings` carries a structured
+  warning for withheld rows and for history that is not clean, so the
+  dashboard and lean brief see publication underfill. An archive with rows
+  that cannot be compared makes the history `partial`. Official feed rows
+  now carry an explicit `source_parser`. Intake replay is unaffected.
+- **Known limit.** Repeat identity is the provider document identity, so an
+  updated article that keeps its source ID is withheld for the rest of the
+  window; the receipt shows each case as `matched_by: source_record_id`.
+
 ## 2.6.5 — measurement integrity
 
 Prepared September 23, 2026. Era 2.6.5 repairs how the ledger, statistics,

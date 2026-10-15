@@ -406,6 +406,15 @@ eligibility markers because focus evidence is a projection of the selected
 headline pool, not a new acquisition path. Stored schema-2.6 artifacts retain
 their legacy focus shape under the immutable 2.6 validator.
 
+Since the change after 2.6.5 a focus candidate must also carry
+`score_components.source_authority >= 1`. Rows whose source class has no
+authority score (the Google aggregated-news fallback) or whose components are
+missing score 0 and are excluded before ranking, for dynamic and configured
+selection alike. This is a behaviour change under the unchanged
+`2.7-editorial-focus-1` marker: a pin whose only evidence is below the floor
+reports the existing `no_usable_fresh_evidence` rejection, and no schema
+value changes.
+
 The runtime environment variable `FOCUS_TICKER` is the optional editorial
 override; unset or blank means dynamic selection. Its normalized public value is
 `universe.configured_focus_ticker`. A configured instrumented ticker must pass
@@ -600,6 +609,56 @@ provider, publisher, source class, raw and mapped tickers, summary, component
 scores, and duplicate lineage. A null lane is valid if and only if
 `reason=no_approved_lane`; it must have no universe mapping, zero issuer/macro
 scores, and must not satisfy the discovery-lane predicate.
+
+### Publication projection (after 2.6.5)
+
+Intake selection (the five-row cap, caps, dedupe, OMNI-02 capture and replay)
+is unchanged. A separate publication projection then runs in the exporter on
+the intake-selected rows and may withhold two kinds of row, which are appended
+to `data_quality.headlines_dropped` with a new `reason` so
+`fetched_count == published + dropped` still holds:
+
+- `publication_repeat`: an earlier day's archived brief inside the
+  `HEADLINES_MAX_AGE_DAYS` window already published the row. Identity is the
+  same non-empty `source_record_id`, or the same normalised title **and** the
+  same `as_of`; missing values never match, and `record_id` (a hash of the
+  rendered text) is not used.
+- `publication_unrelated_halt`: a Nasdaq halt-feed record whose instrument is
+  outside the configured universe. Halt records are identified only by the
+  explicit `source_parser: "nasdaq_halts"` value the halt parser sets; title
+  wording and publisher configuration are never used. Official feed rows carry
+  `source_parser` (`nasdaq_halts` or `generic`); other providers leave it null,
+  which means unknown and is never treated as a halt.
+
+Withheld slots are never refilled from dropped intake rows, so an underfilled
+section stays visible. `sections.headlines`, the text headline lines, the
+editorial-focus input, `summary.total_headlines` and the selected
+provider/publisher/lane diagnostics in `headline_pool` are all derived from
+the published rows. `health.sources.news` carries the same published pool
+plus a compact `publication` summary, and `health.warnings` gains a
+structured warning whenever rows were withheld or the repeat history is not
+clean, so the dashboard quality panel and the lean brief `health_summary`
+see publication underfill, not only the text brief.
+`data_quality.headline_publication` is the receipt:
+history `status` (`ok`, `empty`, `partial`, `unavailable`; `partial` also
+when any archive contained rows that could not be compared, because those
+are publications this run cannot see), the UTC date
+window, each archive consulted by file name and SHA-256 with its used and
+skipped row counts and a `complete` flag, files that could not be used and why, counts of
+same-day, future and out-of-window files ignored, target, intake and
+published counts, `underfill`, and every withheld row with `matched_by`
+(`source_record_id`, `title_as_of` or `source_parser`) and the matching
+archive. Only file names appear, never paths. A missing archive directory,
+an unreadable file, a file whose embedded `generated_at` disagrees with its
+canonical name, or a malformed row never aborts publication: the file or row
+contributes no identity and the receipt says so. Archives are never written.
+
+Deliberate limitation: `source_record_id` is a provider-scoped document
+identity, so an article that is updated but keeps its source ID is withheld
+for the rest of the window. Each such case is visible in the receipt as
+`matched_by: source_record_id`. Schema identifiers stay 2.8/2.9; the only
+schema change is the optional nullable `source_parser` property on selected
+and dropped headline rows.
 
 `scripts/validate_export_schema.py` supplements JSON Schema with marked-only
 cross-field checks: `selected_count` equals the selected-row count, the declared

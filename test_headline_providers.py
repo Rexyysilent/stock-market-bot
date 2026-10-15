@@ -144,7 +144,11 @@ official = OfficialFeedProvider(
 assert official.status == "ok"
 assert len(official.records) == 2
 assert official.metadata["partial_failures"] == 1
-assert all(set(row) == EXPECTED_FIELDS for row in official.records)
+# Official feed records additionally carry their explicit parser identity.
+assert all(
+    set(row) == EXPECTED_FIELDS | {"source_parser"} for row in official.records
+)
+assert all(row["source_parser"] == "generic" for row in official.records)
 assert official.records[0]["publisher"] == "Federal Reserve"
 assert official.records[0]["publisher_domain"] == "federalreserve.gov"
 assert official.records[0]["canonical_url"].endswith("pressreleases/a.htm")
@@ -183,6 +187,7 @@ nasdaq = OfficialFeedProvider(
 assert nasdaq.status == "ok" and len(nasdaq.records) == 2
 nasdaq_row = nasdaq.records[0]
 assert nasdaq_row["title"] == "TSLA (Tesla Inc.) trading halt - T1"
+assert nasdaq_row["source_parser"] == "nasdaq_halts"
 assert nasdaq_row["tickers"] == ["TSLA"]
 assert nasdaq_row["published"] == "2026-08-13T10:31:00-04:00"
 assert nasdaq_row["source_time_kind"] == "event_time"
