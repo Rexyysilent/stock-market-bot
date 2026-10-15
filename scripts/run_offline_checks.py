@@ -26,6 +26,7 @@ CHECKS = (
     'test_focus_authority_floor.py',
     'test_headline_lane_edges.py',
     'test_headline_export_contract.py',
+    'test_headline_publication.py',
     'test_export_schema.py',
     'test_signal_ledger.py',
     'test_sniper_signals.py',

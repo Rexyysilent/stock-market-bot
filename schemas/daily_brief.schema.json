@@ -870,7 +870,8 @@
           "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         },
-        "source": {"type": "string", "minLength": 1}
+        "source": {"type": "string", "minLength": 1},
+        "source_parser": {"type": ["string", "null"]}
       },
       "allOf": [
         {"$ref": "#/$defs/headline"},
@@ -952,7 +953,8 @@
           "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         },
-        "kept_source_record_id": {"type": ["string", "null"]}
+        "kept_source_record_id": {"type": ["string", "null"]},
+        "source_parser": {"type": ["string", "null"]}
       },
       "allOf": [
         {"$ref": "#/$defs/laneIntegrity"}

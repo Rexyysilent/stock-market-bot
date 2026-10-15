@@ -432,6 +432,7 @@ def _parse_generic_feed(
             summary=_child_text(entry, ("description", "summary", "content")),
         )
         if rec:
+            rec["source_parser"] = "generic"
             records.append(rec)
     return records
 
@@ -507,6 +508,9 @@ def _parse_nasdaq_halts(
         if rec:
             rec["canonical_url"] = None
             rec["source_record_id"] = make_source_record_id(provider, None, title, halt_timestamp, raw_id=f"{symbol or ''}|{halt_date or ''}|{halt_time or ''}|{reason or ''}")
+            # Explicit parser identity. Downstream publication rules key on
+            # this field, never on title wording or publisher configuration.
+            rec["source_parser"] = "nasdaq_halts"
             records.append(rec)
     return records
 

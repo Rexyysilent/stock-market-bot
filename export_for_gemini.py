@@ -58,6 +58,12 @@ from editorial_focus import (
 )
 import signals
 from coverage_policy import coverage_policy_manifest
+from headline_publication import (
+    apply_publication_filter,
+    load_publication_history,
+    publication_warning,
+)
+import config as runtime_config
 from lean_brief import LEAN_BRIEF_FILENAME, write_dated_lean_brief, write_lean_brief
 from stateutil import (
     atomic_text_writer,
@@ -747,6 +753,9 @@ def build_headline_export_records(headlines_scored):
             "publisher_domain": row.get("publisher_domain"),
             "source_class": row.get("source_class"),
             "source_record_id": row.get("source_record_id"),
+            # Explicit parser identity from the acquisition adapter, when the
+            # adapter records one. Null means unknown, never inferred.
+            "source_parser": row.get("source_parser"),
             "tickers": row.get("tickers", []),
             "summary": row.get("summary"),
             "duplicate_providers": row.get("duplicate_providers", []),
@@ -792,6 +801,7 @@ def build_dropped_headline_export_records(headlines_dropped):
             "publisher_domain": row.get("publisher_domain"),
             "source_class": row.get("source_class"),
             "source_record_id": row.get("source_record_id"),
+            "source_parser": row.get("source_parser"),
             "tickers": list(row.get("tickers") or []),
             "summary": row.get("summary"),
             "duplicate_providers": list(row.get("duplicate_providers") or []),
@@ -828,6 +838,35 @@ def normalize_headline_pool_diagnostics(
     normalized["selected_count"] = selected_count
     normalized["accounted_candidate_count"] = accounted_count
     normalized["selected_lane_counts"] = selected_lane_counts
+    # The agent computed its selected-row diagnostics on the intake selection.
+    # Re-derive them from the rows given here so publication withholding can
+    # never leave them stale. Keys absent from the input (fail-soft pool) stay
+    # absent; this only overwrites values that were reported.
+    rows = [row for row in selected_headlines if isinstance(row, dict)]
+    publisher_key = NewsAgent._publisher_key
+    derived = {
+        "selected_provider_counts": dict(Counter(
+            row.get("provider") or "unknown" for row in rows
+        )),
+        "selected_provider_lane_counts": dict(Counter(
+            f"{row.get('lane') or 'unknown'}:{row.get('provider') or 'unknown'}"
+            for row in rows
+        )),
+        "selected_publisher_counts": dict(Counter(
+            publisher_key(row) for row in rows
+        )),
+        "selected_publisher_lane_counts": dict(Counter(
+            f"{row.get('lane') or 'unknown'}:{publisher_key(row)}" for row in rows
+        )),
+        "unique_selected_publishers": len({publisher_key(row) for row in rows}),
+        "selected_publisher_max_share": NewsAgent._max_publisher_share(rows),
+        "google_selected_count": sum(
+            row.get("provider") == "Google News" for row in rows
+        ),
+    }
+    for key, value in derived.items():
+        if key in normalized:
+            normalized[key] = value
     if normalized["fetched_count"] != accounted_count:
         raise ValueError(
             "headline candidate accounting mismatch: "
@@ -1382,8 +1421,24 @@ def _generate_daily_brief():
 
     _openinsider_trades = collect_stage("openinsider", fut_openinsider, [])
     headlines = collect_stage("news", fut_news, [])
-    headlines_scored = news_agent.get_scored_headlines()  # data layer
+    headlines_intake = news_agent.get_scored_headlines()  # intake selection
     headlines_dropped = news_agent.get_dropped_headlines()  # all exclusions
+    # Publication projection: withhold earlier-day repeats and unrelated
+    # Nasdaq halt records from the intake selection. Withheld rows join the
+    # dropped accounting; nothing is refilled. Intake replay is untouched
+    # because its signature was fixed inside the agent. The archive directory
+    # is read through the config module so profile workspaces stay isolated.
+    publication_history = load_publication_history(
+        runtime_config.BRIEF_ARCHIVE_DIR, run_now, NewsAgent.HEADLINES_MAX_AGE_DAYS,
+    )
+    headlines_scored, headlines_withheld, headline_publication = (
+        apply_publication_filter(
+            headlines_intake, publication_history, NewsAgent.TARGET_COUNT,
+        )
+    )
+    headlines_dropped = headlines_dropped + headlines_withheld
+    # Text, JSON, focus input and totals all derive from the published rows.
+    headlines = [row["text"] for row in headlines_scored]
     headline_pool = news_agent.get_pool_diagnostics()
     headline_pool = normalize_headline_pool_diagnostics(
         headline_pool, headlines_scored, headlines_dropped
@@ -1587,6 +1642,9 @@ def _generate_daily_brief():
         f.write("-" * 40 + "\n")
         for h in headlines:
             f.write(f"- {h}\n")
+        publication_note = publication_warning(headline_publication)
+        if publication_note:
+            f.write(publication_note + "\n")
         f.write("\n")
 
         f.write("## ASSET PRICES (Source: yfinance)\n")
@@ -2212,6 +2270,9 @@ def _generate_daily_brief():
             headlines_dropped
         ),
         "headline_pool": headline_pool,
+        # Publication projection receipt: history inputs (file names and
+        # hashes only), counts, underfill and every withheld row.
+        "headline_publication": headline_publication,
         "fda_adcom_detail_failures": list(
             getattr(research_agent, "adcom_detail_failures", [])
         ),
@@ -2261,6 +2322,13 @@ def _generate_daily_brief():
         f"{headline_pool.get('fetched_count', 0)} fetched, "
         f"{headline_pool.get('fresh_before_relevance', 0)} fresh, "
         f"newest={headline_pool.get('newest_as_of')}"
+    )
+    print(
+        "  [data_quality] headline publication: "
+        f"{headline_publication['published_count']}/"
+        f"{headline_publication['intake_selected_count']} intake rows published, "
+        f"withheld={headline_publication['withheld']}, "
+        f"history={headline_publication['history']['status']}"
     )
 
     audit_signal_eligible_tickers(json_data)
