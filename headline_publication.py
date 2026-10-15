@@ -97,8 +97,9 @@ def load_publication_history(archive_dir, now, max_age_days):
     and invalid rows are skipped and counted.
 
     ``status`` is ``unavailable`` when the directory cannot be listed,
-    ``partial`` when at least one eligible file could not be used, ``empty``
-    when no eligible file exists, else ``ok``.
+    ``partial`` when at least one eligible file could not be used or
+    contained rows that could not be compared, ``empty`` when no eligible
+    file exists, else ``ok``.
     """
     today = _utc_date(now)
     start = today - timedelta(days=int(max_age_days))
@@ -185,8 +186,13 @@ def load_publication_history(archive_dir, now, max_age_days):
         history["archives"].append({
             "file": name, "sha256": sha, "rows": len(rows),
             "used_rows": used, "skipped_rows": skipped,
+            # An archive is complete only when every row could be compared.
+            # Skipped rows are publications this run cannot see, so repeat
+            # detection against that day is incomplete even if the file read.
+            "complete": skipped == 0,
         })
-    if history["unreadable"]:
+    incomplete = any(not entry["complete"] for entry in history["archives"])
+    if history["unreadable"] or incomplete:
         history["status"] = "partial"
     elif history["archives"]:
         history["status"] = "ok"
@@ -255,6 +261,46 @@ def apply_publication_filter(selected_rows, history, target_count):
         "withheld_rows": withheld_rows,
     }
     return published, withheld, receipt
+
+
+def publication_health_summary(receipt):
+    """Compact structured summary for ``health.sources.news.publication``."""
+    return {
+        "version": receipt["version"],
+        "history_status": receipt["history"]["status"],
+        "history_window_utc_dates": receipt["history"].get("window_utc_dates"),
+        "intake_selected_count": receipt["intake_selected_count"],
+        "published_count": receipt["published_count"],
+        "withheld": dict(receipt["withheld"]),
+        "underfill": receipt["underfill"],
+    }
+
+
+def publication_health_warnings(receipt):
+    """Health warnings for the structured ``health.warnings`` list.
+
+    These reach every consumer of health (text brief, dashboard quality panel,
+    lean brief ``health_summary``), unlike the headline-section text line.
+    """
+    warnings = []
+    withheld = sum(receipt["withheld"].values())
+    if withheld:
+        warnings.append(
+            "Headline publication withheld "
+            f"{withheld} of {receipt['intake_selected_count']} intake row(s) "
+            f"(repeats={receipt['withheld'][REASON_REPEAT]}, "
+            f"unrelated_halts={receipt['withheld'][REASON_UNRELATED_HALT]}); "
+            f"published {receipt['published_count']}/{receipt['target_count']}; "
+            "withheld slots are not refilled."
+        )
+    status = receipt["history"]["status"]
+    if status not in ("ok", "empty"):
+        window = receipt["history"].get("window_utc_dates") or ["?", "?"]
+        warnings.append(
+            f"Headline repeat history is {status} for UTC dates "
+            f"{window[0]}..{window[1]}; repeat suppression may be incomplete."
+        )
+    return warnings
 
 
 def publication_warning(receipt):

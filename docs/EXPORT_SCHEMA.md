@@ -634,10 +634,17 @@ Withheld slots are never refilled from dropped intake rows, so an underfilled
 section stays visible. `sections.headlines`, the text headline lines, the
 editorial-focus input, `summary.total_headlines` and the selected
 provider/publisher/lane diagnostics in `headline_pool` are all derived from
-the published rows. `data_quality.headline_publication` is the receipt:
-history `status` (`ok`, `empty`, `partial`, `unavailable`), the UTC date
+the published rows. `health.sources.news` carries the same published pool
+plus a compact `publication` summary, and `health.warnings` gains a
+structured warning whenever rows were withheld or the repeat history is not
+clean, so the dashboard quality panel and the lean brief `health_summary`
+see publication underfill, not only the text brief.
+`data_quality.headline_publication` is the receipt:
+history `status` (`ok`, `empty`, `partial`, `unavailable`; `partial` also
+when any archive contained rows that could not be compared, because those
+are publications this run cannot see), the UTC date
 window, each archive consulted by file name and SHA-256 with its used and
-skipped row counts, files that could not be used and why, counts of
+skipped row counts and a `complete` flag, files that could not be used and why, counts of
 same-day, future and out-of-window files ignored, target, intake and
 published counts, `underfill`, and every withheld row with `matched_by`
 (`source_record_id`, `title_as_of` or `source_parser`) and the matching

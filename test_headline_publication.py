@@ -206,10 +206,14 @@ with tempfile.TemporaryDirectory() as archive_dir:
         archived_row(None, "Orphan with title only", "   "),
     ])
     history = load_publication_history(archive_dir, NOW, WINDOW_DAYS)
-    assert history["status"] == "ok"
     day3 = history["archives"][-1]
     assert day3["file"] == "2026-08-16_120000Z.json"
     assert day3["used_rows"] == 1 and day3["skipped_rows"] == 2
+    # Rows that could not be compared are publications this run cannot see,
+    # so the archive is incomplete and the history is partial, not ok.
+    assert day3["complete"] is False
+    assert all(entry["complete"] for entry in history["archives"][:-1])
+    assert history["status"] == "partial", history["status"]
     recurring_new = selected_row(
         "official:x2", "Weekly reserve statement", as_of="2026-08-17T13:00:00Z",
     )
@@ -231,6 +235,27 @@ with tempfile.TemporaryDirectory() as archive_dir:
     assert [row["source_record_id"] for row in withheld] == ["official:x3"]
     assert receipt["withheld_rows"][0]["matched_by"] == "title_as_of"
     assert receipt["withheld_rows"][0]["matched_archive"] == day3["file"]
+    assert receipt["history"]["status"] == "partial"
+    assert "repeat history partial" in publication_warning(receipt)
+
+    # An archive whose every row is skipped reads but compares nothing. It
+    # must not count as clean history.
+    with tempfile.TemporaryDirectory() as skipped_dir:
+        write_archive(skipped_dir, "2026-08-16_120000Z", [
+            {"record_id": ["x"], "title": None, "as_of": None},
+            {"source_record_id": "", "title": "", "as_of": ""},
+        ])
+        all_skipped = load_publication_history(skipped_dir, NOW, WINDOW_DAYS)
+        assert all_skipped["status"] == "partial", all_skipped
+        assert all_skipped["archives"][0]["used_rows"] == 0
+        assert all_skipped["archives"][0]["skipped_rows"] == 2
+        assert all_skipped["archives"][0]["complete"] is False
+        assert all_skipped["unreadable"] == []
+        # An archive with a legitimately empty headline section is complete.
+        write_archive(skipped_dir, "2026-08-15_120000Z", [])
+        with_empty = load_publication_history(skipped_dir, NOW, WINDOW_DAYS)
+        assert with_empty["archives"][0]["complete"] is True
+        assert with_empty["status"] == "partial"  # the skipped file still counts
 
     # Case 5b: stable source ID with changed content and time. This is the
     # documented v1 limitation: the document identity wins and the row is
@@ -606,6 +631,153 @@ assert [row["text"] for row in published] == [
     "[Fixture Wire] NXE announces a financing",
     "[Fixture Wire] Treasury yields climb before the Fed decision",
 ]
+
+# ---------------------------------------------------------------------------
+# Structured health. Five intake rows that become three published rows must
+# be reported as three by health, with a publication warning that reaches
+# every health consumer (dashboard quality panel, lean brief health_summary),
+# and a partial history must be warned about there too.
+from export_for_gemini import build_export_health
+from headline_publication import (
+    publication_health_summary,
+    publication_health_warnings,
+)
+from lean_brief import build_lean_brief
+
+
+class HealthAgent:
+    def __init__(self, health=None):
+        self.health = health or {}
+
+    def get_health(self):
+        return dict(self.health)
+
+
+class IntakeNewsHealth:
+    """Agent diagnostics as the intake stage reports them: five selected."""
+
+    def get_pool_diagnostics(self):
+        return {
+            "fetched_count": 9, "fresh_before_relevance": 9,
+            "fresh_relevant_count": 5, "selected_count": 5,
+            "fallback_used": False, "providers": [],
+        }
+
+
+class ResearchHealth:
+    adcom_parse_failed = False
+    adcom_detail_failures = []
+
+    def get_ceo_ca_health(self):
+        return {}
+
+
+five_intake = [
+    selected_row("wire:a", "Story A", ticker="TSLA"),
+    selected_row("wire:b", "Story B", ticker="ROKU"),
+    selected_row("wire:c", "Story C"),
+    selected_row("wire:d", "Story D", ticker="NXE"),
+    classified(by_title["ZZZ (Zed Corp) trading halt - LUDP"]),
+]
+with tempfile.TemporaryDirectory() as archive_dir:
+    write_archive(archive_dir, "2026-08-16_120000Z", [
+        archived_row("wire:a", "Story A", "2026-08-16T11:00:00Z"),
+        {"record_id": ["malformed"], "title": None, "as_of": None},
+    ])
+    partial_history = load_publication_history(archive_dir, NOW, WINDOW_DAYS)
+assert partial_history["status"] == "partial"
+published, withheld, receipt = apply_publication_filter(
+    five_intake, partial_history, TARGET
+)
+assert receipt["intake_selected_count"] == 5 and receipt["published_count"] == 3
+pool = normalize_headline_pool_diagnostics(
+    {"fetched_count": 9, "fresh_before_relevance": 9, "fresh_relevant_count": 5,
+     "selected_count": 5, "fallback_used": False, "providers": []},
+    published,
+    [selected_row(f"wire:dropped-{i}", f"Dropped {i}") for i in range(4)] + withheld,
+)
+assert pool["selected_count"] == 3
+
+
+def health_for(headline_pool=None, headline_publication=None):
+    return build_export_health(
+        "2026-08-17T15:34:26Z", 1.0, [], {}, {}, [], [], {}, [], [], [],
+        IntakeNewsHealth(), HealthAgent(), HealthAgent(), HealthAgent(),
+        HealthAgent({
+            "openinsider_cluster_rows_considered": 0,
+            "openinsider_cluster_rows_eligible": 0,
+            "openinsider_cluster_rows_dropped": {},
+        }),
+        ResearchHealth(),
+        headline_pool=headline_pool,
+        headline_publication=headline_publication,
+    )
+
+
+health = health_for(pool, receipt)
+assert health["status"] == "WARN"
+assert health["sources"]["news"]["selected_count"] == 3, (
+    "health must report the published rows, not the intake selection"
+)
+assert health["sources"]["news"]["publication"] == publication_health_summary(receipt)
+assert health["sources"]["news"]["publication"]["published_count"] == 3
+assert health["sources"]["news"]["publication"]["underfill"] is True
+assert health["sources"]["news"]["publication"]["history_status"] == "partial"
+expected_warnings = publication_health_warnings(receipt)
+assert len(expected_warnings) == 2
+assert expected_warnings[0] == (
+    "Headline publication withheld 2 of 5 intake row(s) (repeats=1, "
+    "unrelated_halts=1); published 3/5; withheld slots are not refilled."
+)
+assert expected_warnings[1].startswith(
+    "Headline repeat history is partial for UTC dates 2026-08-14..2026-08-16"
+)
+for message in expected_warnings:
+    assert message in health["warnings"], health["warnings"]
+# Intake filled all five slots, so the intake-stage underfill warning stays
+# out: publication underfill is reported as publication underfill.
+assert not any(
+    warning.startswith("Publisher-diverse headline section underfilled")
+    for warning in health["warnings"]
+), health["warnings"]
+
+# A caller without the projection keeps the historical behaviour.
+legacy_health = health_for()
+assert legacy_health["sources"]["news"]["selected_count"] == 5
+assert "publication" not in legacy_health["sources"]["news"]
+assert not any("Headline publication" in w for w in legacy_health["warnings"])
+
+# An intake underfill is still reported from the intake count, and a clean
+# publication adds no publication warning.
+with tempfile.TemporaryDirectory() as archive_dir:
+    clean_history = load_publication_history(archive_dir, NOW, WINDOW_DAYS)
+three_intake = five_intake[:3]
+clean_published, clean_withheld, clean_receipt = apply_publication_filter(
+    three_intake, clean_history, TARGET
+)
+assert clean_withheld == [] and publication_health_warnings(clean_receipt) == []
+clean_pool = normalize_headline_pool_diagnostics(
+    {"fetched_count": 3, "fresh_before_relevance": 3, "fresh_relevant_count": 3,
+     "selected_count": 3, "fallback_used": False, "providers": []},
+    clean_published, [],
+)
+clean_health = health_for(clean_pool, clean_receipt)
+assert "Publisher-diverse headline section underfilled: 3/5." in clean_health["warnings"]
+assert clean_health["sources"]["news"]["publication"]["underfill"] is True
+assert not any("Headline publication" in w for w in clean_health["warnings"])
+
+# The lean brief's health_summary carries the structured warnings, so a
+# model-facing reader also sees the publication underfill.
+lean = build_lean_brief({
+    "schema_version": "2.8", "pipeline_version": "2.6.5",
+    "generated_at": "2026-08-17T15:34:26Z", "health": health,
+    "summary": {"total_headlines": 3}, "sections": {"headlines": []},
+    "data_quality": {"headline_publication": receipt},
+})
+assert any(
+    warning.startswith("Headline publication withheld 2 of 5")
+    for warning in lean["health_summary"]["warnings"]
+), lean["health_summary"]
 
 # Inputs are never mutated by the projection.
 pristine = deepcopy(intake_rows)

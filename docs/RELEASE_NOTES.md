@@ -17,8 +17,12 @@ editorial and presentation changes, not measurement changes.
   the configured universe (`publication_unrelated_halt`). Withheld rows are
   accounted in `headlines_dropped`, slots are not refilled, and
   `data_quality.headline_publication` records the history inputs, counts and
-  every withheld row. Official feed rows now carry an explicit
-  `source_parser`. Intake replay is unaffected.
+  every withheld row. `health.sources.news` reports the published rows with a
+  compact `publication` summary, and `health.warnings` carries a structured
+  warning for withheld rows and for history that is not clean, so the
+  dashboard and lean brief see publication underfill. An archive with rows
+  that cannot be compared makes the history `partial`. Official feed rows
+  now carry an explicit `source_parser`. Intake replay is unaffected.
 - **Known limit.** Repeat identity is the provider document identity, so an
   updated article that keeps its source ID is withheld for the rest of the
   window; the receipt shows each case as `matched_by: source_record_id`.

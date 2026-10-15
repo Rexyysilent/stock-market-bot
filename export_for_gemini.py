@@ -61,6 +61,8 @@ from coverage_policy import coverage_policy_manifest
 from headline_publication import (
     apply_publication_filter,
     load_publication_history,
+    publication_health_summary,
+    publication_health_warnings,
     publication_warning,
 )
 import config as runtime_config
@@ -1027,6 +1029,8 @@ def build_export_health(
     sec_agent,
     research_agent=None,
     pipeline_failures=None,
+    headline_pool=None,
+    headline_publication=None,
 ):
     warnings = []
     pipeline_failures = list(pipeline_failures or [])
@@ -1034,7 +1038,14 @@ def build_export_health(
         f"{failure['stage']}: {failure['error']}"
         for failure in pipeline_failures
     ]
-    news_health = news_agent.get_pool_diagnostics()
+    # Prefer the exporter's published, normalized pool so health reports the
+    # rows the brief actually carries, not the agent's intake selection. The
+    # agent diagnostics remain the fallback for callers without a projection.
+    news_health = (
+        dict(headline_pool)
+        if isinstance(headline_pool, dict)
+        else news_agent.get_pool_diagnostics()
+    )
     intake_health = news_health.get("evidence_intake") or {}
     if intake_health.get("status") == "error":
         _add_unique(warnings, "Shadow evidence intake failed; active headline selection is unchanged.")
@@ -1079,12 +1090,24 @@ def build_export_health(
                 "FMP Stock News is unavailable for this account; using the "
                 "narrower FMP Articles feed.",
             )
-    if news_health.get("selected_count", 0) < NewsAgent.TARGET_COUNT:
+    intake_selected = (
+        headline_publication.get("intake_selected_count")
+        if isinstance(headline_publication, dict)
+        else news_health.get("selected_count", 0)
+    )
+    if (intake_selected or 0) < NewsAgent.TARGET_COUNT:
         _add_unique(
             warnings,
             "Publisher-diverse headline section underfilled: "
-            f"{news_health.get('selected_count', 0)}/{NewsAgent.TARGET_COUNT}.",
+            f"{intake_selected or 0}/{NewsAgent.TARGET_COUNT}.",
         )
+    if isinstance(headline_publication, dict):
+        # Structured publication health: withheld rows and history status
+        # reach the dashboard quality panel and the lean brief through
+        # health.warnings; the compact summary sits beside the pool.
+        news_health["publication"] = publication_health_summary(headline_publication)
+        for message in publication_health_warnings(headline_publication):
+            _add_unique(warnings, message)
     social_source_counts = _count_social_sources(whispers)
     social_agent_health = _copy_health(social_agent)
     reddit_failure_count = (
@@ -1569,6 +1592,8 @@ def _generate_daily_brief():
             sec_agent,
             research_agent,
             pipeline_failures,
+            headline_pool=headline_pool,
+            headline_publication=headline_publication,
         )
     finally:
         openinsider_agent.close()
