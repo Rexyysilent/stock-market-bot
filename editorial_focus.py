@@ -359,8 +359,8 @@ def rank_focus_candidates(headlines, universe_tickers, generated_at):
 
     The caller must pass the NewsAgent's selected/scored records, never the raw
     or dropped pool.  This function still fail-closes on lane, mapped ticker,
-    URL, source time, and materiality so a configured focus cannot create an
-    empty ticker shell.
+    URL, source time, materiality, and source authority (>= 1) so a configured
+    focus cannot create an empty ticker shell or rest on an unscored source.
     """
     universe = {
         str(ticker).strip().upper()
@@ -390,10 +390,19 @@ def rank_focus_candidates(headlines, universe_tickers, generated_at):
             # A focus is one supported development, not an issuer-level blend
             # of unrelated stories. This prevents component maxima from being
             # borrowed across separate headlines for the same ticker.
+            #
+            # source_authority >= 1 is a hard floor, not a tie-breaker. A row
+            # whose source class has no authority score (for example the
+            # Google aggregated-news fallback) or whose components are missing
+            # scores 0 and can never be the focus, dynamic or configured. A
+            # configured ticker whose only evidence is below the floor is
+            # therefore absent from the ranked set and reports the existing
+            # no_usable_fresh_evidence rejection.
             if (
                 components["impact"] < 1
                 or components["audience_relevance"] < 1
                 or components["timeliness"] < 1
+                or components["source_authority"] < 1
             ):
                 continue
             candidate = {

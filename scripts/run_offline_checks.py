@@ -23,6 +23,7 @@ CHECKS = (
     'test_shadow_noninterference.py',
     'test_dynamic_focus.py',
     'test_focus_duplicate_occurrence.py',
+    'test_focus_authority_floor.py',
     'test_headline_lane_edges.py',
     'test_headline_export_contract.py',
     'test_export_schema.py',

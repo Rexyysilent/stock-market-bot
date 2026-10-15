@@ -406,6 +406,15 @@ eligibility markers because focus evidence is a projection of the selected
 headline pool, not a new acquisition path. Stored schema-2.6 artifacts retain
 their legacy focus shape under the immutable 2.6 validator.
 
+Since the change after 2.6.5 a focus candidate must also carry
+`score_components.source_authority >= 1`. Rows whose source class has no
+authority score (the Google aggregated-news fallback) or whose components are
+missing score 0 and are excluded before ranking, for dynamic and configured
+selection alike. This is a behaviour change under the unchanged
+`2.7-editorial-focus-1` marker: a pin whose only evidence is below the floor
+reports the existing `no_usable_fresh_evidence` rejection, and no schema
+value changes.
+
 The runtime environment variable `FOCUS_TICKER` is the optional editorial
 override; unset or blank means dynamic selection. Its normalized public value is
 `universe.configured_focus_ticker`. A configured instrumented ticker must pass
