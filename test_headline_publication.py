@@ -623,6 +623,26 @@ document["data_quality"]["headline_publication"] = receipt
 errors = validation_errors(document, load_json(DEFAULT_SCHEMA))
 assert errors == [], [str(error)[:300] for error in errors]
 
+# Publication withholding receives intake-selected provider rows. Their source
+# timestamps may still be naive (FMP) or offset-qualified (RSS); dropped rows
+# bypass add_record_metadata, so their export builder owns normalization.
+raw_withheld = deepcopy(withheld)
+raw_withheld[0].update({
+    "as_of": "2026-08-16 02:02:48",
+    "published": "2026-08-16 02:02:48",
+    "provider_seen_at": "2026-08-17T17:00:00+02:00",
+})
+normalized_drops = build_dropped_headline_export_records(raw_withheld)
+assert normalized_drops[0]["as_of"] == "2026-08-16T00:00:00Z", normalized_drops[0]
+assert normalized_drops[0]["observed_at"] == "2026-08-17T15:00:00Z"
+assert normalized_drops[0]["published"] == "2026-08-16 02:02:48"
+normalized_document = deepcopy(document)
+normalized_document["data_quality"]["headlines_dropped"] = normalized_drops
+assert validation_errors(normalized_document, load_json(DEFAULT_SCHEMA)) == []
+raw_withheld[0].update({"as_of": "unavailable", "provider_seen_at": "unavailable"})
+unknown_drop = build_dropped_headline_export_records(raw_withheld)[0]
+assert unknown_drop["as_of"] is None and unknown_drop["observed_at"] is None
+
 # The fail-soft pool contract is unchanged: absent diagnostics stay absent.
 assert "selected_provider_counts" not in normalize_headline_pool_diagnostics({}, [], [])
 
