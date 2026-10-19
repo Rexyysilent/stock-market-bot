@@ -1,0 +1,41 @@
+{
+  "contract": "omni-source-config-1",
+  "default_mode": "off",
+  "policies": {
+    "sec-edgar": {
+      "policy_id": "sec-edgar", "version": "metadata-internal-2",
+      "evidence": ["https://www.sec.gov/about/developer-resources", "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"],
+      "routes": [{"host": "www.sec.gov", "path_prefix": "/cgi-bin/browse-edgar"}, {"host": "www.sec.gov", "path_prefix": "/Archives/edgar/data/"}, {"host": "www.sec.gov", "path_prefix": "/Archives/edgar/daily-index/"}, {"host": "data.sec.gov", "path_prefix": "/submissions/"}],
+      "source_class": "filing", "reporting_parties": ["filing_issuer"],
+      "uses": {"acquire": true, "store_text": false, "local_analysis": false, "review_display": false, "model_processing": false, "commercial_display": false},
+      "scope": "Public filing metadata for local discovery. Body retention/display requires an operator-reviewed purpose policy; SEC hosting is not independent verification of issuer claims."
+    },
+    "clinicaltrials": {
+      "policy_id": "clinicaltrials", "version": "registry-metadata-1",
+      "evidence": ["https://clinicaltrials.gov/data-api/api", "https://clinicaltrials.gov/data-api/about-api/study-data-structure"],
+      "routes": [{"host": "clinicaltrials.gov", "path_prefix": "/api/v2/"}, {"host": "clinicaltrials.gov", "path_prefix": "/study/"}],
+      "source_class": "registry", "reporting_parties": ["registry_submitter"],
+      "uses": {"acquire": true, "store_text": false, "local_analysis": false, "review_display": false, "model_processing": false, "commercial_display": false},
+      "scope": "Structured trial metadata and hashes for local change tracking. Registry posting is not regulator approval or independent outcome verification."
+    },
+    "fda-oncology": {
+      "policy_id": "fda-oncology", "version": "notification-metadata-1",
+      "evidence": ["https://www.fda.gov/drugs/resources-information-approved-drugs/oncology-cancerhematologic-malignancies-approval-notifications"],
+      "routes": [{"host": "www.fda.gov", "path_prefix": "/drugs/resources-information-approved-drugs/"}],
+      "source_class": "regulator", "reporting_parties": ["FDA"],
+      "uses": {"acquire": true, "store_text": false, "local_analysis": false, "review_display": false, "model_processing": false, "commercial_display": false},
+      "scope": "FDA oncology/hematology notification index metadata only. Not comprehensive approval or label-change coverage."
+    },
+    "fda-medwatch": {
+      "policy_id": "fda-medwatch", "version": "safety-metadata-1",
+      "evidence": ["https://www.fda.gov/safety/medwatch-fda-safety-information-and-adverse-event-reporting-program/subscribe-medwatch-safety-alerts"],
+      "routes": [{"host": "www.fda.gov", "path_prefix": "/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/"}, {"host": "www.fda.gov", "path_prefix": "/safety/"}, {"host": "www.fda.gov", "path_prefix": "/drugs/drug-safety-and-availability/"}],
+      "source_class": "regulator", "reporting_parties": ["FDA"],
+      "uses": {"acquire": true, "store_text": false, "local_analysis": false, "review_display": false, "model_processing": false, "commercial_display": false},
+      "scope": "FDA MedWatch safety metadata. Not a comprehensive drug-approval feed or a causal interpretation of adverse-event reports."
+    }
+  },
+  "feeds": [{"policy_id": "fda-medwatch", "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml", "enabled": false}],
+  "issuer_feeds": [],
+  "issuer_feed_status": "Configure a specific reviewed issuer route; no whole-cohort fan-out."
+}

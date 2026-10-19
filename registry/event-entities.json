@@ -1,0 +1,2724 @@
+{
+  "version": "omni-identity-1",
+  "entities": [
+    {
+      "entity_id": "cik:0001682852",
+      "kind": "issuer",
+      "name": "Moderna, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001682852",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0000875320",
+      "kind": "issuer",
+      "name": "Vertex Pharmaceuticals Incorporated",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0000875320",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001745999",
+      "kind": "issuer",
+      "name": "Beam Therapeutics Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001745999",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001515673",
+      "kind": "issuer",
+      "name": "Ultragenyx Pharmaceutical Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001515673",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001868275",
+      "kind": "issuer",
+      "name": "Constellation Energy Corporation",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001868275",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001065059",
+      "kind": "issuer",
+      "name": "Centrus Energy Corp.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001065059",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001486957",
+      "kind": "issuer",
+      "name": "BWX Technologies, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001486957",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001996810",
+      "kind": "issuer",
+      "name": "GE Vernova Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001996810",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001801368",
+      "kind": "issuer",
+      "name": "MP Materials Corp.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001801368",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001045810",
+      "kind": "issuer",
+      "name": "NVIDIA Corporation",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001045810",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001819994",
+      "kind": "issuer",
+      "name": "Rocket Lab Corporation",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001819994",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001783879",
+      "kind": "issuer",
+      "name": "Robinhood Markets, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001783879",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0000310158",
+      "kind": "issuer",
+      "name": "Merck & Co., Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0000310158",
+      "evidence": [
+        "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "primary_verified"
+    },
+    {
+      "entity_id": "cik:0001318605",
+      "kind": "issuer",
+      "name": "Tesla, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001318605",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001428439",
+      "kind": "issuer",
+      "name": "ROKU, INC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001428439",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001321655",
+      "kind": "issuer",
+      "name": "Palantir Technologies Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001321655",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001674416",
+      "kind": "issuer",
+      "name": "CRISPR Therapeutics AG",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001674416",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001824502",
+      "kind": "issuer",
+      "name": "Archer Aviation Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001824502",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001594805",
+      "kind": "issuer",
+      "name": "SHOPIFY INC.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001594805",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001001838",
+      "kind": "issuer",
+      "name": "SOUTHERN COPPER CORP/",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001001838",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001652130",
+      "kind": "issuer",
+      "name": "Intellia Therapeutics, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001652130",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0000831259",
+      "kind": "issuer",
+      "name": "FREEPORT-MCMORAN INC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0000831259",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001674101",
+      "kind": "issuer",
+      "name": "Vertiv Holdings Co",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001674101",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001679788",
+      "kind": "issuer",
+      "name": "Coinbase Global, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001679788",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001874178",
+      "kind": "issuer",
+      "name": "Rivian Automotive, Inc. / DE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001874178",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0000006951",
+      "kind": "issuer",
+      "name": "APPLIED MATERIALS INC /DE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0000006951",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001347178",
+      "kind": "issuer",
+      "name": "Vanda Pharmaceuticals Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001347178",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001385849",
+      "kind": "issuer",
+      "name": "ENERGY FUELS INC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001385849",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001009001",
+      "kind": "issuer",
+      "name": "CAMECO CORP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001009001",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001698535",
+      "kind": "issuer",
+      "name": "NexGen Energy Ltd.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001698535",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001063259",
+      "kind": "issuer",
+      "name": "DENISON MINES CORP.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001063259",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0000936468",
+      "kind": "issuer",
+      "name": "LOCKHEED MARTIN CORP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0000936468",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001133421",
+      "kind": "issuer",
+      "name": "NORTHROP GRUMMAN CORP /DE/",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001133421",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "cik:0001590877",
+      "kind": "issuer",
+      "name": "REGENXBIO Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "cik": "0001590877",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:TSLA",
+      "kind": "security",
+      "name": "seed1:TSLA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:ROKU",
+      "kind": "security",
+      "name": "seed1:ROKU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:PLTR",
+      "kind": "security",
+      "name": "seed1:PLTR",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:CRSP",
+      "kind": "security",
+      "name": "seed1:CRSP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:ACHR",
+      "kind": "security",
+      "name": "seed1:ACHR",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:SHOP",
+      "kind": "security",
+      "name": "seed1:SHOP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:SCCO",
+      "kind": "security",
+      "name": "seed1:SCCO",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:NTLA",
+      "kind": "security",
+      "name": "seed1:NTLA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:FCX",
+      "kind": "security",
+      "name": "seed1:FCX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:VRT",
+      "kind": "security",
+      "name": "seed1:VRT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:COIN",
+      "kind": "security",
+      "name": "seed1:COIN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:RIVN",
+      "kind": "security",
+      "name": "seed1:RIVN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:AMAT",
+      "kind": "security",
+      "name": "seed1:AMAT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:VNDA",
+      "kind": "security",
+      "name": "seed1:VNDA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:UUUU",
+      "kind": "security",
+      "name": "seed1:UUUU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:CCJ",
+      "kind": "security",
+      "name": "seed1:CCJ",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:NXE",
+      "kind": "security",
+      "name": "seed1:NXE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:DNN",
+      "kind": "security",
+      "name": "seed1:DNN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:LMT",
+      "kind": "security",
+      "name": "seed1:LMT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:NOC",
+      "kind": "security",
+      "name": "seed1:NOC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:RGNX",
+      "kind": "security",
+      "name": "seed1:RGNX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:MRNA",
+      "kind": "security",
+      "name": "seed1:MRNA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:VRTX",
+      "kind": "security",
+      "name": "seed1:VRTX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:BEAM",
+      "kind": "security",
+      "name": "seed1:BEAM",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:RARE",
+      "kind": "security",
+      "name": "seed1:RARE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:CEG",
+      "kind": "security",
+      "name": "seed1:CEG",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:LEU",
+      "kind": "security",
+      "name": "seed1:LEU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:BWXT",
+      "kind": "security",
+      "name": "seed1:BWXT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:GEV",
+      "kind": "security",
+      "name": "seed1:GEV",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:MP",
+      "kind": "security",
+      "name": "seed1:MP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:NVDA",
+      "kind": "security",
+      "name": "seed1:NVDA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:RKLB",
+      "kind": "security",
+      "name": "seed1:RKLB",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:HOOD",
+      "kind": "security",
+      "name": "seed1:HOOD",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "snapshot_matched"
+    },
+    {
+      "entity_id": "seed1:MRK",
+      "kind": "security",
+      "name": "seed1:MRK",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ],
+      "verification": "primary_verified"
+    },
+    {
+      "entity_id": "issuer:merck-kgaa-de",
+      "kind": "issuer",
+      "name": "Merck KGaA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-kgaa-identity"
+      ],
+      "verification": "primary_verified"
+    },
+    {
+      "entity_id": "asset:intismeran",
+      "kind": "asset",
+      "name": "intismeran autogene",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "verification": "primary_verified"
+    },
+    {
+      "entity_id": "asset:pembrolizumab",
+      "kind": "asset",
+      "name": "pembrolizumab",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "verification": "primary_verified"
+    },
+    {
+      "entity_id": "trial:NCT05933577",
+      "kind": "trial",
+      "name": "INTerpath-001",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "verification": "primary_verified",
+      "phase": "PHASE3",
+      "indication": "resected stage IIB-IV cutaneous melanoma"
+    },
+    {
+      "entity_id": "trial:NCT03897881",
+      "kind": "trial",
+      "name": "KEYNOTE-942",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-keynote-20260601"
+      ],
+      "verification": "primary_verified",
+      "phase": "PHASE2",
+      "indication": "resected high-risk stage III-IV melanoma"
+    }
+  ],
+  "aliases": [
+    {
+      "entity_id": "cik:0001682852",
+      "alias": "Moderna, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000875320",
+      "alias": "Vertex Pharmaceuticals Incorporated",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001745999",
+      "alias": "Beam Therapeutics Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001515673",
+      "alias": "Ultragenyx Pharmaceutical Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001868275",
+      "alias": "Constellation Energy Corporation",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001065059",
+      "alias": "Centrus Energy Corp.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001486957",
+      "alias": "BWX Technologies, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001996810",
+      "alias": "GE Vernova Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001801368",
+      "alias": "MP Materials Corp.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001045810",
+      "alias": "NVIDIA Corporation",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001819994",
+      "alias": "Rocket Lab Corporation",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001783879",
+      "alias": "Robinhood Markets, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000310158",
+      "alias": "Merck & Co., Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001318605",
+      "alias": "Tesla, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001428439",
+      "alias": "ROKU, INC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001321655",
+      "alias": "Palantir Technologies Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674416",
+      "alias": "CRISPR Therapeutics AG",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001824502",
+      "alias": "Archer Aviation Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001594805",
+      "alias": "SHOPIFY INC.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001001838",
+      "alias": "SOUTHERN COPPER CORP/",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001652130",
+      "alias": "Intellia Therapeutics, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000831259",
+      "alias": "FREEPORT-MCMORAN INC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674101",
+      "alias": "Vertiv Holdings Co",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001679788",
+      "alias": "Coinbase Global, Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001874178",
+      "alias": "Rivian Automotive, Inc. / DE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000006951",
+      "alias": "APPLIED MATERIALS INC /DE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001347178",
+      "alias": "Vanda Pharmaceuticals Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001385849",
+      "alias": "ENERGY FUELS INC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001009001",
+      "alias": "CAMECO CORP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001698535",
+      "alias": "NexGen Energy Ltd.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001063259",
+      "alias": "DENISON MINES CORP.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000936468",
+      "alias": "LOCKHEED MARTIN CORP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001133421",
+      "alias": "NORTHROP GRUMMAN CORP /DE/",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001590877",
+      "alias": "REGENXBIO Inc.",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001318605",
+      "alias": "NASDAQ:TSLA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001318605",
+      "alias": "NASDAQ: TSLA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001318605",
+      "alias": "tesla",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001428439",
+      "alias": "NASDAQ:ROKU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001428439",
+      "alias": "NASDAQ: ROKU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001428439",
+      "alias": "roku",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001321655",
+      "alias": "NASDAQ:PLTR",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001321655",
+      "alias": "NASDAQ: PLTR",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001321655",
+      "alias": "palantir",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674416",
+      "alias": "NASDAQ:CRSP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674416",
+      "alias": "NASDAQ: CRSP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674416",
+      "alias": "crispr therapeutics",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001824502",
+      "alias": "NYSE:ACHR",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001824502",
+      "alias": "NYSE: ACHR",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001824502",
+      "alias": "archer aviation",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001594805",
+      "alias": "NASDAQ:SHOP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001594805",
+      "alias": "NASDAQ: SHOP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001594805",
+      "alias": "shopify",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001001838",
+      "alias": "NYSE:SCCO",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001001838",
+      "alias": "NYSE: SCCO",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001001838",
+      "alias": "southern copper",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001652130",
+      "alias": "NASDAQ:NTLA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001652130",
+      "alias": "NASDAQ: NTLA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001652130",
+      "alias": "intellia",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000831259",
+      "alias": "NYSE:FCX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000831259",
+      "alias": "NYSE: FCX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000831259",
+      "alias": "freeport",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674101",
+      "alias": "NYSE:VRT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674101",
+      "alias": "NYSE: VRT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001674101",
+      "alias": "vertiv",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001679788",
+      "alias": "NASDAQ:COIN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001679788",
+      "alias": "NASDAQ: COIN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001679788",
+      "alias": "coinbase",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001874178",
+      "alias": "NASDAQ:RIVN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001874178",
+      "alias": "NASDAQ: RIVN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001874178",
+      "alias": "rivian",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000006951",
+      "alias": "NASDAQ:AMAT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000006951",
+      "alias": "NASDAQ: AMAT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000006951",
+      "alias": "applied materials",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001347178",
+      "alias": "NASDAQ:VNDA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001347178",
+      "alias": "NASDAQ: VNDA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001347178",
+      "alias": "vanda",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001385849",
+      "alias": "NYSE AMERICAN:UUUU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001385849",
+      "alias": "NYSE AMERICAN: UUUU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001385849",
+      "alias": "energy fuels",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001009001",
+      "alias": "NYSE:CCJ",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001009001",
+      "alias": "NYSE: CCJ",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001009001",
+      "alias": "cameco",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001698535",
+      "alias": "NYSE:NXE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001698535",
+      "alias": "NYSE: NXE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001698535",
+      "alias": "nexgen",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001063259",
+      "alias": "NYSE AMERICAN:DNN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001063259",
+      "alias": "NYSE AMERICAN: DNN",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001063259",
+      "alias": "denison",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000936468",
+      "alias": "NYSE:LMT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000936468",
+      "alias": "NYSE: LMT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000936468",
+      "alias": "lockheed",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001133421",
+      "alias": "NYSE:NOC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001133421",
+      "alias": "NYSE: NOC",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001133421",
+      "alias": "northrop",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001590877",
+      "alias": "NASDAQ:RGNX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001590877",
+      "alias": "NASDAQ: RGNX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001590877",
+      "alias": "regenxbio",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:instrumented",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001682852",
+      "alias": "NASDAQ:MRNA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001682852",
+      "alias": "NASDAQ: MRNA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001682852",
+      "alias": "moderna",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000875320",
+      "alias": "NASDAQ:VRTX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000875320",
+      "alias": "NASDAQ: VRTX",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000875320",
+      "alias": "vertex pharmaceuticals",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001745999",
+      "alias": "NASDAQ:BEAM",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001745999",
+      "alias": "NASDAQ: BEAM",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001745999",
+      "alias": "beam therapeutics",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001515673",
+      "alias": "NASDAQ:RARE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001515673",
+      "alias": "NASDAQ: RARE",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001515673",
+      "alias": "ultragenyx",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001868275",
+      "alias": "NASDAQ:CEG",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001868275",
+      "alias": "NASDAQ: CEG",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001868275",
+      "alias": "constellation energy",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001065059",
+      "alias": "NYSE:LEU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001065059",
+      "alias": "NYSE: LEU",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001065059",
+      "alias": "centrus energy",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001486957",
+      "alias": "NYSE:BWXT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001486957",
+      "alias": "NYSE: BWXT",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001486957",
+      "alias": "bwx technologies",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001996810",
+      "alias": "NYSE:GEV",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001996810",
+      "alias": "NYSE: GEV",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001996810",
+      "alias": "ge vernova",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001801368",
+      "alias": "NYSE:MP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001801368",
+      "alias": "NYSE: MP",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001801368",
+      "alias": "mp materials",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0001045810",
+      "alias": "NASDAQ:NVDA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001045810",
+      "alias": "NASDAQ: NVDA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001045810",
+      "alias": "nvidia",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001819994",
+      "alias": "NASDAQ:RKLB",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001819994",
+      "alias": "NASDAQ: RKLB",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001819994",
+      "alias": "rocket lab",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001783879",
+      "alias": "NASDAQ:HOOD",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001783879",
+      "alias": "NASDAQ: HOOD",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001783879",
+      "alias": "robinhood markets",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0001783879",
+      "alias": "robinhood",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "config:editorial_only",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_listed@4853eac77f624227"
+      ]
+    },
+    {
+      "entity_id": "cik:0000310158",
+      "alias": "NYSE:MRK",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000310158",
+      "alias": "NYSE: MRK",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000310158",
+      "alias": "merck & co",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "cik:0000310158",
+      "alias": "merck and co",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "https://www.sec.gov/Archives/edgar/data/310158/000031015826000063/mrk-20251231.htm",
+        "snapshot:sec_company_tickers_exchange@affa8f025ab31bab",
+        "snapshot:nasdaq_other_listed@9e8aa849c7fbc58b"
+      ]
+    },
+    {
+      "entity_id": "issuer:merck-kgaa-de",
+      "alias": "Merck KGaA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-kgaa-identity"
+      ]
+    },
+    {
+      "entity_id": "issuer:merck-kgaa-de",
+      "alias": "EMD Serono",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-kgaa-identity"
+      ]
+    },
+    {
+      "entity_id": "issuer:merck-kgaa-de",
+      "alias": "MilliporeSigma",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-kgaa-identity"
+      ]
+    },
+    {
+      "entity_id": "cik:0000310158",
+      "alias": "Merck",
+      "ambiguous": true,
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-identity",
+        "merck-kgaa-identity"
+      ]
+    },
+    {
+      "entity_id": "issuer:merck-kgaa-de",
+      "alias": "Merck",
+      "ambiguous": true,
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-identity",
+        "merck-kgaa-identity"
+      ]
+    },
+    {
+      "entity_id": "asset:intismeran",
+      "alias": "intismeran autogene",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "asset:intismeran",
+      "alias": "intismeran",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "asset:intismeran",
+      "alias": "V940",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "asset:intismeran",
+      "alias": "mRNA-4157",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "asset:pembrolizumab",
+      "alias": "pembrolizumab",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "asset:pembrolizumab",
+      "alias": "KEYTRUDA",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "trial:NCT05933577",
+      "alias": "INTerpath-001",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "trial:NCT05933577",
+      "alias": "NCT05933577",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ]
+    },
+    {
+      "entity_id": "trial:NCT03897881",
+      "alias": "KEYNOTE-942",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-keynote-20260601"
+      ]
+    },
+    {
+      "entity_id": "trial:NCT03897881",
+      "alias": "NCT03897881",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-keynote-20260601"
+      ]
+    },
+    {
+      "entity_id": "trial:NCT03897881",
+      "alias": "mRNA-4157-P201",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-keynote-20260601"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "from_id": "cik:0001318605",
+      "to_id": "seed1:TSLA",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001428439",
+      "to_id": "seed1:ROKU",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001321655",
+      "to_id": "seed1:PLTR",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001674416",
+      "to_id": "seed1:CRSP",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001824502",
+      "to_id": "seed1:ACHR",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001594805",
+      "to_id": "seed1:SHOP",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001001838",
+      "to_id": "seed1:SCCO",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001652130",
+      "to_id": "seed1:NTLA",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0000831259",
+      "to_id": "seed1:FCX",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001674101",
+      "to_id": "seed1:VRT",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001679788",
+      "to_id": "seed1:COIN",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001874178",
+      "to_id": "seed1:RIVN",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0000006951",
+      "to_id": "seed1:AMAT",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001347178",
+      "to_id": "seed1:VNDA",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001385849",
+      "to_id": "seed1:UUUU",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001009001",
+      "to_id": "seed1:CCJ",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001698535",
+      "to_id": "seed1:NXE",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001063259",
+      "to_id": "seed1:DNN",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0000936468",
+      "to_id": "seed1:LMT",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001133421",
+      "to_id": "seed1:NOC",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001590877",
+      "to_id": "seed1:RGNX",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001682852",
+      "to_id": "seed1:MRNA",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0000875320",
+      "to_id": "seed1:VRTX",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001745999",
+      "to_id": "seed1:BEAM",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001515673",
+      "to_id": "seed1:RARE",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001868275",
+      "to_id": "seed1:CEG",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001065059",
+      "to_id": "seed1:LEU",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001486957",
+      "to_id": "seed1:BWXT",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001996810",
+      "to_id": "seed1:GEV",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001801368",
+      "to_id": "seed1:MP",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001045810",
+      "to_id": "seed1:NVDA",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001819994",
+      "to_id": "seed1:RKLB",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001783879",
+      "to_id": "seed1:HOOD",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0000310158",
+      "to_id": "seed1:MRK",
+      "role": "issues",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "instrument-registry:b71e7b340d31a12b0f71c6fd7fa56a60da771a8799992e698b694638d36265b9"
+      ]
+    },
+    {
+      "from_id": "cik:0001682852",
+      "to_id": "asset:intismeran",
+      "role": "jointly_develops",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "valid_from": null,
+      "valid_to": null
+    },
+    {
+      "from_id": "cik:0000310158",
+      "to_id": "asset:intismeran",
+      "role": "jointly_develops",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "valid_from": null,
+      "valid_to": null
+    },
+    {
+      "from_id": "cik:0000310158",
+      "to_id": "asset:pembrolizumab",
+      "role": "develops",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "valid_from": null,
+      "valid_to": null
+    },
+    {
+      "from_id": "asset:intismeran",
+      "to_id": "trial:NCT05933577",
+      "role": "evaluated_in",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "valid_from": null,
+      "valid_to": null
+    },
+    {
+      "from_id": "asset:pembrolizumab",
+      "to_id": "trial:NCT05933577",
+      "role": "combination_and_comparator",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "moderna-interpath-20260819"
+      ],
+      "valid_from": null,
+      "valid_to": null
+    },
+    {
+      "from_id": "asset:intismeran",
+      "to_id": "trial:NCT03897881",
+      "role": "evaluated_in",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-keynote-20260601"
+      ],
+      "valid_from": null,
+      "valid_to": null
+    },
+    {
+      "from_id": "asset:pembrolizumab",
+      "to_id": "trial:NCT03897881",
+      "role": "combination_and_comparator",
+      "known_from": "2026-10-18T08:06:08Z",
+      "evidence": [
+        "merck-keynote-20260601"
+      ],
+      "valid_from": null,
+      "valid_to": null
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "moderna-interpath-20260819",
+      "url": "https://news.modernatx.com/merck-and-moderna-announce-phase-3-interpath-001-trial-of-intismeran-plus-keytruda-met-endpoints-of-rfs-and-dmfs-in-melanoma",
+      "checked_at": "2026-10-18T08:06:08Z",
+      "scope": "identity facts only; no source-content redistribution permission"
+    },
+    {
+      "source_id": "merck-keynote-20260601",
+      "url": "https://www.merck.com/news/moderna-and-merck-present-5-year-data-for-intismeran-autogene-in-combination-with-keytruda-pembrolizumab-in-patients-with-high-risk-stage-iii-iv-melanoma-following-complete-resection-at-the-20/",
+      "checked_at": "2026-10-18T08:06:08Z",
+      "scope": "identity facts only; no source-content redistribution permission"
+    },
+    {
+      "source_id": "merck-identity",
+      "url": "https://www.merck.com/investor-relations/investor-resources/",
+      "checked_at": "2026-10-18T08:06:08Z",
+      "scope": "identity facts only; no source-content redistribution permission"
+    },
+    {
+      "source_id": "merck-kgaa-identity",
+      "url": "https://www.reports.emdgroup.com/en/annualreport/2025/services/sitemap.html",
+      "checked_at": "2026-10-18T08:06:08Z",
+      "scope": "identity facts only; no source-content redistribution permission"
+    }
+  ]
+}

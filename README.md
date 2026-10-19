@@ -35,6 +35,10 @@ The neutral scope is a product-design constraint, not legal advice or a represen
 
 ## Outputs
 
+The optional [OMNI local event workbench](docs/OMNI.md) provides separate evidence
+intake, mandatory validation and explicit human review. It defaults to off;
+validation and source-use gates require operator-supplied evidence.
+
 A successful export writes:
 
 - `daily_brief.json` — typed schema 2.8 data for scripts and dashboards; additional uses require source-purpose approval
@@ -134,7 +138,7 @@ adjustment vintages. Cash-runway measurements expose missing operating cash flow
 period mismatch, currency ambiguity and missing debt as typed unknowns; they do
 not use an infinite-runway sentinel or treat missing financials as zero.
 
-The six-scenario Windows launcher regression checks real exit-code handling:
+The ten-scenario Windows launcher regression checks real exit-code handling:
 stderr warnings alone do not fail a run. Profile-aware scheduling remains a
 future gate; use the profile CLI manually until that path is implemented.
 

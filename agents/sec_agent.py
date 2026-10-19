@@ -18,6 +18,7 @@ from threading import Lock
 from config import SEC_USER_AGENT, SIGNAL_ELIGIBLE_TICKERS
 from openinsider_agent import OpenInsiderAgent
 from timeutil import to_utc_z, newest
+from source_request_gate import wait_for_sec
 
 # Compatibility seam for focused tests; acquisition remains the core 29 only.
 ALL_TICKERS = list(SIGNAL_ELIGIBLE_TICKERS)
@@ -143,6 +144,7 @@ class SECAgent:
         for attempt in range(1, max_attempts + 1):
             try:
                 self._bump_health("requests")
+                wait_for_sec()
                 response = requests.get(url, params=params, headers=self.headers, timeout=timeout)
                 last_response = response
                 self._record_status(response.status_code)
