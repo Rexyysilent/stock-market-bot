@@ -35,6 +35,24 @@ expected refusals. Tracked source files remained unchanged throughout the checks
 Existing environments were reused. These were deterministic fixture and local
 loopback checks, with non-loopback test requests blocked.
 
+## Dependency gate found during integration
+
+The first integration CI run reported nine advisory entries in the existing
+`aiohttp 3.14.3` and `certifi 2026.7.22` pins. Both hash locks were regenerated
+with targeted upgrades to `aiohttp 3.14.4` and `certifi 2026.10.19`. The aiohttp
+release requires `yarl>=1.25.1`, so that dependency also moved from `1.24.5` to
+`1.25.1`. No other package version changed. The audit policy, secret scanner and
+secret baseline were retained.
+
+Upstream references: [aiohttp release](https://github.com/aio-libs/aiohttp/releases/tag/v3.14.4),
+[aiohttp dependency metadata](https://pypi.org/pypi/aiohttp/3.14.4/json), and
+[certifi release](https://pypi.org/project/certifi/2026.10.19/).
+
+Clean hash-locked installations and the combined private regression suite are
+checked separately for the updated dependencies. Current PR checks record the
+result for the final public head; the earlier Windows results above retain their
+original environment scope.
+
 The retained synthetic workflow exercised rights withholding, exact review,
 correction invalidation, stale-export refusal and a fresh reviewed correction.
 Its sources, approvals, reviews, feedback and costs are fictional. It cannot
