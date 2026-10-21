@@ -1,0 +1,196 @@
+{
+  "contract": "omni-vertical-offline-test-receipt-1",
+  "date": "2026-10-20",
+  "evidence_kind": "synthetic_offline",
+  "human_review_status": "pending",
+  "not_gold": true,
+  "not_pilot_evidence": true,
+  "live_collector_runs": 0,
+  "runs": [
+    {
+      "command": [
+        "/tmp/omni-venv311-20261020/bin/python",
+        "-m",
+        "unittest",
+        "-v",
+        "test_omni_verticals",
+        "test_omni_acquisition.AcquisitionTests.test_noncanonical_paths_are_rejected_before_dns_budget_or_request",
+        "test_omni_acquisition.AcquisitionTests.test_t24_t44_budget_retries_and_throttle",
+        "test_omni_acquisition.AcquisitionTests.test_t29_redirect_dns_and_size_fail_closed"
+      ],
+      "cwd": {
+        "manifest": "test-execution-context.txt",
+        "entry": "cwd"
+      },
+      "started_at": "2026-10-20T17:28:53.779015+00:00",
+      "finished_at": "2026-10-20T17:28:54.976222+00:00",
+      "exit_code": 0,
+      "environment": {
+        "python": "3.11.17 (main, Oct  3 2026, 01:05:36) [Clang 22.1.3 ]",
+        "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+        "implementation": "CPython"
+      },
+      "output_file": "docs/research/omni-20261020/vertical-python311.txt",
+      "output_sha256": {
+        "algorithm": "sha256",
+        "manifest": "vertical-test-hashes.txt",
+        "entry": "/runs/0/output_sha256"
+      }
+    },
+    {
+      "command": [
+        "/tmp/omni-venv312-20261020/bin/python",
+        "-m",
+        "unittest",
+        "-v",
+        "test_omni_verticals",
+        "test_omni_acquisition.AcquisitionTests.test_noncanonical_paths_are_rejected_before_dns_budget_or_request",
+        "test_omni_acquisition.AcquisitionTests.test_t24_t44_budget_retries_and_throttle",
+        "test_omni_acquisition.AcquisitionTests.test_t29_redirect_dns_and_size_fail_closed"
+      ],
+      "cwd": {
+        "manifest": "test-execution-context.txt",
+        "entry": "cwd"
+      },
+      "started_at": "2026-10-20T17:28:54.976453+00:00",
+      "finished_at": "2026-10-20T17:28:55.853913+00:00",
+      "exit_code": 0,
+      "environment": {
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+        "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+        "implementation": "CPython"
+      },
+      "output_file": "docs/research/omni-20261020/vertical-python312.txt",
+      "output_sha256": {
+        "algorithm": "sha256",
+        "manifest": "vertical-test-hashes.txt",
+        "entry": "/runs/1/output_sha256"
+      }
+    },
+    {
+      "command": [
+        "/tmp/omni-venv312-20261020/bin/python",
+        "scripts/run_secret_scan.py"
+      ],
+      "exit_code": 0,
+      "output_file": "docs/research/omni-20261020/vertical-secret-scan.txt",
+      "output_sha256": {
+        "algorithm": "sha256",
+        "manifest": "vertical-test-hashes.txt",
+        "entry": "/runs/2/output_sha256"
+      }
+    }
+  ],
+  "input_files": {
+    "fixtures/omni/vertical_sources.json": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/fixtures~1omni~1vertical_sources.json"
+    },
+    "omni/transport.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1transport.py"
+    },
+    "omni/verticals/__init__.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1__init__.py"
+    },
+    "omni/verticals/__main__.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1__main__.py"
+    },
+    "omni/verticals/cli.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1cli.py"
+    },
+    "omni/verticals/common.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1common.py"
+    },
+    "omni/verticals/eia.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1eia.py"
+    },
+    "omni/verticals/eia860.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1eia860.py"
+    },
+    "omni/verticals/nrc.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1nrc.py"
+    },
+    "omni/verticals/procurement.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/omni~1verticals~1procurement.py"
+    },
+    "test_omni_verticals.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/input_files/test_omni_verticals.py"
+    }
+  },
+  "shared_integration_dependencies_not_owned_by_this_commit": {
+    "omni/receipts.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1receipts.py"
+    },
+    "omni/attestations.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1attestations.py"
+    },
+    "omni/migrations.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1migrations.py"
+    },
+    "omni/lifecycle.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1lifecycle.py"
+    },
+    "omni/coverage.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1coverage.py"
+    },
+    "omni/store.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1store.py"
+    },
+    "omni/evidence.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1evidence.py"
+    },
+    "omni/amounts.py": {
+      "algorithm": "sha256",
+      "manifest": "vertical-test-hashes.txt",
+      "entry": "/shared_integration_dependencies_not_owned_by_this_commit/omni~1amounts.py"
+    }
+  },
+  "legacy_broad_check": {
+    "command": "python -m unittest -v test_omni_acquisition test_omni_reconciliation test_omni_cli",
+    "tests": 27,
+    "passed": 24,
+    "failures": [
+      "test_conflicting_exhibits_are_combined_and_deferred_exhibits_block_review:2 events vs prior1 expectation",
+      "test_same_origin_keeps_both_evidence_paths_without_duplicate_event:2 events vs prior1 origin-string expectation",
+      "test_rss_unknown_timezone_and_empty_window_do_not_claim_coverage:initial_window_only vs prior feed_window_before_watermark"
+    ],
+    "root_disposition": "Known deliberate WS1 contract changes and mixed legacy consumers; root integrating current tests. No WS1 test changed in this branch."
+  },
+  "audit_hash_manifest": "vertical-test-hashes.txt",
+  "scan_scope_limit": "The recorded original exit-zero scan ran before new WS4 files were git-tracked, so then-untracked WS4 files were not covered. See expansion-test-receipt.json for final staged scan and regression verification."
+}

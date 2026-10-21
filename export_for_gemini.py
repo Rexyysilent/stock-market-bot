@@ -788,10 +788,10 @@ def build_dropped_headline_export_records(headlines_dropped):
             "link": row.get("link"),
             "canonical_url": row.get("canonical_url"),
             "published": row.get("published"),
-            "as_of": row.get("as_of") or row.get("published") or (
+            "as_of": to_utc_z(row.get("as_of") or row.get("published") or (
                 provider_seen_at if provider_seen_time else None
-            ),
-            "observed_at": None if provider_seen_time else provider_seen_at,
+            )),
+            "observed_at": None if provider_seen_time else to_utc_z(provider_seen_at),
             "source_time_kind": row.get("source_time_kind"),
             "relevance": row.get("relevance"),
             "reason": row.get("drop_reason"),

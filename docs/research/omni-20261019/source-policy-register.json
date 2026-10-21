@@ -1,0 +1,285 @@
+{
+  "contract": "omni-source-policy-research-1",
+  "as_of": "2026-10-19",
+  "status": "AI_draft_pending_human_review",
+  "not_runtime_policy": true,
+  "source_bodies_included": false,
+  "new_approvals_granted": 0,
+  "sources": [
+    {
+      "source_id": "SEC-DAILY",
+      "route_or_discovery_page": "https://www.sec.gov/Archives/edgar/daily-index/",
+      "evidence_urls": [
+        "https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data",
+        "https://www.sec.gov/about/webmaster-frequently-asked-questions"
+      ],
+      "source_locator": "Business hours and dissemination; Post-acceptance corrections and deletions; FAQ reuse questions",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "Indexes begin nightly after the business-day filing window; some filings disseminate next business day. Later removals do not update earlier daily/feed/oldload indexes. Full and quarterly indexes incorporate post-acceptance changes on weekly rebuild.",
+        "SEC FAQ states government-created and EDGAR public filing content may be accessed and reused, with some exceptions such as stock art."
+      ],
+      "implementation_inference": "One-to-seven-day closed-day reconciliation establishes observed records only. Existing metadata acquisition policy remains unchanged.",
+      "ambiguity_or_limit": "Old daily-index absence cannot establish a removal. A successful request is not a real-time coverage attestation; linked dissemination-policy path attempted during research was unavailable.",
+      "configured_policy_id": "sec-edgar",
+      "operator_use_state": {
+        "acquire": "existing_metadata_config_unchanged",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "SEC-FEED",
+      "route_or_discovery_page": "https://www.sec.gov/cgi-bin/browse-edgar",
+      "evidence_urls": [
+        "https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data",
+        "https://www.sec.gov/about/webmaster-frequently-asked-questions",
+        "https://www.sec.gov/about/developer-resources"
+      ],
+      "source_locator": "Fair access; FAQ lag time and timestamps",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "SEC requests declared contact User-Agent and a maximum 10 requests/second in aggregate across machines. Website posting delay is not guaranteed; no timestamp directly identifies first website availability."
+      ],
+      "implementation_inference": "Keep local shared gate, bounded requests and feed publication/observation clocks separate.",
+      "ambiguity_or_limit": "The local gate does not coordinate other machines. RSS mutable offsets cannot certify uninterrupted intervals.",
+      "configured_policy_id": "sec-edgar",
+      "operator_use_state": {
+        "acquire": "existing_metadata_config_unchanged",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "SEC-SUBMISSIONS",
+      "route_or_discovery_page": "https://data.sec.gov/submissions/",
+      "evidence_urls": [
+        "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"
+      ],
+      "source_locator": "Submissions; Update schedule",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "Submission history is available without API keys and includes at least a year or 1000 filings, whichever is more; historical files are linked separately. API data update as filings disseminate, with variable processing lag."
+      ],
+      "implementation_inference": "A bounded issuer-specific repair must follow explicit historical-file pointers and receipt every page/version.",
+      "ambiguity_or_limit": "No whole-universe submission download or full-index route was added. The page was last reviewed April 8, 2025; accessed October 19, 2026.",
+      "configured_policy_id": "sec-edgar",
+      "operator_use_state": {
+        "acquire": "existing_metadata_config_unchanged",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "FDA-ONCOLOGY",
+      "route_or_discovery_page": "https://www.fda.gov/drugs/resources-information-approved-drugs/oncology-cancerhematologic-malignancies-approval-notifications",
+      "evidence_urls": [
+        "https://www.fda.gov/drugs/resources-information-approved-drugs/oncology-cancerhematologic-malignancies-approval-notifications",
+        "https://www.fda.gov/about-fda/about-website/website-policies"
+      ],
+      "source_locator": "Opening scope notice; Linking to or Copying Information on the FDA Website",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "The notification index expressly omits some approvals and label changes. FDA website content is generally reusable unless otherwise noted; FDA prefers source links and recommends copying date/source link when copied."
+      ],
+      "implementation_inference": "Metadata index is a discovery route, not an all-approval denominator or validated approval claim.",
+      "ambiguity_or_limit": "Review third-party exceptions per item and jurisdiction/purpose. Programmatic limits and timeliness guarantee were not established from these pages.",
+      "configured_policy_id": "fda-oncology",
+      "operator_use_state": {
+        "acquire": "existing_metadata_config_unchanged",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "FDA-MEDWATCH",
+      "route_or_discovery_page": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml",
+      "evidence_urls": [
+        "https://www.fda.gov/safety/medwatch-fda-safety-information-and-adverse-event-reporting-program/medwatch-rss-feed",
+        "https://www.fda.gov/about-fda/about-website/website-policies"
+      ],
+      "source_locator": "How Do I Use RSS Feeds?",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "FDA documents a MedWatch safety RSS route; the help page displays a legacy HTTP URL with mixed-case path. It describes safety information."
+      ],
+      "implementation_inference": "Reconfirm actual canonical HTTPS route and redirects before an operator enables the currently disabled feed.",
+      "ambiguity_or_limit": "The configured modern path was not live-polled. A safety feed does not cover all drug approvals or establish adverse-event causation.",
+      "configured_policy_id": "fda-medwatch",
+      "operator_use_state": {
+        "acquire": "existing_metadata_config_unchanged",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "FDA-DRUGS-DATABASE",
+      "route_or_discovery_page": "https://www.fda.gov/drugs/drug-approvals-and-databases/drugsfda-database",
+      "evidence_urls": [
+        "https://www.fda.gov/drugs/resources-information-approved-drugs/oncology-cancerhematologic-malignancies-approval-notifications",
+        "https://www.fda.gov/about-fda/about-website/website-policies"
+      ],
+      "source_locator": "Oncology index referral to Drugs@FDA",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "The oncology index directs readers to Drugs@FDA for current product approvals and prescribing information."
+      ],
+      "implementation_inference": "Evaluate a separate product/application/action/label route after policy review.",
+      "ambiguity_or_limit": "Direct database-page retrieval timed out; endpoint format, pagination, update latency, history completeness and its downstream routes were not verified. No new route approved.",
+      "configured_policy_id": null,
+      "operator_use_state": {
+        "acquire": "pending_no_new_approval",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "CTG-API",
+      "route_or_discovery_page": "https://clinicaltrials.gov/api/v2/",
+      "evidence_urls": [
+        "https://clinicaltrials.gov/about-site/terms-conditions",
+        "https://clinicaltrials.gov/data-api/about-api"
+      ],
+      "source_locator": "Terms and Conditions and About API pages (body unavailable in retrieval)",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "The official terms and API page URLs resolve, but retrieved text contained only the site shell."
+      ],
+      "implementation_inference": "Preserve the existing metadata-only policy and version-pinned snapshot/change behavior.",
+      "ambiguity_or_limit": "Current substantive terms were not verified. No inferred public-domain, bulk-retention, model-processing or redistribution approval.",
+      "configured_policy_id": "clinicaltrials",
+      "operator_use_state": {
+        "acquire": "existing_metadata_config_unchanged",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "BEAM-RSS",
+      "route_or_discovery_page": "https://investors.beamtx.com/stockholder-tools/rss-feeds",
+      "evidence_urls": [
+        "https://investors.beamtx.com/stockholder-tools/rss-feeds",
+        "https://investors.beamtx.com/press-releases",
+        "https://beamtx.com/terms-of-use/"
+      ],
+      "source_locator": "RSS introduction; Use of the Website",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "Official issuer site describes RSS readers/aggregators and has a bounded release archive. Corporate terms permit certain public documents for noncommercial informational use subject to conditions and restrict other uses."
+      ],
+      "implementation_inference": "Candidate is one issuer only, with fixed endpoint, cap and cadence to be reviewed.",
+      "ambiguity_or_limit": "The XML URL was not exposed by the research reader. Corporate terms define www.beamtx.com; applicability to investor subdomain/provider and commercial/model uses needs review. No inferred feed URL or new configuration.",
+      "configured_policy_id": null,
+      "operator_use_state": {
+        "acquire": "pending_no_new_approval",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "BWXT-ISSUER",
+      "route_or_discovery_page": "https://investors.bwxt.com/news-events/news-releases",
+      "evidence_urls": [
+        "https://www.bwxt.com/terms-of-use/",
+        "https://investors.bwxt.com/news-events/news-releases"
+      ],
+      "source_locator": "Limitation on Use of Site; issuer release archive",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "BWXT corporate terms restrict copying, redistribution and incorporation into retrieval systems; content may change or be removed."
+      ],
+      "implementation_inference": "Research links and release-native identifiers support provenance proposals only.",
+      "ambiguity_or_limit": "Investor-subdomain terms/provider applicability, RSS endpoint and automated/model/distribution rights remain unresolved.",
+      "configured_policy_id": null,
+      "operator_use_state": {
+        "acquire": "pending_no_new_approval",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "BUSINESSWIRE",
+      "route_or_discovery_page": "https://www.businesswire.com/news/home/",
+      "evidence_urls": [
+        "https://www.businesswire.com/legal/terms-of-use"
+      ],
+      "source_locator": "A. Limitations on Scope of Use; effective January 1, 2024",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "Terms allow reading and RSS retrieval within a restricted scope; storage, aggregation, reproduction/distribution and commercial activities face express restrictions or consent requirements."
+      ],
+      "implementation_inference": "An issuer-linked wire identifier can be provenance evidence; it grants no acquisition or reuse policy to the pipeline.",
+      "ambiguity_or_limit": "Any separate licensed feed/agreement and precise model purpose require review. Research did not establish a project licence.",
+      "configured_policy_id": null,
+      "operator_use_state": {
+        "acquire": "pending_no_new_approval",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    },
+    {
+      "source_id": "PRNEWSWIRE",
+      "route_or_discovery_page": "https://www.prnewswire.com/news-releases/",
+      "evidence_urls": [
+        "https://www.prnewswire.com/terms-of-use/"
+      ],
+      "source_locator": "General Rules of Conduct; proprietary rights",
+      "accessed_on": "2026-10-19",
+      "verified_policy_facts": [
+        "Terms restrict scraping, systematic retrieval, redistribution and use for software development including AI training, subject to stated permissions and service-specific terms."
+      ],
+      "implementation_inference": "Do not configure a generic scraper or infer rights from a public release or customer attribution.",
+      "ambiguity_or_limit": "Inference-only processing, the project purpose and any separate licensed service still need explicit review. No licence or approval was obtained.",
+      "configured_policy_id": null,
+      "operator_use_state": {
+        "acquire": "pending_no_new_approval",
+        "store_text": "pending_no_new_approval",
+        "local_analysis": "pending_no_new_approval",
+        "review_display": "pending_no_new_approval",
+        "model_processing": "pending_no_new_approval",
+        "commercial_display": "pending_no_new_approval"
+      },
+      "human_review_status": "pending"
+    }
+  ]
+}

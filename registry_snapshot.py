@@ -72,6 +72,9 @@ def capture(out_dir, user_agent, *, opener=urllib.request.urlopen, now=None):
         record = {"source": spec["source"], "url": spec["url"], "file": spec["file"],
                   "captured_at": captured_at}
         try:
+            if spec["url"].startswith("https://www.sec.gov/"):
+                from source_request_gate import wait_for_sec
+                wait_for_sec()
             with opener(request, timeout=30) as response:
                 data = response.read(MAX_PART_BYTES + 1)
             if len(data) > MAX_PART_BYTES:

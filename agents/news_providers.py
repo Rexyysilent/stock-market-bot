@@ -564,6 +564,9 @@ class OfficialFeedProvider:
                 })
                 continue
             try:
+                if urlsplit(url).hostname in ("www.sec.gov", "data.sec.gov", "sec.gov"):
+                    from source_request_gate import wait_for_sec
+                    wait_for_sec()
                 response = self.request_get(
                     url,
                     headers={

@@ -1,0 +1,238 @@
+{
+  "contract": "omni-clinical-numerics-2",
+  "synthetic": true,
+  "human_review_status": "pending",
+  "not_gold_or_pilot": true,
+  "catalog_fixture": "generated exact synthetic evidence in test_omni_clinical_scope.approved_synthetic_catalog; no real approval",
+  "cases": [
+    {
+      "fixture_id": "WS2-C01",
+      "rule": "full explicit row with native header and cell evidence",
+      "mode": "table",
+      "expected_results": 1,
+      "text": "| Trial | Endpoint | Population | Treatment | Comparator | Timepoint | Analysis | Statistics |\n| KEYNOTE-942 | recurrence-free survival | intention-to-treat | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |"
+    },
+    {
+      "fixture_id": "WS2-C02",
+      "rule": "blank population cannot inherit from preceding row",
+      "mode": "table",
+      "expected_results": 0,
+      "text": "| Trial | Endpoint | Population | Treatment | Comparator | Timepoint | Analysis | Statistics |\n| KEYNOTE-942 | recurrence-free survival | intention-to-treat | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |\n| KEYNOTE-942 | recurrence-free survival |  | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |"
+    },
+    {
+      "fixture_id": "WS2-C03",
+      "rule": "duplicate header is ambiguous",
+      "mode": "table",
+      "expected_results": 0,
+      "text": "| Trial | Endpoint | Population | Population | Treatment | Comparator | Timepoint | Analysis | Statistics |\n| KEYNOTE-942 | recurrence-free survival | intention-to-treat | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |"
+    },
+    {
+      "fixture_id": "WS2-C04",
+      "rule": "footnote cannot be separated by a blank line to evade scope",
+      "mode": "table",
+      "expected_results": 0,
+      "text": "| Trial | Endpoint | Population | Treatment | Comparator | Timepoint | Analysis | Statistics |\n| KEYNOTE-942 | recurrence-free survival | intention-to-treat | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |\n\nNote: estimates exclude unevaluable participants."
+    },
+    {
+      "fixture_id": "WS2-C05",
+      "rule": "unknown unit column cannot be treated as an estimand",
+      "mode": "table",
+      "expected_results": 0,
+      "text": "| Trial | Endpoint | Population | Treatment | Comparator | Timepoint | Analysis | Result |\n| KEYNOTE-942 | recurrence-free survival | intention-to-treat | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |"
+    },
+    {
+      "fixture_id": "WS2-C06",
+      "rule": "statistics cannot borrow a missing trial from another row",
+      "mode": "table",
+      "expected_results": 0,
+      "text": "| Trial | Endpoint | Population | Treatment | Comparator | Timepoint | Analysis | Statistics |\n| KEYNOTE-942 | recurrence-free survival | intention-to-treat | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |\n| same as above | recurrence-free survival | intention-to-treat | intismeran plus pembrolizumab | pembrolizumab alone | 18 months | prespecified | hazard ratio 0.51; 95% CI 0.29-0.90; two-sided nominal p=0.02 |"
+    },
+    {
+      "fixture_id": "WS2-C07",
+      "rule": "risk ratio retains its measure",
+      "mode": "sentence",
+      "expected_results": 1,
+      "replace": [
+        [
+          "hazard ratio 0.51",
+          "risk ratio=0.51"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C08",
+      "rule": "odds ratio retains its measure",
+      "mode": "sentence",
+      "expected_results": 1,
+      "replace": [
+        [
+          "hazard ratio 0.51",
+          "odds ratio=0.51"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C09",
+      "rule": "signed difference and interval require percentage-point units",
+      "mode": "sentence",
+      "expected_results": 1,
+      "replace": [
+        [
+          "hazard ratio 0.51 (95% CI 0.29-0.90)",
+          "risk difference=-5 percentage points (95% CI [-7, -3] percentage points)"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C10",
+      "rule": "percent is not a percentage-point difference",
+      "mode": "sentence",
+      "expected_results": 0,
+      "replace": [
+        [
+          "hazard ratio 0.51 (95% CI 0.29-0.90)",
+          "risk difference=5%"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C11",
+      "rule": "model-adjusted effect needs a separate model contract",
+      "mode": "sentence",
+      "expected_results": 0,
+      "replace": [
+        [
+          "hazard ratio 0.51",
+          "adjusted odds ratio=0.51"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C12",
+      "rule": "Holm p adjustment method retained",
+      "mode": "sentence",
+      "expected_results": 1,
+      "replace": [
+        [
+          "nominal p=0.02",
+          "Holm-adjusted p=0.02"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C13",
+      "rule": "unknown adjustment method is not silently erased",
+      "mode": "sentence",
+      "expected_results": 0,
+      "replace": [
+        [
+          "nominal p=0.02",
+          "Sidak-adjusted p=0.02"
+        ]
+      ],
+      "expected_reason": "numeric_multiplicity_method_unsupported"
+    },
+    {
+      "fixture_id": "WS2-C14",
+      "rule": "explicit no-alpha statement retained",
+      "mode": "sentence",
+      "expected_results": 1,
+      "replace": [
+        [
+          "analysis: prespecified;",
+          "analysis: prespecified; multiplicity: no alpha allocated;"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C15",
+      "rule": "unevaluable denominator handling needs a disposition contract",
+      "mode": "sentence",
+      "expected_results": 0,
+      "replace": [
+        [
+          "population: intention-to-treat",
+          "population: intention-to-treat excluding unevaluable participants"
+        ]
+      ],
+      "expected_reason": "numeric_population_disposition_unsupported"
+    },
+    {
+      "fixture_id": "WS2-C16",
+      "rule": "severity grade does not supply seriousness",
+      "mode": "sentence",
+      "expected_results": 0,
+      "replace": [
+        [
+          "treatment events: 22/107 patients",
+          "treatment events: 22/107 patients with grade 3 adverse events"
+        ]
+      ],
+      "expected_reason": "numeric_safety_scope_unsupported"
+    },
+    {
+      "fixture_id": "WS2-C17",
+      "rule": "approved synthetic catalog supplies only tested canonical mappings",
+      "mode": "catalog",
+      "expected_results": 1
+    },
+    {
+      "fixture_id": "WS2-C18",
+      "rule": "unknown endpoint alias cannot borrow a nearby definition",
+      "mode": "catalog",
+      "expected_results": 0,
+      "replace": [
+        [
+          "recurrence-free survival",
+          "event-free survival"
+        ]
+      ],
+      "expected_reason": "clinical_scope_endpoint_unmapped_or_ambiguous"
+    },
+    {
+      "fixture_id": "WS2-C19",
+      "rule": "secondary label cannot replace reviewed primary rank",
+      "mode": "catalog",
+      "expected_results": 0,
+      "replace": [
+        [
+          "rank: primary",
+          "rank: secondary"
+        ]
+      ],
+      "expected_reason": "clinical_scope_endpoint_rank_mismatch"
+    },
+    {
+      "fixture_id": "WS2-C20",
+      "rule": "evaluable population cannot become randomized ITT",
+      "mode": "catalog",
+      "expected_results": 0,
+      "replace": [
+        [
+          "population: intention-to-treat",
+          "population: efficacy-evaluable"
+        ]
+      ],
+      "expected_reason": "clinical_scope_analysis_population_unmapped_or_ambiguous"
+    },
+    {
+      "fixture_id": "WS2-C21",
+      "rule": "named cohort alias does not replace analysis population",
+      "mode": "catalog",
+      "expected_results": 1,
+      "replace": [
+        [
+          "analysis: prespecified;",
+          "cohort: cohort A; analysis: prespecified;"
+        ]
+      ]
+    },
+    {
+      "fixture_id": "WS2-C22",
+      "rule": "pending review catalog supplies no clinical mapping",
+      "mode": "pending_catalog",
+      "expected_results": 0,
+      "expected_reason": "clinical_scope_version_unavailable_at_disclosure"
+    }
+  ]
+}

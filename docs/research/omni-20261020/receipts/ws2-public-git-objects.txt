@@ -1,0 +1,4 @@
+# Exact public/base Git object IDs; these are Git IDs, not file SHA-256 checksums.
+1a0ae6d2a277642e9466495323c11469f43f911a  starting_commit
+0208cc4400358c05956f63ddeb1b84f4ca00dcc3  starting_tree
+d35f667aebd3c2590cabbbe80e51076b3a1fa788  public_base

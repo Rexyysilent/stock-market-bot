@@ -1,0 +1,623 @@
+{
+  "contract": "omni-numeric-fixtures-1",
+  "synthetic": true,
+  "human_review_status": "pending",
+  "not_gold_or_pilot": true,
+  "base_text": "KEYNOTE-942 reports Phase 2b results; endpoint: recurrence-free survival; rank: primary; population: intention-to-treat; treatment: intismeran plus pembrolizumab; comparator: pembrolizumab alone; timepoint: 18 months; analysis: prespecified; hazard ratio 0.51 (95% CI 0.29-0.90); two-sided nominal p=0.02; treatment events: 22/107 patients; comparator events: 20/50 patients.",
+  "cases": [
+    {
+      "fixture_id": "A-N01",
+      "rule": "Fully explicit trial/endpoint/analysis scope",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [],
+      "expected_results": 1,
+      "expected_reason": null
+    },
+    {
+      "fixture_id": "A-N02",
+      "rule": "Unknown population stays unknown",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "population: intention-to-treat; ",
+          ""
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_scope_incomplete"
+    },
+    {
+      "fixture_id": "A-N03",
+      "rule": "No shared statistics across endpoints",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "endpoint: recurrence-free survival",
+          "endpoint: recurrence-free survival and overall survival"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_endpoint_ambiguous"
+    },
+    {
+      "fixture_id": "A-N04",
+      "rule": "No shared statistics across trials",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260819"
+      ],
+      "replace": [
+        [
+          "KEYNOTE-942 reports",
+          "KEYNOTE-942 and INTerpath-001 report"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_trial_ambiguous_or_unknown"
+    },
+    {
+      "fixture_id": "A-N05",
+      "rule": "Unknown NCT cannot disappear beside known trial",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "KEYNOTE-942 reports",
+          "KEYNOTE-942 and NCT00000000 report"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_trial_ambiguous_or_unknown"
+    },
+    {
+      "fixture_id": "A-N06",
+      "rule": "Wrong registered phase cannot be repaired",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "Phase 2b",
+          "Phase 3"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_trial_phase_mismatch"
+    },
+    {
+      "fixture_id": "A-N07",
+      "rule": "Missing timepoint is not follow-up",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "timepoint: 18 months",
+          "median follow-up of 60 months"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_scope_incomplete"
+    },
+    {
+      "fixture_id": "A-N08",
+      "rule": "p-value comparator preserved",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "p=0.02",
+          "p<0.001"
+        ]
+      ],
+      "expected_results": 1,
+      "expected_reason": null
+    },
+    {
+      "fixture_id": "A-N09",
+      "rule": "P-sidedness is not defaulted",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "two-sided nominal ",
+          ""
+        ]
+      ],
+      "expected_results": 1,
+      "expected_reason": null
+    },
+    {
+      "fixture_id": "A-N10",
+      "rule": "p must be within probability bounds",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "p=0.02",
+          "p=1.2"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_p_value_invalid"
+    },
+    {
+      "fixture_id": "A-N11",
+      "rule": "Confidence bounds must be ordered",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "0.29-0.90",
+          "0.90-0.29"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_confidence_interval_invalid"
+    },
+    {
+      "fixture_id": "A-N12",
+      "rule": "HR must be within its stated CI",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "ratio 0.51",
+          "ratio 2.0"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_estimate_outside_interval"
+    },
+    {
+      "fixture_id": "A-N13",
+      "rule": "Denominator must be positive",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "22/107",
+          "22/0"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_count_denominator_invalid"
+    },
+    {
+      "fixture_id": "A-N14",
+      "rule": "Count cannot exceed denominator in bounded proportion grammar",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "22/107",
+          "108/107"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_count_denominator_invalid"
+    },
+    {
+      "fixture_id": "A-N15",
+      "rule": "Bare n does not establish a denominator",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "ratio 0.51",
+          "ratio 0.51; n=14"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_unparsed_competing_value"
+    },
+    {
+      "fixture_id": "A-N16",
+      "rule": "Baseline and evaluable N cannot be joined",
+      "linked_source_case_ids": [
+        "CLIN-EYPT-20240506"
+      ],
+      "replace": [
+        [
+          "ratio 0.51",
+          "ratio 0.51; baseline n=157"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_unparsed_competing_value"
+    },
+    {
+      "fixture_id": "A-N17",
+      "rule": "Duplicated analysis stays ambiguous",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "analysis: prespecified",
+          "analysis: prespecified; analysis: post hoc"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_analysis_ambiguous"
+    },
+    {
+      "fixture_id": "A-N18",
+      "rule": "Rates are not absolute fractions",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "22/107 patients",
+          "22/107 patients per year"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_unit_or_suffix_unsupported"
+    },
+    {
+      "fixture_id": "A-N19",
+      "rule": "No numeric unit conversion",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "ratio 0.51",
+          "ratio 0.51 mg"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_unit_or_suffix_unsupported"
+    },
+    {
+      "fixture_id": "A-N20",
+      "rule": "p is not a dimensional measurement",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "p=0.02",
+          "p=0.02 mg"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_unit_or_suffix_unsupported"
+    },
+    {
+      "fixture_id": "A-N21",
+      "rule": "Unsupported scientific notation stays unparsed",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "p=0.02",
+          "p=2e-2"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_unparsed_competing_value"
+    },
+    {
+      "fixture_id": "A-N22",
+      "rule": "Approximation stays review-only",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "hazard ratio",
+          "approximately hazard ratio"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_grammar_unsupported"
+    },
+    {
+      "fixture_id": "A-N23",
+      "rule": "Future statistics do not establish observed results",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [],
+      "expected_results": 0,
+      "expected_reason": "numeric_assertion_not_established",
+      "prefix": "Hypothetical "
+    },
+    {
+      "fixture_id": "A-N24",
+      "rule": "Unknown marker does not satisfy population",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "population: intention-to-treat",
+          "population: unknown"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_scope_incomplete"
+    },
+    {
+      "fixture_id": "A-N25",
+      "rule": "Unknown marker does not satisfy comparator",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "comparator: pembrolizumab alone",
+          "comparator: unspecified"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_scope_incomplete"
+    },
+    {
+      "fixture_id": "A-N26",
+      "rule": "Statistical tokens cannot hide inside a scope label",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "population: intention-to-treat",
+          "population: intention-to-treat HR=-2"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_context_contains_statistic"
+    },
+    {
+      "fixture_id": "A-N27",
+      "rule": "Transformed statistics cannot hide inside an arm",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "treatment: intismeran plus pembrolizumab",
+          "treatment: intismeran log(HR)=-2"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_context_contains_statistic"
+    },
+    {
+      "fixture_id": "A-N28",
+      "rule": "Treatment timing is not endpoint timing",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "timepoint: 18 months; ",
+          ""
+        ],
+        [
+          "treatment: intismeran plus pembrolizumab",
+          "treatment: intismeran administered at 18 months"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_scope_incomplete"
+    },
+    {
+      "fixture_id": "A-N29",
+      "rule": "Conflicting populations invalidate a result",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "population: intention-to-treat;",
+          "population: intention-to-treat; per-protocol population;"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_population_ambiguous"
+    },
+    {
+      "fixture_id": "A-N30",
+      "rule": "Conflicting endpoint ranks invalidate a result",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "rank: primary",
+          "primary RFS; rank: secondary"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_context_ambiguous"
+    },
+    {
+      "fixture_id": "A-N31",
+      "rule": "Negated source label is not an approved label",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "comparator: pembrolizumab alone",
+          "non-comparator: pembrolizumab alone"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_scope_incomplete"
+    },
+    {
+      "fixture_id": "A-N32",
+      "rule": "Unreported estimate stays unestablished",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "ratio 0.51",
+          "ratio 0.51 is unreported"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_assertion_not_established"
+    },
+    {
+      "fixture_id": "A-N33",
+      "rule": "Unobserved assessment stays unestablished",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "18 months",
+          "18 months was never observed"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_assertion_not_established"
+    },
+    {
+      "fixture_id": "A-N34",
+      "rule": "Long decimal tokens return abstention without throwing",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "18 months",
+          "0.12345678901234567890123 months"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_token_too_long"
+    },
+    {
+      "fixture_id": "A-N35",
+      "rule": "Case and unit morphology do not change analysis scope",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "intention-to-treat",
+          "Intention-to-treat"
+        ],
+        [
+          "18 months",
+          "18 month"
+        ]
+      ],
+      "expected_results": 1,
+      "expected_reason": null
+    },
+    {
+      "fixture_id": "A-N36",
+      "rule": "Contradictory explicit comparator cannot be ignored",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "hazard ratio 0.51",
+          "for intismeran plus pembrolizumab versus active-control had hazard ratio 0.51"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_arm_ambiguous"
+    },
+    {
+      "fixture_id": "A-N37",
+      "rule": "Missing endpoint stays unknown",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "endpoint: recurrence-free survival",
+          "endpoint: unknown"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_scope_incomplete"
+    },
+    {
+      "fixture_id": "A-N38",
+      "rule": "Unsupported table rows remain review leads",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "; endpoint:",
+          "\tendpoint:"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_grammar_unsupported"
+    },
+    {
+      "fixture_id": "A-N39",
+      "rule": "Post hoc remains a separate explicit analysis",
+      "linked_source_case_ids": [
+        "CLIN-EYPT-20240506"
+      ],
+      "replace": [
+        [
+          "analysis: prespecified",
+          "analysis: post hoc"
+        ]
+      ],
+      "expected_results": 1,
+      "expected_reason": null
+    },
+    {
+      "fixture_id": "A-N40",
+      "rule": "Pivotal wording does not create Phase 3",
+      "linked_source_case_ids": [
+        "CLIN-BEAM-20260804"
+      ],
+      "replace": [
+        [
+          "reports Phase 2b",
+          "reports pivotal Phase 2b"
+        ]
+      ],
+      "expected_results": 1,
+      "expected_reason": null
+    },
+    {
+      "fixture_id": "A-N41",
+      "rule": "Closing interval punctuation cannot hide unsupported percent units",
+      "linked_source_case_ids": [
+        "CLIN-MRNA-20260601"
+      ],
+      "replace": [
+        [
+          "CI 0.29-0.90)",
+          "CI [0.29, 0.90] percent)"
+        ]
+      ],
+      "expected_results": 0,
+      "expected_reason": "numeric_unit_or_suffix_unsupported"
+    }
+  ]
+}

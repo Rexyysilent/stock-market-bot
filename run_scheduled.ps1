@@ -86,7 +86,10 @@ try {
     # skewed or unverifiable clock stops the run before anything is written.
     Invoke-ScheduledPython -Stage "clock" -PythonArguments @("-u", "clock_guard.py")
     Invoke-ScheduledPython -Stage "export" -PythonArguments @("-u", "export_for_gemini.py")
+    Invoke-ScheduledPython -Stage "schema" -PythonArguments @("-u", "scripts/validate_export_schema.py", "daily_brief.json")
     Invoke-ScheduledPython -Stage "ledger" -PythonArguments @("-u", "-m", "ledger", "update")
+    Invoke-ScheduledPython -Stage "history" -PythonArguments @("-u", "-m", "event_history", "import")
+    Invoke-ScheduledPython -Stage "history-anchor" -PythonArguments @("-u", "-m", "event_history", "anchor")
     Set-Content -LiteralPath $lastRunPath -Value $utcDate -NoNewline
 } finally {
     if ($lockStream) { $lockStream.Dispose() }

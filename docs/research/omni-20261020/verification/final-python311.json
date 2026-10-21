@@ -1,0 +1,71 @@
+{
+  "contract": "omni-final-verification-1",
+  "label": "python311",
+  "started_at": "2026-10-20T18:24:27.261556+00:00",
+  "scope": "Final combined candidate, deterministic fixtures and local loopback only; no live provider, Windows, model, scheduler or operating certification",
+  "context_file": "final-python311-context.txt",
+  "input_manifest_before": "final-python311-inputs-before.sha256",
+  "commands": [
+    {
+      "name": "runtime",
+      "transcript": "final-python311-runtime.txt",
+      "started_at": "2026-10-20T18:24:27.261572+00:00",
+      "completed_at": "2026-10-20T18:24:27.325741+00:00",
+      "duration_seconds": 0.064,
+      "exit_code": 0
+    },
+    {
+      "name": "dependencies",
+      "transcript": "final-python311-dependencies.txt",
+      "started_at": "2026-10-20T18:24:27.325860+00:00",
+      "completed_at": "2026-10-20T18:24:27.590743+00:00",
+      "duration_seconds": 0.265,
+      "exit_code": 0
+    },
+    {
+      "name": "pip-check",
+      "transcript": "final-python311-pip-check.txt",
+      "started_at": "2026-10-20T18:24:27.590861+00:00",
+      "completed_at": "2026-10-20T18:24:27.855835+00:00",
+      "duration_seconds": 0.265,
+      "exit_code": 0
+    },
+    {
+      "name": "compilation",
+      "transcript": "final-python311-compilation.txt",
+      "started_at": "2026-10-20T18:24:27.855986+00:00",
+      "completed_at": "2026-10-20T18:24:28.171097+00:00",
+      "duration_seconds": 0.315,
+      "exit_code": 0
+    },
+    {
+      "name": "export-schema",
+      "transcript": "final-python311-export-schema.txt",
+      "started_at": "2026-10-20T18:24:28.171203+00:00",
+      "completed_at": "2026-10-20T18:24:28.335787+00:00",
+      "duration_seconds": 0.165,
+      "exit_code": 0
+    },
+    {
+      "name": "offline-suite",
+      "transcript": "final-python311-offline-suite.txt",
+      "started_at": "2026-10-20T18:24:28.335896+00:00",
+      "completed_at": "2026-10-20T18:25:42.218942+00:00",
+      "duration_seconds": 73.883,
+      "exit_code": 0
+    },
+    {
+      "name": "javascript",
+      "transcript": "final-python311-javascript.txt",
+      "started_at": "2026-10-20T18:25:42.219237+00:00",
+      "completed_at": "2026-10-20T18:25:42.252012+00:00",
+      "duration_seconds": 0.033,
+      "exit_code": 0
+    }
+  ],
+  "completed_at": "2026-10-20T18:25:42.258483+00:00",
+  "input_manifest_after": "final-python311-inputs-after.sha256",
+  "inputs_unchanged": true,
+  "selected_input_files": 256,
+  "status": "passed"
+}

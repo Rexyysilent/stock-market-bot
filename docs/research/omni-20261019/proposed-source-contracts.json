@@ -1,0 +1,53 @@
+{
+  "contract": "omni-proposed-source-contracts-1",
+  "status": "design_only_pending_human_review",
+  "runtime_supported": false,
+  "origin_equivalence": {
+    "relation_id": "hash of members, source revisions, relation and supporting locators",
+    "relation": "same_release | republishes | corrects | retracts | independently_reports",
+    "members": "source policy ID + native document ID + immutable content revision",
+    "proofs": "exact source revision/span or structured native-link field; provenance and retrieval clock required",
+    "native_release_id": "wire ID or issuer release ID, never title similarity",
+    "reporting_party": "party responsible for the assertion, distinct from host/publisher",
+    "valid_from": "observed interval with actual source precision",
+    "supersedes": "prior relation ID or null",
+    "human_review_status": "pending",
+    "approved_receipt_ref": null,
+    "independent_origin_count": "computed only after proof review; transitive copy chains do not add independent observations"
+  },
+  "scoped_amount": {
+    "amount_id": "hash of fully scoped amount and immutable support",
+    "issuer_id": "resolved claim subject or null",
+    "contract_or_financing_id": "source-supported identifier or null",
+    "currency": "exact ISO currency atom; bare dollar unknown",
+    "operator": "equal | upper_bound | lower_bound | range | approximate",
+    "value": "decimal string or null",
+    "lower": "decimal string or null",
+    "upper": "decimal string or null",
+    "scale": "source scale atom, not guessed",
+    "role": "ceiling | option | obligation | financing_authority | gross_proceeds | net_proceeds | other",
+    "condition": "supported contingency text or null",
+    "period": "supported start/end or duration with distinct precision; null is unknown",
+    "additivity": "included | incremental | alternative | unknown",
+    "support": "separate exact revision-bound proof for every scalar/qualifier",
+    "human_review_status": "pending",
+    "signal_eligible": false,
+    "inferred_revenue": null,
+    "inferred_cash_received": null,
+    "inferred_runway": null
+  },
+  "correction_lifecycle": {
+    "states": [
+      "observed_difference",
+      "quarantined_pending_adjudication",
+      "confirmed_correction",
+      "confirmed_retraction",
+      "not_material",
+      "unresolved"
+    ],
+    "required_binding": "source-native ID + old/new evidence revisions + affected event revisions + policy/identity versions",
+    "hydration_completion_clears_quarantine": false,
+    "old_evidence_deleted": false,
+    "runtime_implemented": "Only observed index metadata differences and immutable receipts in this patch; other lifecycle states are proposals."
+  }
+}

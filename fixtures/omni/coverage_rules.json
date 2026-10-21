@@ -1,0 +1,285 @@
+{
+  "contract": "omni-coverage-adversarial-drafts-1",
+  "synthetic": true,
+  "human_review_status": "pending",
+  "not_gold_or_pilot": true,
+  "amount_cases": [
+    {
+      "fixture_id": "B-M01",
+      "text": "Synthetic contract has a ceiling of USD 5 million.",
+      "stage": "ceiling",
+      "expected_existing_results": [
+        [
+          "contract_ceiling_amount",
+          "5000000"
+        ]
+      ],
+      "rule": "One explicit exact USD ceiling; no revenue inference.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M02",
+      "text": "Synthetic contract ceiling is USD 5 million plus EUR 2 million.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Multiple currencies remain separate unresolved atoms; never sum or convert.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [],
+      "scoped_status": "executable_synthetic_pending_human_review",
+      "expected_scoped_reason": "amount_role_ambiguous_or_missing"
+    },
+    {
+      "fixture_id": "B-M03",
+      "text": "Synthetic contract ceiling is USD 5 million, including USD 1 million options.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Ceiling and included option amount cannot be added.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        },
+        {
+          "role": "option",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "1000000",
+          "lower": null,
+          "upper": null,
+          "additivity": "included"
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M04",
+      "text": "Synthetic contract has USD 2 million obligated against its USD 5 million ceiling.",
+      "stage": "obligation",
+      "expected_existing_results": [],
+      "rule": "Obligation differs from ceiling and neither establishes cash received.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "obligation",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "2000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        },
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M05",
+      "text": "Synthetic contract ceiling is USD 5 million per year.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Duration and rate cannot be collapsed to a total.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M06",
+      "text": "Synthetic contract ceiling is USD 5 million subject to milestones.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Conditions require their own exact support.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M07",
+      "text": "Synthetic contract ceiling is approximately USD 5 million.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Approximation cannot become exact.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "approximate",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M08",
+      "text": "Synthetic contract ceiling is $5 million.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Bare dollar symbol has unknown currency.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": null,
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M09",
+      "text": "Synthetic contract ceiling is USD 5m.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Unsupported scale abbreviation stays unnormalized.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [],
+      "scoped_status": "executable_synthetic_pending_human_review",
+      "expected_scoped_reason": "amount_token_or_count_unsupported"
+    },
+    {
+      "fixture_id": "B-M10",
+      "text": "Synthetic contract ceiling is USD 5 million through 2028.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Period-scoped amount requires explicit period semantics.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M11",
+      "text": "Synthetic contract ceiling is less than USD 5 million.",
+      "stage": "ceiling",
+      "expected_existing_results": [],
+      "rule": "Bound/operator cannot become equality.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "<",
+          "value": null,
+          "lower": null,
+          "upper": "5000000",
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    },
+    {
+      "fixture_id": "B-M12",
+      "text": "Synthetic financing authority is USD 5 million.",
+      "stage": "financing_authority",
+      "expected_existing_results": [],
+      "rule": "Financing authority is not proceeds, received cash or runway.",
+      "scoped_contract": "omni-scoped-amount-1",
+      "expected_scoped_atoms": [
+        {
+          "role": "financing_authority",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ],
+      "scoped_status": "executable_synthetic_pending_human_review"
+    }
+  ],
+  "origin_proposal_cases": [
+    {
+      "fixture_id": "B-O01",
+      "input": "Issuer page explicitly links wire release ID R1; filing exhibit embeds that same release.",
+      "expected_proposal": "One origin with three evidence paths; zero extra independent corroboration."
+    },
+    {
+      "fixture_id": "B-O02",
+      "input": "Two pages share issuer, headline and date but expose no native release link.",
+      "expected_proposal": "Candidate similarity only; origin equivalence remains pending."
+    },
+    {
+      "fixture_id": "B-O03",
+      "input": "An issuer release cites an FDA action document; both describe the same action.",
+      "expected_proposal": "Different reporting roles and evidence paths; decision requires the regulator action, not a publisher vote."
+    },
+    {
+      "fixture_id": "B-O04",
+      "input": "Wire release R1 is corrected under same URL with different numerical results.",
+      "expected_proposal": "New content revision, retained old observation, correction link and renewed adjudication; no old approval inheritance."
+    },
+    {
+      "fixture_id": "B-O05",
+      "input": "An old daily index still lists accession A after a later full-index snapshot omits it.",
+      "expected_proposal": "Observed discrepancy only; no deletion or adjudicated retraction from absence alone."
+    },
+    {
+      "fixture_id": "B-O06",
+      "input": "A candidate is marked metadata_changed_review_required but all cached jobs are parsed.",
+      "expected_proposal": "A future persistent correction gate must survive hydration; current patch only receipts metadata changes."
+    }
+  ]
+}

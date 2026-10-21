@@ -1,0 +1,160 @@
+{
+  "contract": "omni-vertical-proposals-1",
+  "prepared_date": "2026-10-19",
+  "human_review_status": "pending",
+  "implementation_status": "proposal_only",
+  "automatic_activation": false,
+  "source_policy_changes": 0,
+  "membership_changes": 0,
+  "compatibility": "Not imported by existing runtime schemas; retain existing asset/project kinds.",
+  "time_fields": {
+    "document_date": "Raw source value plus date/month/quarter/unknown precision; no imputed UTC",
+    "source_posted_at": "Explicit source timezone or null normalized instant; retain naive raw timestamp",
+    "reporting_period": "Series-specific period and frequency, distinct from posting date",
+    "action_or_effective_date": "Contract/regulatory/ownership date with its own precision",
+    "first_observed_at": "Explicit timezone from actual collection receipt",
+    "retrieved_at": "Explicit timezone, never before first_observed_at",
+    "known_from": "When this mapping or fact became known; never backdate from effective_date",
+    "timezone_basis": "Exact source documentation/evidence reference or null"
+  },
+  "identifiers": {
+    "nrc_accession": "Document-native AccessionNumber; required for APS evidence",
+    "nrc_dockets": "Zero or more source-provided strings; not an approval or event count",
+    "eia_generator": [
+      "dataset_vintage",
+      "plant_code",
+      "generator_id"
+    ],
+    "issuer": "Reviewed legal entity ID and evidenced CIK when available",
+    "security": "Existing instrument/listing ID with validity interval; symbol alone is insufficient",
+    "recipient": "Source-supplied UEI when available; no inferred parent",
+    "procurement": [
+      "source_award_family_key",
+      "source_transaction_key",
+      "modification_id"
+    ]
+  },
+  "relationship_contract": {
+    "required": [
+      "relationship_id",
+      "from_id",
+      "to_id",
+      "role",
+      "known_from",
+      "validity_precision",
+      "source_vintage",
+      "proofs",
+      "human_review_status"
+    ],
+    "optional": [
+      "valid_from",
+      "valid_to",
+      "direct_stake_percent",
+      "economic_definition"
+    ],
+    "roles": [
+      "operates",
+      "directly_owns",
+      "applicant_for",
+      "licensee_for",
+      "contractor_for",
+      "parent_of",
+      "unit_of",
+      "crosswalks_to"
+    ],
+    "human_review_status": "pending",
+    "percentage_rules": [
+      "Explicit decimal 0 through 100 only",
+      "Direct legal ownership is not operator share",
+      "No inferred residual owner",
+      "Reject incompatible overlapping intervals or double counting",
+      "Do not traverse unreviewed or temporally incompatible parent edges"
+    ],
+    "proof_requirements": [
+      "Existing text evidence spans when available",
+      "Proposed typed JSON-pointer/cell-row proofs require a new validated proof contract",
+      "Evidence/revision IDs, native row key, original units, field name and source policy",
+      "Table/JSON support is not currently accepted by validator.validate"
+    ]
+  },
+  "licensing_contract": {
+    "distinct_subject_kinds": [
+      "fuel_cycle_facility",
+      "reactor_unit",
+      "other_authorized_activity"
+    ],
+    "stages": [
+      "intent",
+      "pre_application",
+      "application_submitted",
+      "application_accepted",
+      "technical_review",
+      "environmental_review",
+      "hearing",
+      "authorization_issued",
+      "authorization_amended",
+      "authorization_denied",
+      "authorization_withdrawn"
+    ],
+    "constraints": [
+      "A docket number alone establishes no stage",
+      "Stages can be parallel, conditional or revisited; do not infer a strict linear state machine",
+      "Issued authorization requires exact NRC decision, subject, activity, conditions and effective date",
+      "Issuer forecasts remain issuer-reported future events",
+      "A safety evaluation or environmental document alone does not establish every license condition is satisfied"
+    ]
+  },
+  "lineage_contract": {
+    "fields": [
+      "origin_cluster_id",
+      "upstream_source",
+      "upstream_native_id",
+      "unit_or_project_id",
+      "reporting_period",
+      "relation",
+      "proofs",
+      "human_review_status"
+    ],
+    "rule": "Collapse documented NRC-derived EIA observations into shared lineage; distinguish different independently sourced observations.",
+    "human_review_status": "pending"
+  },
+  "request_contract": {
+    "prototype": "read_json(method, url, body=None, credential_ref=None)",
+    "old_policy_default_methods": [
+      "GET"
+    ],
+    "proposed_post_routes": [
+      "https://adams-api.nrc.gov/aps/api/search",
+      "https://api.usaspending.gov/api/v2/search/spending_by_award/"
+    ],
+    "constraints": [
+      "Reviewed exact route, method and bounded body schema before DNS",
+      "Credential handle in approved local mechanism, never its value in state",
+      "Redact query credentials and echoed response request fields before persistence",
+      "Retain existing SSRF/path/redirect/size checks and shared quota accounting",
+      "No automatic quota expansion or scheduler",
+      "Unknown content/fields/totals or paging cap produce visible coverage debt"
+    ],
+    "runtime_enabled": false
+  },
+  "expansion_receipt_template": {
+    "template_only": true,
+    "baseline_scope_hash": null,
+    "candidate_scope_hash": null,
+    "window_start": null,
+    "window_end": null,
+    "implementation_hash": null,
+    "source_policy_hashes": [],
+    "identity_receipts": [],
+    "wave_a_review_receipt": null,
+    "cost_receipts": [],
+    "yield_receipts": [],
+    "unknown_issuer_recall_receipt": null,
+    "negative_outcome_recall_receipt": null,
+    "review_load_receipt": null,
+    "baseline_service_effect_receipt": null,
+    "human_decision": null,
+    "human_review_status": "pending",
+    "automatic_membership_change": false
+  }
+}

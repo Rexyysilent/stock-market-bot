@@ -1,0 +1,631 @@
+{
+  "contract": "omni-source-case-ledger-1",
+  "prepared_date": "2026-10-19",
+  "human_review_status": "pending",
+  "not_human_gold": true,
+  "not_pilot_evidence": true,
+  "source_body_retention": false,
+  "source_policy_changes": false,
+  "cases": [
+    {
+      "case_id": "CLIN-MRNA-20260819",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://news.modernatx.com/merck-and-moderna-announce-phase-3-interpath-001-trial-of-intismeran-plus-keytruda-met-endpoints-of-rfs-and-dmfs-in-melanoma",
+      "native_id": "https://news.modernatx.com/merck-and-moderna-announce-phase-3-interpath-001-trial-of-intismeran-plus-keytruda-met-endpoints-of-rfs-and-dmfs-in-melanoma",
+      "publication": {
+        "raw": "2026-08-19",
+        "precision": "date"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NASDAQ:MRNA / CIK0001682852",
+        "NYSE:MRK / CIK0000310158"
+      ],
+      "trial_identifiers": [
+        "NCT05933577 / INTerpath-001",
+        "NCT03897881 / KEYNOTE-942"
+      ],
+      "source_location": {
+        "sections": [
+          "Main body paragraphs 1-2",
+          "Paragraph beginning Today’s Phase 3 readout builds",
+          "About INTerpath-001"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "A Phase 3 topline disclosure contains a separate historical Phase 2b comparison paragraph.",
+      "proposed_claims": {
+        "current_trial": "NCT05933577",
+        "reported_phase": "Phase 3",
+        "analysis": "prespecified interim",
+        "RFS_primary": "reported_met",
+        "DMFS_key_secondary": "reported_met",
+        "OS": "continuing_follow_up",
+        "phase3_HR_CI_p": "not_disclosed_here",
+        "historical_values_belong_to": "NCT03897881"
+      },
+      "conflicting_evidence": [
+        "Embedded HR 0.51 and 0.411 belong to earlier KEYNOTE-942, not INTerpath-001."
+      ],
+      "uncertainty": [
+        "No Phase 3 numeric estimate is supplied in the result paragraphs. No later OS outcome inferred."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://clinicaltrials.gov/study/NCT05933577",
+          "native_id": "NCT05933577",
+          "publication": {
+            "raw": null,
+            "precision": "unknown"
+          },
+          "location": "Trial description/link in issuer release",
+          "source_role": "registry_identity_link",
+          "note": "Registry historical-version timing requires separate evidence; release itself provides trial identity.",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    },
+    {
+      "case_id": "CLIN-MRNA-20260601",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://www.merck.com/news/moderna-and-merck-present-5-year-data-for-intismeran-autogene-in-combination-with-keytruda-pembrolizumab-in-patients-with-high-risk-stage-iii-iv-melanoma-following-complete-resection-at-the-20/",
+      "native_id": "https://www.merck.com/news/moderna-and-merck-present-5-year-data-for-intismeran-autogene-in-combination-with-keytruda-pembrolizumab-in-patients-with-high-risk-stage-iii-iv-melanoma-following-complete-resection-at-the-20/",
+      "publication": {
+        "raw": "2026-06-01T12:00:00Z",
+        "precision": "timestamp"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NASDAQ:MRNA / CIK0001682852",
+        "NYSE:MRK / CIK0000310158"
+      ],
+      "trial_identifiers": [
+        "NCT03897881 / KEYNOTE-942 / mRNA-4157-P201"
+      ],
+      "source_location": {
+        "sections": [
+          "Efficacy paragraph after introduction",
+          "Additional subgroup and translational data",
+          "About KEYNOTE-942/mRNA-4157-P201"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "The five-year Phase 2b update separately reports RFS, DMFS and exploratory OS; pipeline paragraphs describe other trials.",
+      "proposed_claims": {
+        "reported_phase": "Phase 2b",
+        "followup_median_months": "60.3",
+        "RFS": {
+          "rank": "primary",
+          "HR": "0.51",
+          "CI_level_percent": "95",
+          "CI": [
+            "0.294",
+            "0.887"
+          ]
+        },
+        "DMFS": {
+          "rank": "key_secondary",
+          "HR": "0.411",
+          "CI_level_percent": "95",
+          "CI": [
+            "0.200",
+            "0.843"
+          ]
+        },
+        "OS": {
+          "rank": "exploratory",
+          "HR": "0.471",
+          "CI_level_percent": "95",
+          "CI": [
+            "0.165",
+            "1.345"
+          ],
+          "benefit_status": "not_established"
+        },
+        "p_values": "not_borrowed_from_earlier_analyses"
+      },
+      "conflicting_evidence": [
+        "Three-year follow-ups have different intervals/DMFS/OS estimates. The nearby n=14 is not cohort enrollment."
+      ],
+      "uncertainty": [
+        "Descriptive analysis/no-alpha context comes from the associated original paper. HR is not absolute risk reduction."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://ascopubs.org/doi/10.1200/JCO-26-00835",
+          "native_id": "doi:10.1200/JCO-26-00835",
+          "publication": {
+            "raw": "2026-06-01",
+            "precision": "date"
+          },
+          "location": "Abstract; Clinical Assessments; Efficacy",
+          "source_role": "original_research_same_trial",
+          "note": "Five-year analyses descriptive; no alpha assigned; cutoff 2025-12-15; randomized arms 107/50. Same trial is not independent replication.",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    },
+    {
+      "case_id": "CLIN-EYPT-20240506",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://investors.eyepoint.bio/news-releases/news-release-details/eyepoint-pharmaceuticals-announces-topline-data-phase-2-pavia",
+      "native_id": "https://investors.eyepoint.bio/news-releases/news-release-details/eyepoint-pharmaceuticals-announces-topline-data-phase-2-pavia",
+      "publication": {
+        "raw": "2024-05-06",
+        "precision": "date"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NASDAQ:EYPT / CIK0001314102"
+      ],
+      "trial_identifiers": [
+        "NCT05383209 / PAVIA"
+      ],
+      "source_location": {
+        "sections": [
+          "Opening results paragraph",
+          "PAVIA topline interim results bullets",
+          "PAVIA trial description"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "PAVIA failed its prespecified primary endpoint despite favorable stability and progression framing.",
+      "proposed_claims": {
+        "reported_phase": "Phase 2",
+        "indication": "NPDR",
+        "primary_endpoint": "at least two-step DRSS improvement at week 36",
+        "primary_status": "not_met",
+        "outcome_percent_by_arm": {
+          "3mg": "5",
+          "2mg": "0",
+          "sham": "5"
+        },
+        "stability_analysis_class": null
+      },
+      "conflicting_evidence": [
+        "The same release describes previously positive DAVIO 2 and future LUGANO/LUCIA studies in wet AMD.",
+        "Baseline arm sizes 26/26/25 differ from nine-month outcome denominators 20/20/21 (sham/2mg/3mg)."
+      ],
+      "uncertainty": [
+        "No verified historical LUGANO failure maps to the synthetic test.",
+        "The favorable stability measure is not explicitly called post hoc in these issuer records; leave that label pending.",
+        "Conference call at 08:00 ET is not a verified publication time."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1314102/000095017024053248/eypt-20240506.htm",
+          "native_id": "0000950170-24-053248",
+          "publication": {
+            "raw": "2024-05-06",
+            "precision": "date"
+          },
+          "location": "Item 8.01 / exhibit reference",
+          "source_role": "issuer_filing_copy",
+          "note": "Filing date retained at date precision; not an independent regulator validation.",
+          "retrieval_date": "2026-10-19"
+        },
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1314102/000095017024053248/eypt-ex99_1.htm",
+          "native_id": "0000950170-24-053248:EX-99.1",
+          "publication": {
+            "raw": "2024-05-06",
+            "precision": "date"
+          },
+          "location": "Exhibit 99.1; main results and PAVIA description",
+          "source_role": "issuer_release_copy",
+          "note": "",
+          "retrieval_date": "2026-10-19"
+        },
+        {
+          "url": "https://eyepointpharma.com/wp-content/uploads/2024/05/Eyepoint-PAVIA-Topline_vFFF.pdf",
+          "native_id": "Eyepoint-PAVIA-Topline_vFFF.pdf",
+          "publication": {
+            "raw": "2024-05-06",
+            "precision": "date"
+          },
+          "location": "Primary-endpoint and disease-progression charts; baseline table",
+          "source_role": "issuer_presentation",
+          "note": "Baseline and evaluable denominators must not be interchanged.",
+          "retrieval_date": "2026-10-19"
+        },
+        {
+          "url": "https://clinicaltrials.gov/study/NCT05383209",
+          "native_id": "NCT05383209",
+          "publication": {
+            "raw": null,
+            "precision": "unknown"
+          },
+          "location": "Phase and outcome measures",
+          "source_role": "registry_current_snapshot",
+          "note": "Worsening is listed among secondary measures in current registry; this is not a historical-version attestation.",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    },
+    {
+      "case_id": "CLIN-BEAM-20260325",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://investors.beamtx.com/news-releases/news-release-details/beam-therapeutics-announces-compelling-updated-clinical-data/",
+      "native_id": "https://investors.beamtx.com/news-releases/news-release-details/beam-therapeutics-announces-compelling-updated-clinical-data/",
+      "publication": {
+        "raw": "2026-03-25T11:00:00Z",
+        "precision": "timestamp"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NASDAQ:BEAM / CIK0001745999"
+      ],
+      "trial_identifiers": [
+        "NCT06389877 / BEAM-302"
+      ],
+      "source_location": {
+        "sections": [
+          "BEAM-302 Phase 1/2 Clinical Trial Data Update",
+          "BEAM-302 Pivotal Development"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "Beam proposed pivotal expansion of the ongoing Phase 1/2 study and a potential accelerated approval pathway.",
+      "proposed_claims": {
+        "reported_phase": "Phase 1/2",
+        "pivotal_cohort_status": "planned",
+        "regulatory_approval": "not_established",
+        "cutoff": "2026-02-10",
+        "treated_n": "29",
+        "efficacy_evaluable_n": "28",
+        "single_dose_n": "26",
+        "multidose_n": "3",
+        "additional_planned_n": "approximately 50"
+      },
+      "conflicting_evidence": [
+        "Single-dose safety statements cannot transfer to multidose patients.",
+        "Planned additional enrollment is not treated/evaluable population."
+      ],
+      "uncertainty": [
+        "A planned accelerated pathway is not FDA approval. Concentration, dose and biomarker percentage extraction remain unsupported in the narrow patch."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://clinicaltrials.gov/study/NCT06389877",
+          "native_id": "NCT06389877",
+          "publication": {
+            "raw": null,
+            "precision": "unknown"
+          },
+          "location": "Phases; trial parts/cohorts",
+          "source_role": "registry_current_snapshot",
+          "note": "PHASE1 and PHASE2; current registry changes cannot be backdated.",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    },
+    {
+      "case_id": "CLIN-BEAM-20260804",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://investors.beamtx.com/news-releases/news-release-details/beam-therapeutics-reports-second-quarter-2026-financial-results",
+      "native_id": "https://investors.beamtx.com/news-releases/news-release-details/beam-therapeutics-reports-second-quarter-2026-financial-results",
+      "publication": {
+        "raw": "2026-08-04T11:00:00Z",
+        "precision": "timestamp"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NASDAQ:BEAM / CIK0001745999"
+      ],
+      "trial_identifiers": [
+        "NCT06389877 / BEAM-302"
+      ],
+      "source_location": {
+        "sections": [
+          "Liver-targeted Genetic Disease Franchise",
+          "BEAM-302 first bullet"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "Beam reported first pivotal-cohort dosing during July in the ongoing Phase 1/2 trial.",
+      "proposed_claims": {
+        "reported_phase": "Phase 1/2",
+        "pivotal_cohort_status": "first_patient_reported_dosed",
+        "event_time": {
+          "raw": "2026-07",
+          "precision": "month"
+        },
+        "regulatory_approval": "not_established"
+      },
+      "conflicting_evidence": [
+        "Adjacent BEAM-304 IND clearance and BEACON updates concern different assets."
+      ],
+      "uncertainty": [
+        "Do not convert July into an invented day or use August 4 as the dosing date."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://clinicaltrials.gov/study/NCT06389877",
+          "native_id": "NCT06389877",
+          "publication": {
+            "raw": null,
+            "precision": "unknown"
+          },
+          "location": "Phases and cohort parts",
+          "source_role": "registry_current_snapshot",
+          "note": "",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    },
+    {
+      "case_id": "REG-BWXT-20260407",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://investors.bwxt.com/news-releases/news-release-details/bwxt-begins-nrc-engagement-licensing-new-defense-nuclear-fuel",
+      "native_id": "businesswire:20260407349126",
+      "publication": {
+        "raw": "2026-04-07",
+        "precision": "date"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NYSE:BWXT / CIK0001486957"
+      ],
+      "trial_identifiers": [],
+      "source_location": {
+        "sections": [
+          "Main body paragraphs 1-3",
+          "Forward-Looking Statements"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "The issuer notified NRC of an intended new Erwin enrichment facility application, beginning pre-application engagement.",
+      "proposed_claims": {
+        "regulatory_stage": "pre_application",
+        "planned_application": {
+          "raw": "Q1 2027",
+          "precision": "quarter"
+        },
+        "licence_approval": "not_established"
+      },
+      "conflicting_evidence": [
+        "The adjacent existing NFS facility operates under its own licensing history.",
+        "A previously announced NNSA contract does not approve this new facility."
+      ],
+      "uncertainty": [
+        "No NRC licence grant or dated regulator receipt for this new project was verified in this research.",
+        "Corporate timestamp variants and the IR page lack an independently verified common timezone; retain date precision."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://www.bwxt.com/bwxt-begins-nrc-engagement-on-licensing-for-a-new-defense-nuclear-fuel-facility/",
+          "native_id": "corporate-copy:2026-04-07",
+          "publication": {
+            "raw": "2026-04-07",
+            "precision": "date"
+          },
+          "location": "Opening paragraphs",
+          "source_role": "same_issuer_copy",
+          "note": "",
+          "retrieval_date": "2026-10-19"
+        },
+        {
+          "url": "https://www.businesswire.com/news/home/20260407349126/en/",
+          "native_id": "businesswire:20260407349126",
+          "publication": {
+            "raw": "2026-04-07",
+            "precision": "date"
+          },
+          "location": "Linked source version",
+          "source_role": "syndicated_issuer_release",
+          "note": "Explicit same-release link; not another independent origin.",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    },
+    {
+      "case_id": "REG-BWXT-20220831-CANDIDATE",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://www.nrc.gov/docs/ML2224/ML22243A112.pdf",
+      "native_id": "ADAMS:ML22243A112",
+      "publication": {
+        "raw": null,
+        "precision": "unknown"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "BWXT Advanced Technologies, LLC / parent NYSE:BWXT"
+      ],
+      "trial_identifiers": [],
+      "source_location": {
+        "sections": [
+          "Cover letter dated 2022-08-31",
+          "Enclosure BANR-PLAN-111554 Rev.0 section 4.2",
+          "Section 5 Preapplication Engagement"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "An older BANR regulatory-engagement plan discusses technical/topical submissions and explicitly says no licence application was being pursued at that time.",
+      "proposed_claims": {
+        "project": "BANR",
+        "document_date": "2022-08-31",
+        "document_revision": "BANR-PLAN-111554 Rev.0",
+        "stage": "pre_application",
+        "licence_approval": "not_established"
+      },
+      "conflicting_evidence": [
+        "This BANR reactor project is distinct from the 2026 Erwin enrichment facility."
+      ],
+      "uncertainty": [
+        "Letter date is verified; public release/posting date is unknown.",
+        "NRC hosts an issuer submission. Hosting does not convert it into an NRC licensing decision."
+      ],
+      "corroborating_records": [],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false,
+      "native_document_date": "2022-08-31",
+      "candidate_only": true
+    },
+    {
+      "case_id": "IDENT-GM-20230608",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://investor.gm.com/news-releases/news-release-details/general-motors-doubles-down-commitment-unified-charging-standard",
+      "native_id": "prnewswire:301846599",
+      "publication": {
+        "raw": "2023-06-08",
+        "precision": "date"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NYSE:GM / General Motors Co.",
+        "NASDAQ:TSLA / CIK0001318605"
+      ],
+      "trial_identifiers": [],
+      "source_location": {
+        "sections": [
+          "First datelined body paragraph",
+          "Charging access timeline paragraphs"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "GM announced a collaboration with Tesla for GM vehicles and charging access; Tesla is an explicitly named counterpart.",
+      "proposed_claims": {
+        "reporting_subject": "General Motors Co.",
+        "counterparty": "Tesla, Inc.",
+        "related_tags_establish_subject": false,
+        "plans": {
+          "charging_access": "2024",
+          "vehicle_connector_integration": "2025"
+        }
+      },
+      "conflicting_evidence": [
+        "The GM and Tesla names refer to different roles; a known Tesla mapping cannot stand in for an unresolved GM subject."
+      ],
+      "uncertainty": [
+        "No original vendor related-company tag payload was supplied or independently verified. This is a source-role example, not proof of the exact synthetic historical bug.",
+        "GM is not in the current seed entity graph; keep it unresolved until an identity addition is reviewed."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://www.prnewswire.com/news-releases/general-motors-doubles-down-on-commitment-to-a-unified-charging-standard-and-expands-charging-access-to-tesla-supercharger-network-301846599.html",
+          "native_id": "prnewswire:301846599",
+          "publication": {
+            "raw": "2023-06-08T20:30:00Z",
+            "precision": "timestamp"
+          },
+          "location": "Dateline; 16:30 ET publisher stamp",
+          "source_role": "syndicated_issuer_release",
+          "note": "Explicit original-content link from GM; one disclosure lineage.",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    },
+    {
+      "case_id": "CLIN-MRNA-HISTORICAL-P-CONTROL",
+      "corpus_kind": "real_source_research_case",
+      "primary_url": "https://www.merck.com/news/moderna-and-merck-announce-mrna-4157-v940-in-combination-with-keytruda-pembrolizumab-demonstrated-continued-improvement-in-recurrence-free-survival-and-distant-metastasis-free-survival-in-pa/",
+      "native_id": "https://www.merck.com/news/moderna-and-merck-announce-mrna-4157-v940-in-combination-with-keytruda-pembrolizumab-demonstrated-continued-improvement-in-recurrence-free-survival-and-distant-metastasis-free-survival-in-pa/",
+      "publication": {
+        "raw": "2023-12-14",
+        "precision": "date"
+      },
+      "retrieval_date": "2026-10-19",
+      "issuer_identifiers": [
+        "NASDAQ:MRNA / CIK0001682852",
+        "NYSE:MRK / CIK0000310158"
+      ],
+      "trial_identifiers": [
+        "NCT03897881 / KEYNOTE-942"
+      ],
+      "source_location": {
+        "sections": [
+          "Efficacy result paragraph"
+        ]
+      },
+      "excerpt": null,
+      "paraphrase": "Three-year follow-up releases report nominal p-values with different sidedness.",
+      "proposed_claims": {
+        "2023-12-14": {
+          "RFS_p": "0.0095",
+          "DMFS_p": "0.0077",
+          "sidedness": "one_sided",
+          "adjustment": "nominal"
+        },
+        "2024-06-03": {
+          "RFS_p": "0.019",
+          "DMFS_p": "0.015",
+          "sidedness": "two_sided",
+          "adjustment": "nominal"
+        }
+      },
+      "conflicting_evidence": [
+        "These p-values must not be imported into the 2026 five-year analysis."
+      ],
+      "uncertainty": [
+        "Same trial/dataset context does not make different statistical qualifiers interchangeable."
+      ],
+      "corroborating_records": [
+        {
+          "url": "https://www.merck.com/news/moderna-merck-announce-3-year-data-for-mrna-4157-v940-in-combination-with-keytruda-pembrolizumab-demonstrated-sustained-improvement-in-recurrence-free-survival-distant-metastasis-free-su/",
+          "native_id": "https://www.merck.com/news/moderna-merck-announce-3-year-data-for-mrna-4157-v940-in-combination-with-keytruda-pembrolizumab-demonstrated-sustained-improvement-in-recurrence-free-survival-distant-metastasis-free-su/",
+          "publication": {
+            "raw": "2024-06-03",
+            "precision": "date"
+          },
+          "location": "Efficacy results paragraph",
+          "source_role": "later_same_trial_disclosure",
+          "note": "",
+          "retrieval_date": "2026-10-19"
+        }
+      ],
+      "human_review_status": "pending",
+      "label_origin": "AI draft",
+      "gold_eligible": false,
+      "pilot_eligible": false,
+      "source_use_approval": "pending_operator_review",
+      "body_retained_in_bundle": false
+    }
+  ],
+  "baseline_commit_url": "https://github.com/Rexyysilent/stock-market-bot/tree/d35f667aebd3c2590cabbbe80e51076b3a1fa788"
+}

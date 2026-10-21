@@ -1,0 +1,382 @@
+SCAN-FRIENDLY AUDIT RENDERING — NOT RAW STDOUT
+The unchanged original transcript is preserved in the delivery original-audit-receipts/verification directory.
+Original file: migration-python312.txt
+Original SHA256: migration-python312-hashes.txt#h047
+Exact hash/path values are in migration-python312-hashes.txt; @audit tokens resolve to those entries.
+This representation changes no command outcomes or test evidence. No test rerun occurred.
+
+OMNI synthetic migration replay
+Status: passed
+Checkpoint: @audit[migration-python312-hashes.txt#h002]
+Python: 3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]
+Platform: Linux-6.18.55-x86_64-with-glibc2.39
+SQLite: 3.53.1
+Source fingerprint: @audit[migration-python312-hashes.txt#h006]
+Scope: Disposable synthetic main-CLI operator replay; no production database, real review, network collection or activation
+
+COMMAND: git rev-parse HEAD
+START: 2026-10-20T18:17:44.432392+00:00
+END: 2026-10-20T18:17:44.434074+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+@audit[migration-python312-hashes.txt#h007]
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] --version
+START: 2026-10-20T18:17:44.434089+00:00
+END: 2026-10-20T18:17:44.435486+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+Python 3.12.14
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m pip check
+START: 2026-10-20T18:17:44.435497+00:00
+END: 2026-10-20T18:17:44.700084+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+No broken requirements found.
+
+STDERR:
+
+
+COMMAND: git show @audit[migration-python312-hashes.txt#h002]:omni/store.py
+START: 2026-10-20T18:17:44.700134+00:00
+END: 2026-10-20T18:17:44.702947+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+[Exact checkpoint source captured by SHA256 @audit[migration-python312-hashes.txt#h011]; AST schema recorded in JSON.]
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-backup @audit[migration-python312-hashes.txt#p008]
+START: 2026-10-20T18:17:44.742678+00:00
+END: 2026-10-20T18:17:44.923672+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "contract": "omni-backup-1",
+  "path": "@audit[migration-python312-hashes.txt#p008]",
+  "sha256": "@audit[migration-python312-hashes.txt#h012]",
+  "bytes": 167936,
+  "method": "sqlite_online_backup",
+  "original_preserved": true
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-backup @audit[migration-python312-hashes.txt#p008]
+START: 2026-10-20T18:17:44.926062+00:00
+END: 2026-10-20T18:17:45.084863+00:00
+EXIT: 1 (expected 1)
+STDOUT:
+
+STDERR:
+{"status": "failed", "error": "ValueError", "detail": "backup destination already exists"}
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-upgrade
+START: 2026-10-20T18:17:45.084969+00:00
+END: 2026-10-20T18:17:45.260333+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "schema": "omni-extension-schema-1",
+  "status": "upgraded",
+  "legacy_records_rewritten": false
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-upgrade
+START: 2026-10-20T18:17:45.262468+00:00
+END: 2026-10-20T18:17:45.462948+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "schema": "omni-extension-schema-1",
+  "status": "already_current",
+  "legacy_records_rewritten": false
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] receipt-import @audit[migration-python312-hashes.txt#p009]
+START: 2026-10-20T18:17:45.464928+00:00
+END: 2026-10-20T18:17:45.636612+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "contract": "omni-receipt-1",
+  "kind": "migration_fixture",
+  "observed_at": "2026-10-20T00:00:00Z",
+  "payload": {
+    "contract": "synthetic-migration-fixture-1",
+    "index": 0,
+    "evidence_kind": "synthetic",
+    "ai_label": "pending_human_review",
+    "actual_human_approval": false,
+    "automatic_activation": false,
+    "legacy_review_sha256": "@audit[migration-python312-hashes.txt#h017]"
+  },
+  "refs": [],
+  "receipt_id": "receipt:migration_fixture:@audit[migration-python312-hashes.txt#h018]",
+  "record_hash": "@audit[migration-python312-hashes.txt#h019]"
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] receipt-import @audit[migration-python312-hashes.txt#p010]
+START: 2026-10-20T18:17:45.636994+00:00
+END: 2026-10-20T18:17:45.830110+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "contract": "omni-receipt-1",
+  "kind": "migration_fixture",
+  "observed_at": "2026-10-20T00:00:00Z",
+  "payload": {
+    "contract": "synthetic-migration-fixture-1",
+    "index": 1,
+    "evidence_kind": "synthetic",
+    "ai_label": "pending_human_review",
+    "actual_human_approval": false,
+    "automatic_activation": false,
+    "legacy_review_sha256": "@audit[migration-python312-hashes.txt#h017]"
+  },
+  "refs": [
+    "receipt:migration_fixture:@audit[migration-python312-hashes.txt#h018]"
+  ],
+  "receipt_id": "receipt:migration_fixture:@audit[migration-python312-hashes.txt#h021]",
+  "record_hash": "@audit[migration-python312-hashes.txt#h022]"
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] receipt-import @audit[migration-python312-hashes.txt#p010]
+START: 2026-10-20T18:17:45.830242+00:00
+END: 2026-10-20T18:17:45.992109+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "contract": "omni-receipt-1",
+  "kind": "migration_fixture",
+  "observed_at": "2026-10-20T00:00:00Z",
+  "payload": {
+    "actual_human_approval": false,
+    "ai_label": "pending_human_review",
+    "automatic_activation": false,
+    "contract": "synthetic-migration-fixture-1",
+    "evidence_kind": "synthetic",
+    "index": 1,
+    "legacy_review_sha256": "@audit[migration-python312-hashes.txt#h017]"
+  },
+  "receipt_id": "receipt:migration_fixture:@audit[migration-python312-hashes.txt#h021]",
+  "record_hash": "@audit[migration-python312-hashes.txt#h022]",
+  "refs": [
+    "receipt:migration_fixture:@audit[migration-python312-hashes.txt#h018]"
+  ]
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-backup @audit[migration-python312-hashes.txt#p011]
+START: 2026-10-20T18:17:45.993602+00:00
+END: 2026-10-20T18:17:46.178789+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "contract": "omni-backup-1",
+  "path": "@audit[migration-python312-hashes.txt#p011]",
+  "sha256": "@audit[migration-python312-hashes.txt#h025]",
+  "bytes": 225280,
+  "method": "sqlite_online_backup",
+  "original_preserved": true
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-restore @audit[migration-python312-hashes.txt#p008] @audit[migration-python312-hashes.txt#p012] --sha256 @audit[migration-python312-hashes.txt#h012]
+START: 2026-10-20T18:17:46.180565+00:00
+END: 2026-10-20T18:17:46.332160+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "status": "restored",
+  "path": "@audit[migration-python312-hashes.txt#p012]",
+  "sha256": "@audit[migration-python312-hashes.txt#h012]",
+  "original_preserved": true
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-restore @audit[migration-python312-hashes.txt#p011] @audit[migration-python312-hashes.txt#p013] --sha256 @audit[migration-python312-hashes.txt#h025]
+START: 2026-10-20T18:17:46.332257+00:00
+END: 2026-10-20T18:17:46.477801+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "status": "restored",
+  "path": "@audit[migration-python312-hashes.txt#p013]",
+  "sha256": "@audit[migration-python312-hashes.txt#h025]",
+  "original_preserved": true
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p013] --sources @audit[migration-python312-hashes.txt#p007] store-upgrade
+START: 2026-10-20T18:17:46.481429+00:00
+END: 2026-10-20T18:17:46.652569+00:00
+EXIT: 0 (expected 0)
+STDOUT:
+{
+  "schema": "omni-extension-schema-1",
+  "status": "already_current",
+  "legacy_records_rewritten": false
+}
+
+STDERR:
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-restore @audit[migration-python312-hashes.txt#p008] @audit[migration-python312-hashes.txt#p006] --sha256 @audit[migration-python312-hashes.txt#h012]
+START: 2026-10-20T18:17:46.654325+00:00
+END: 2026-10-20T18:17:46.797783+00:00
+EXIT: 1 (expected 1)
+STDOUT:
+
+STDERR:
+{"status": "failed", "error": "ValueError", "detail": "restore requires a new destination; existing store is preserved"}
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-restore @audit[migration-python312-hashes.txt#p008] @audit[migration-python312-hashes.txt#p012] --sha256 @audit[migration-python312-hashes.txt#h012]
+START: 2026-10-20T18:17:46.797894+00:00
+END: 2026-10-20T18:17:46.955014+00:00
+EXIT: 1 (expected 1)
+STDOUT:
+
+STDERR:
+{"status": "failed", "error": "ValueError", "detail": "restore requires a new destination; existing store is preserved"}
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p006] --sources @audit[migration-python312-hashes.txt#p007] store-restore @audit[migration-python312-hashes.txt#p008] @audit[migration-python312-hashes.txt#p014] --sha256 @audit[migration-python312-hashes.txt#h029]
+START: 2026-10-20T18:17:46.955130+00:00
+END: 2026-10-20T18:17:47.130722+00:00
+EXIT: 1 (expected 1)
+STDOUT:
+
+STDERR:
+{"status": "failed", "error": "ValueError", "detail": "backup hash mismatch"}
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p015] --sources @audit[migration-python312-hashes.txt#p007] store-upgrade
+START: 2026-10-20T18:17:47.133800+00:00
+END: 2026-10-20T18:17:47.315018+00:00
+EXIT: 1 (expected 1)
+STDOUT:
+
+STDERR:
+{"status": "failed", "error": "ValueError", "detail": "unsupported OMNI extension schema"}
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p016] --sources @audit[migration-python312-hashes.txt#p007] store-upgrade
+START: 2026-10-20T18:17:47.320271+00:00
+END: 2026-10-20T18:17:47.507102+00:00
+EXIT: 1 (expected 1)
+STDOUT:
+
+STDERR:
+{"status": "failed", "error": "ValueError", "detail": "not an OMNI database"}
+
+
+COMMAND: @audit[migration-python312-hashes.txt#p003] -m omni --db @audit[migration-python312-hashes.txt#p017] --sources @audit[migration-python312-hashes.txt#p007] store-upgrade
+START: 2026-10-20T18:17:47.510559+00:00
+END: 2026-10-20T18:17:47.677706+00:00
+EXIT: 1 (expected 1)
+STDOUT:
+
+STDERR:
+{"status": "failed", "error": "ValueError", "detail": "unsupported OMNI database"}
+
+
+CHECKS:
+{"actual": 0, "expected": 0, "name": "git_head:exit", "passed": true}
+{"actual": 0, "expected": 0, "name": "runtime_version:exit", "passed": true}
+{"actual": 0, "expected": 0, "name": "locked_dependency_check:exit", "passed": true}
+{"actual": 0, "expected": 0, "name": "exact_checkpoint_store_source:exit", "passed": true}
+{"name": "one_literal_legacy_schema", "passed": true}
+{"name": "legacy_schema_is_literal_text", "passed": true}
+{"name": "legacy_before_backup:integrity", "passed": true}
+{"name": "no_new_extensions_in_exact_legacy_schema", "passed": true}
+{"actual": 0, "expected": 0, "name": "backup_before_upgrade:exit", "passed": true}
+{"name": "backup_hash_matches_file", "passed": true}
+{"name": "legacy_backup_did_not_open_migrating_store", "passed": true}
+{"name": "legacy_backup:integrity", "passed": true}
+{"name": "legacy_backup_preserves_all_rows_and_schema", "passed": true}
+{"actual": 1, "expected": 1, "name": "backup_overwrite_refused:exit", "passed": true}
+{"name": "backup_overwrite_refused:typed_refusal", "passed": true, "refusal": {"detail": "backup destination already exists", "error": "ValueError", "status": "failed"}}
+{"actual": 0, "expected": 0, "name": "first_upgrade:exit", "passed": true}
+{"name": "first_upgrade_reports_upgraded", "passed": true}
+{"name": "after_first_upgrade:integrity", "passed": true}
+{"name": "legacy_rows_after_upgrade:integrity", "passed": true}
+{"name": "all_legacy_rows_retained_exactly", "passed": true}
+{"name": "legacy_review_and_evidence_payload_bytes_retained", "passed": true}
+{"actual": 0, "expected": 0, "name": "second_upgrade:exit", "passed": true}
+{"name": "second_upgrade_reports_already_current", "passed": true}
+{"name": "second_upgrade_preserves_schema_rows_and_migration_clock", "passed": true}
+{"actual": 0, "expected": 0, "name": "import_new_receipt_0:exit", "passed": true}
+{"name": "imported_receipt_0_exact", "passed": true}
+{"actual": 0, "expected": 0, "name": "import_new_receipt_1:exit", "passed": true}
+{"name": "imported_receipt_1_exact", "passed": true}
+{"actual": 0, "expected": 0, "name": "replay_new_receipt:exit", "passed": true}
+{"name": "new_receipt_import_is_idempotent", "passed": true}
+{"name": "upgraded_with_receipts:integrity", "passed": true}
+{"name": "two_append_only_receipts_present", "passed": true}
+{"actual": 0, "expected": 0, "name": "backup_upgraded_store:exit", "passed": true}
+{"name": "upgraded_backup_hash_matches_file", "passed": true}
+{"name": "upgraded_backup:integrity", "passed": true}
+{"name": "upgraded_backup_preserves_all_rows_and_schema", "passed": true}
+{"actual": 0, "expected": 0, "name": "restore_legacy_to_new_path:exit", "passed": true}
+{"actual": 0, "expected": 0, "name": "restore_upgraded_to_new_path:exit", "passed": true}
+{"name": "legacy_restore_is_byte_identical", "passed": true}
+{"name": "upgraded_restore_is_byte_identical", "passed": true}
+{"name": "legacy_restored:integrity", "passed": true}
+{"name": "old_restore_remains_old_without_automatic_open", "passed": true}
+{"name": "upgraded_restored:integrity", "passed": true}
+{"name": "new_restore_preserves_rows_and_extensions", "passed": true}
+{"name": "restored_receipt_hashes_and_links_validate", "passed": true}
+{"actual": 0, "expected": 0, "name": "open_restored_upgraded_store:exit", "passed": true}
+{"name": "restored_new_store_opens_already_current", "passed": true}
+{"actual": 1, "expected": 1, "name": "restore_over_existing_original_refused:exit", "passed": true}
+{"name": "restore_over_existing_original_refused:typed_refusal", "passed": true, "refusal": {"detail": "restore requires a new destination; existing store is preserved", "error": "ValueError", "status": "failed"}}
+{"actual": 1, "expected": 1, "name": "restore_over_existing_restore_refused:exit", "passed": true}
+{"name": "restore_over_existing_restore_refused:typed_refusal", "passed": true, "refusal": {"detail": "restore requires a new destination; existing store is preserved", "error": "ValueError", "status": "failed"}}
+{"actual": 1, "expected": 1, "name": "wrong_restore_hash_refused:exit", "passed": true}
+{"name": "wrong_restore_hash_refused:typed_refusal", "passed": true, "refusal": {"detail": "backup hash mismatch", "error": "ValueError", "status": "failed"}}
+{"name": "wrong_hash_created_no_destination", "passed": true}
+{"name": "overwrite_refusals_preserved_original", "passed": true}
+{"actual": 1, "expected": 1, "name": "unsupported_extension_refused:exit", "passed": true}
+{"name": "unsupported_extension_refused:typed_refusal", "passed": true, "refusal": {"detail": "unsupported OMNI extension schema", "error": "ValueError", "status": "failed"}}
+{"name": "unsupported_extension_refusal_is_byte_preserving", "passed": true}
+{"actual": 1, "expected": 1, "name": "preexisting_non_omni_database_refused:exit", "passed": true}
+{"name": "preexisting_non_omni_database_refused:typed_refusal", "passed": true, "refusal": {"detail": "not an OMNI database", "error": "ValueError", "status": "failed"}}
+{"name": "preexisting_database_refusal_is_byte_preserving", "passed": true}
+{"actual": 1, "expected": 1, "name": "unsupported_store_contract_refused:exit", "passed": true}
+{"name": "unsupported_store_contract_refused:typed_refusal", "passed": true, "refusal": {"detail": "unsupported OMNI database", "error": "ValueError", "status": "failed"}}
+{"name": "wrong_contract_refusal_is_byte_preserving", "passed": true}
+{"name": "original_backups_preserved_throughout", "passed": true}
+{"name": "legacy_review_and_evidence_survive_both_restore_formats", "passed": true}
+{"name": "source_modules_unchanged_during_replay", "passed": true}
+SUMMARY: {"checks": 67, "commands": 21, "expected_refusals": 7, "main_cli_commands": 17, "passed_checks": 67}

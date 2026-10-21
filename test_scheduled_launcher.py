@@ -8,6 +8,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent
 CLOCK, EXPORT, LEDGER = "-u clock_guard.py", "-u export_for_gemini.py", "-u -m ledger update"
+HISTORY, ANCHOR = "-u -m event_history import", "-u -m event_history anchor"
+SCHEMA = "-u scripts/validate_export_schema.py daily_brief.json"
 POWERSHELL = Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32/WindowsPowerShell/v1.0/powershell.exe"
 
 HARNESS = r'''
@@ -31,7 +33,10 @@ function Start-Process {
     $code = 0
     if ($Scenario -eq "clock-failure" -and $script:invocations -eq 1) { $code = 2 }
     if ($Scenario -eq "export-failure" -and $script:invocations -eq 2) { $code = 7 }
-    if ($Scenario -eq "ledger-failure" -and $script:invocations -eq 3) { $code = 9 }
+    if ($Scenario -eq "schema-failure" -and $script:invocations -eq 3) { $code = 8 }
+    if ($Scenario -eq "ledger-failure" -and $script:invocations -eq 4) { $code = 9 }
+    if ($Scenario -eq "history-failure" -and $script:invocations -eq 5) { $code = 10 }
+    if ($Scenario -eq "anchor-failure" -and $script:invocations -eq 6) { $code = 11 }
     # Substitute only the child program. Exercise actual Windows PowerShell
     # Start-Process stream capture and exit-code behavior, without bot imports.
     $child = Microsoft.PowerShell.Management\Start-Process -FilePath $TestPython `
@@ -92,7 +97,7 @@ class ScheduledLauncherTests(unittest.TestCase):
                 self.assertIn("failed" if scenario != "launch-failure" else "fixture launch failure", result.stderr)
 
     def test_warning_stderr_succeeds_and_commits_marker(self):
-        self.run_case("success", [CLOCK, EXPORT, LEDGER], True, True)
+        self.run_case("success", [CLOCK, EXPORT, SCHEMA, LEDGER, HISTORY, ANCHOR], True, True)
 
     def test_refused_clock_stops_before_export_and_marker(self):
         self.run_case("clock-failure", [CLOCK])
@@ -101,7 +106,16 @@ class ScheduledLauncherTests(unittest.TestCase):
         self.run_case("export-failure", [CLOCK, EXPORT])
 
     def test_ledger_failure_does_not_commit_marker(self):
-        self.run_case("ledger-failure", [CLOCK, EXPORT, LEDGER])
+        self.run_case("ledger-failure", [CLOCK, EXPORT, SCHEMA, LEDGER])
+
+    def test_schema_failure_stops_before_ledger_and_marker(self):
+        self.run_case("schema-failure", [CLOCK, EXPORT, SCHEMA])
+
+    def test_history_failure_does_not_commit_marker(self):
+        self.run_case("history-failure", [CLOCK, EXPORT, SCHEMA, LEDGER, HISTORY])
+
+    def test_anchor_failure_does_not_commit_marker(self):
+        self.run_case("anchor-failure", [CLOCK, EXPORT, SCHEMA, LEDGER, HISTORY, ANCHOR])
 
     def test_missing_exit_code_fails_closed(self):
         self.run_case("missing-exit-code", [CLOCK])

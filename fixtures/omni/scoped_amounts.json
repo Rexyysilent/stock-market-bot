@@ -1,0 +1,311 @@
+{
+  "contract": "omni-scoped-amount-1",
+  "synthetic": true,
+  "human_review_status": "pending",
+  "not_gold_or_pilot": true,
+  "cases": [
+    {
+      "fixture_id": "WS2-M13",
+      "text": "Synthetic contract id: SYN-1; ceiling is EUR 1,234.56.",
+      "expected_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "EUR",
+          "operator": "equal",
+          "value": "1234.56",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M14",
+      "text": "Synthetic contract ceiling is between USD 3 million and USD 5 million.",
+      "expected_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "range",
+          "value": null,
+          "lower": "3000000",
+          "upper": "5000000",
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M15",
+      "text": "Synthetic contract ceiling is between USD 3 million and EUR 5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_range_currency_mismatch"
+    },
+    {
+      "fixture_id": "WS2-M16",
+      "text": "Synthetic contract ceiling is between USD 5 million and USD 3 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_range_reversed"
+    },
+    {
+      "fixture_id": "WS2-M17",
+      "text": "Synthetic contract ceiling is between USD 3 and 5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_range_grammar_unsupported"
+    },
+    {
+      "fixture_id": "WS2-M18",
+      "text": "Synthetic contract ceiling is USD 3-5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_range_grammar_unsupported"
+    },
+    {
+      "fixture_id": "WS2-M19",
+      "text": "Synthetic contract ceiling is USD 5 million; additional USD 1 million options.",
+      "expected_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        },
+        {
+          "role": "option",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "1000000",
+          "lower": null,
+          "upper": null,
+          "additivity": "incremental"
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M20",
+      "text": "Synthetic financing has gross proceeds of USD 5 million and net proceeds of USD 4.5 million.",
+      "expected_atoms": [
+        {
+          "role": "gross_proceeds",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        },
+        {
+          "role": "net_proceeds",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "4500000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M21",
+      "text": "Synthetic Project FinanceCo may sell up to $20 million under an ATM facility.",
+      "expected_atoms": [
+        {
+          "role": "financing_authority",
+          "currency": null,
+          "operator": "<=",
+          "value": null,
+          "lower": null,
+          "upper": "20000000",
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M22",
+      "text": "Synthetic contract current obligation is USD 2 million.",
+      "expected_atoms": [
+        {
+          "role": "obligation",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "2000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M23",
+      "text": "Synthetic contract obligation change is USD -2 million.",
+      "expected_atoms": [
+        {
+          "role": "obligation",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "-2000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M24",
+      "text": "Synthetic contract deobligation is USD 2 million.",
+      "expected_atoms": [
+        {
+          "role": "obligation",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "2000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M25",
+      "text": "Synthetic contract has no obligation of USD 2 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_assertion_not_established"
+    },
+    {
+      "fixture_id": "WS2-M26",
+      "text": "Synthetic contract ceiling is USD 5 million equivalent to EUR 4 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_derived_value_unsupported"
+    },
+    {
+      "fixture_id": "WS2-M27",
+      "text": "Synthetic contract ceiling is USD 5 million annually.",
+      "expected_atoms": [],
+      "expected_reason": "amount_unconsumed_qualifier_scope"
+    },
+    {
+      "fixture_id": "WS2-M28",
+      "text": "Synthetic contract ceiling is USD 5 million; received cash is USD 5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_role_ambiguous_or_missing"
+    },
+    {
+      "fixture_id": "WS2-M29",
+      "text": "Synthetic contract ceiling is USD 5 million; runway is 3 years.",
+      "expected_atoms": [],
+      "expected_reason": "amount_unconsumed_numeric_scope"
+    },
+    {
+      "fixture_id": "WS2-M30",
+      "text": "Synthetic contract ceiling is almost USD 5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_operator_unsupported"
+    },
+    {
+      "fixture_id": "WS2-M31",
+      "text": "Synthetic contract ceiling is USD 5 million approximately.",
+      "expected_atoms": [],
+      "expected_reason": "amount_unconsumed_qualifier_scope"
+    },
+    {
+      "fixture_id": "WS2-M32",
+      "text": "Synthetic contract ceiling is USD 5 million per megawatt.",
+      "expected_atoms": [],
+      "expected_reason": "amount_unconsumed_qualifier_scope"
+    },
+    {
+      "fixture_id": "WS2-M33",
+      "text": "Synthetic contract ceiling is USD -5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_negative_role_unsupported"
+    },
+    {
+      "fixture_id": "WS2-M34",
+      "text": "Synthetic contract ceiling is at least USD 5 million.",
+      "expected_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": ">=",
+          "value": null,
+          "lower": "5000000",
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M35",
+      "text": "Synthetic contract ceiling is no more than USD 5 million.",
+      "expected_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "<=",
+          "value": null,
+          "lower": null,
+          "upper": "5000000",
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M36",
+      "text": "Synthetic contract ceiling is about USD 5 million.",
+      "expected_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "approximate",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M37",
+      "text": "Synthetic contract id: C-1; financing id: F-1; ceiling is USD 5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_identity_ambiguous"
+    },
+    {
+      "fixture_id": "WS2-M38",
+      "text": "Synthetic contract ceiling is USD 5 million subject to milestones.",
+      "expected_atoms": [
+        {
+          "role": "ceiling",
+          "currency": "USD",
+          "operator": "equal",
+          "value": "5000000",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    },
+    {
+      "fixture_id": "WS2-M39",
+      "text": "Synthetic contract subject to milestones has a ceiling of USD 5 million.",
+      "expected_atoms": [],
+      "expected_reason": "amount_unconsumed_qualifier_scope"
+    },
+    {
+      "fixture_id": "WS2-M40",
+      "text": "Synthetic contract option of GBP 0.10 is unexercised.",
+      "expected_atoms": [
+        {
+          "role": "option",
+          "currency": "GBP",
+          "operator": "equal",
+          "value": "0.1",
+          "lower": null,
+          "upper": null,
+          "additivity": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "scope": "Workstream 3 isolated focused synthetic/API/CLI checks with copied W1 shared modules; no live provider, real scheduler or human evidence",
+  "python_version": "3.11.17 (main, Oct  3 2026, 01:05:36) [Clang 22.1.3 ]",
+  "implementation_hash": {
+    "algorithm": "sha256",
+    "manifest": "workstream-3-python311-hashes.txt",
+    "entry": "h002"
+  },
+  "source_file_sha256": {
+    "requirements.lock": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h003"
+    },
+    "requirements-ci.lock": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h004"
+    },
+    "omni/prospective.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h005"
+    },
+    "omni/publications.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h006"
+    },
+    "omni/timing.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h007"
+    },
+    "omni/intervals.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h008"
+    },
+    "omni/holdout.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h009"
+    },
+    "omni/prospective_cli.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h010"
+    },
+    "omni/evaluation.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h011"
+    },
+    "omni/pilot.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h012"
+    },
+    "omni/receipts.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h013"
+    },
+    "omni/attestations.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h014"
+    },
+    "omni/coverage.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h015"
+    },
+    "omni/lifecycle.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h016"
+    },
+    "omni/store.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h017"
+    },
+    "omni/evidence.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h018"
+    },
+    "omni/review.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h019"
+    },
+    "test_omni_prospective.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h020"
+    },
+    "test_omni_evaluation.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h021"
+    },
+    "test_omni_pilot.py": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h022"
+    }
+  },
+  "results": [
+    {
+      "command": [
+        {
+          "algorithm": "path",
+          "manifest": "workstream-3-python311-hashes.txt",
+          "entry": "p001"
+        },
+        "-m",
+        "pip",
+        "check"
+      ],
+      "started_at": "2026-10-20T18:12:54.696737+00:00",
+      "completed_at": "2026-10-20T18:12:54.946094+00:00",
+      "exit_code": 0,
+      "output": "No broken requirements found.\n"
+    },
+    {
+      "command": [
+        {
+          "algorithm": "path",
+          "manifest": "workstream-3-python311-hashes.txt",
+          "entry": "p001"
+        },
+        "-m",
+        "unittest",
+        "-v",
+        "test_omni_prospective",
+        "test_omni_evaluation",
+        "test_omni_pilot"
+      ],
+      "started_at": "2026-10-20T18:12:54.946120+00:00",
+      "completed_at": "2026-10-20T18:13:00.459436+00:00",
+      "exit_code": 0,
+      "output": "test_adjudication_hash_native_mapping_and_one_to_one_constraints (test_omni_prospective.ProspectiveTests.test_adjudication_hash_native_mapping_and_one_to_one_constraints) ... ok\ntest_adjudication_replay_and_correction_keep_one_current_decision (test_omni_prospective.ProspectiveTests.test_adjudication_replay_and_correction_keep_one_current_decision) ... ok\ntest_another_family_from_same_native_disclosure_is_not_a_gold_detection (test_omni_prospective.ProspectiveTests.test_another_family_from_same_native_disclosure_is_not_a_gold_detection) ... ok\ntest_bundled_event_mapping_is_reviewed_before_sampling_and_cannot_reuse_detection (test_omni_prospective.ProspectiveTests.test_bundled_event_mapping_is_reviewed_before_sampling_and_cannot_reuse_detection) ... ok\ntest_capped_observation_and_unclosed_interval_leave_inventory_pending (test_omni_prospective.ProspectiveTests.test_capped_observation_and_unclosed_interval_leave_inventory_pending) ... ok\ntest_complete_later_frame_resolves_cap_without_deleting_history (test_omni_prospective.ProspectiveTests.test_complete_later_frame_resolves_cap_without_deleting_history) ... ok\ntest_custody_request_review_and_actual_recording_clocks_can_differ (test_omni_prospective.ProspectiveTests.test_custody_request_review_and_actual_recording_clocks_can_differ) ... ok\ntest_date_only_publication_and_unknown_timezone_never_get_latency_credit (test_omni_prospective.ProspectiveTests.test_date_only_publication_and_unknown_timezone_never_get_latency_credit) ... ok\ntest_delayed_imports_cannot_backdate_gold_or_scheduled_run_counts (test_omni_prospective.ProspectiveTests.test_delayed_imports_cannot_backdate_gold_or_scheduled_run_counts) ... ok\ntest_duplicate_enumeration_does_not_multiply_source_events (test_omni_prospective.ProspectiveTests.test_duplicate_enumeration_does_not_multiply_source_events) ... ok\ntest_end_to_end_exact_hit_and_miss_remain_synthetic (test_omni_prospective.ProspectiveTests.test_end_to_end_exact_hit_and_miss_remain_synthetic) ... ok\ntest_evaluation_receipt_rechecks_exact_inputs_and_rejects_synthetic_gate (test_omni_prospective.ProspectiveTests.test_evaluation_receipt_rechecks_exact_inputs_and_rejects_synthetic_gate) ... ok\ntest_exact_freeze_replay_is_idempotent_and_policy_drift_rejected (test_omni_prospective.ProspectiveTests.test_exact_freeze_replay_is_idempotent_and_policy_drift_rejected) ... ok\ntest_freeze_requires_future_rules_review_and_not_classifier_ids (test_omni_prospective.ProspectiveTests.test_freeze_requires_future_rules_review_and_not_classifier_ids) ... ok\ntest_future_corrections_do_not_supersede_prior_as_of_heads (test_omni_prospective.ProspectiveTests.test_future_corrections_do_not_supersede_prior_as_of_heads) ... ok\ntest_future_source_closure_and_coverage_are_not_visible_at_earlier_clock (test_omni_prospective.ProspectiveTests.test_future_source_closure_and_coverage_are_not_visible_at_earlier_clock) ... ok\ntest_future_timing_proofs_and_measurements_cannot_enter_earlier_report (test_omni_prospective.ProspectiveTests.test_future_timing_proofs_and_measurements_cannot_enter_earlier_report) ... ok\ntest_generic_adjudication_cannot_claim_detection_without_correspondence (test_omni_prospective.ProspectiveTests.test_generic_adjudication_cannot_claim_detection_without_correspondence) ... ok\ntest_generic_enumeration_cannot_drop_unknown_source_records (test_omni_prospective.ProspectiveTests.test_generic_enumeration_cannot_drop_unknown_source_records) ... ok\ntest_generic_inventory_closure_cannot_omit_unknown_source_records (test_omni_prospective.ProspectiveTests.test_generic_inventory_closure_cannot_omit_unknown_source_records) ... ok\ntest_generic_run_receipt_with_attested_but_nonexistent_cycles_is_excluded (test_omni_prospective.ProspectiveTests.test_generic_run_receipt_with_attested_but_nonexistent_cycles_is_excluded) ... ok\ntest_independent_reporting_does_not_merge_origins_and_late_copy_invalidates (test_omni_prospective.ProspectiveTests.test_independent_reporting_does_not_merge_origins_and_late_copy_invalidates) ... ok\ntest_known_issuer_uses_frozen_identity_and_unapproved_real_scope_is_rejected (test_omni_prospective.ProspectiveTests.test_known_issuer_uses_frozen_identity_and_unapproved_real_scope_is_rejected) ... ok\ntest_legacy_migration_is_atomic_idempotent_and_preserves_original_bytes (test_omni_prospective.ProspectiveTests.test_legacy_migration_is_atomic_idempotent_and_preserves_original_bytes) ... ok\ntest_missing_closure_review_does_not_freeze_denominator (test_omni_prospective.ProspectiveTests.test_missing_closure_review_does_not_freeze_denominator) ... ok\ntest_missing_prospective_inventory_stays_pending_without_invented_misses (test_omni_prospective.ProspectiveTests.test_missing_prospective_inventory_stays_pending_without_invented_misses) ... ok\ntest_missing_source_stratum_cannot_close_and_query_changes_are_explicit (test_omni_prospective.ProspectiveTests.test_missing_source_stratum_cannot_close_and_query_changes_are_explicit) ... ok\ntest_non_event_false_proposal_stays_in_complete_publication_denominator (test_omni_prospective.ProspectiveTests.test_non_event_false_proposal_stays_in_complete_publication_denominator) ... ok\ntest_posthoc_enumeration_and_mapping_are_rejected (test_omni_prospective.ProspectiveTests.test_posthoc_enumeration_and_mapping_are_rejected) ... ok\ntest_protocol_review_revocation_invalidates_report_without_erasing_history (test_omni_prospective.ProspectiveTests.test_protocol_review_revocation_invalidates_report_without_erasing_history) ... ok\ntest_public_command_path_freeze_enumerate_close_adjudicate_report (test_omni_prospective.ProspectiveTests.test_public_command_path_freeze_enumerate_close_adjudicate_report) ... ok\ntest_publication_census_is_independent_of_recall_sample_and_approval (test_omni_prospective.ProspectiveTests.test_publication_census_is_independent_of_recall_sample_and_approval) ... ok\ntest_publication_replay_correction_and_revocation_preserve_denominator (test_omni_prospective.ProspectiveTests.test_publication_replay_correction_and_revocation_preserve_denominator) ... ok\ntest_raw_evaluation_flags_cannot_mature_timing_or_release (test_omni_prospective.ProspectiveTests.test_raw_evaluation_flags_cannot_mature_timing_or_release) ... ok\ntest_real_feed_gate_requires_actual_traversal_and_retention_proof (test_omni_prospective.ProspectiveTests.test_real_feed_gate_requires_actual_traversal_and_retention_proof) ... ok\ntest_recovery_cannot_drop_previously_observed_native_id (test_omni_prospective.ProspectiveTests.test_recovery_cannot_drop_previously_observed_native_id) ... ok\ntest_request_approval_and_actual_freeze_can_have_distinct_clocks (test_omni_prospective.ProspectiveTests.test_request_approval_and_actual_freeze_can_have_distinct_clocks) ... ok\ntest_retention_interval_has_exact_scope_clocks_and_revocable_review (test_omni_prospective.ProspectiveTests.test_retention_interval_has_exact_scope_clocks_and_revocable_review) ... ok\ntest_reused_origins_across_development_and_untouched_do_not_close (test_omni_prospective.ProspectiveTests.test_reused_origins_across_development_and_untouched_do_not_close) ... ok\ntest_reviewed_transitive_copies_count_one_assertion_origin (test_omni_prospective.ProspectiveTests.test_reviewed_transitive_copies_count_one_assertion_origin) ... ok\ntest_revised_same_native_disclosure_keeps_one_origin_and_all_proposals (test_omni_prospective.ProspectiveTests.test_revised_same_native_disclosure_keeps_one_origin_and_all_proposals) ... ok\ntest_run_sessions_cycle_reuse_and_exact_replay (test_omni_prospective.ProspectiveTests.test_run_sessions_cycle_reuse_and_exact_replay) ... ok\ntest_short_retention_or_missed_poll_cadence_cannot_certify_interval (test_omni_prospective.ProspectiveTests.test_short_retention_or_missed_poll_cadence_cannot_certify_interval) ... ok\ntest_source_first_inventory_includes_unknown_miss_without_any_classifier_output (test_omni_prospective.ProspectiveTests.test_source_first_inventory_includes_unknown_miss_without_any_classifier_output) ... ok\ntest_timing_correction_is_append_only_and_must_supersede_same_unit (test_omni_prospective.ProspectiveTests.test_timing_correction_is_append_only_and_must_supersede_same_unit) ... ok\ntest_timing_rejects_scalar_and_continuous_source_flags (test_omni_prospective.ProspectiveTests.test_timing_rejects_scalar_and_continuous_source_flags) ... ok\ntest_timing_uses_referenced_clocks_and_synthetic_counts_stay_zero (test_omni_prospective.ProspectiveTests.test_timing_uses_referenced_clocks_and_synthetic_counts_stay_zero) ... ok\ntest_unadjudicated_proposals_keep_precision_gate_pending (test_omni_prospective.ProspectiveTests.test_unadjudicated_proposals_keep_precision_gate_pending) ... ok\ntest_unknown_acquisition_start_cannot_be_hidden_by_precise_completion (test_omni_prospective.ProspectiveTests.test_unknown_acquisition_start_cannot_be_hidden_by_precise_completion) ... ok\ntest_untouched_access_cannot_reuse_attestation_for_another_partition (test_omni_prospective.ProspectiveTests.test_untouched_access_cannot_reuse_attestation_for_another_partition) ... ok\ntest_untouched_access_requires_exact_subject_and_rechecks_expiry (test_omni_prospective.ProspectiveTests.test_untouched_access_requires_exact_subject_and_rechecks_expiry) ... ok\ntest_untouched_changed_policy_is_visible_and_cannot_be_consumed (test_omni_prospective.ProspectiveTests.test_untouched_changed_policy_is_visible_and_cannot_be_consumed) ... ok\ntest_untouched_future_access_is_excluded_and_remains_explicitly_pending (test_omni_prospective.ProspectiveTests.test_untouched_future_access_is_excluded_and_remains_explicitly_pending) ... ok\ntest_untouched_seal_adjudication_controlled_consumption_is_single_use (test_omni_prospective.ProspectiveTests.test_untouched_seal_adjudication_controlled_consumption_is_single_use) ... ok\ntest_untouched_uncontrolled_access_and_missing_adjudications_block_consumption (test_omni_prospective.ProspectiveTests.test_untouched_uncontrolled_access_and_missing_adjudications_block_consumption) ... ok\ntest_dependent_work_stays_pending_without_evidence (test_omni_evaluation.EvaluationTests.test_dependent_work_stays_pending_without_evidence) ... ok\ntest_gold_misses_and_unknown_issuer_are_visible (test_omni_evaluation.EvaluationTests.test_gold_misses_and_unknown_issuer_are_visible) ... ok\ntest_known_wilson_examples (test_omni_evaluation.EvaluationTests.test_known_wilson_examples) ... ok\ntest_many_reruns_one_session_and_missing_review_fail (test_omni_evaluation.EvaluationTests.test_many_reruns_one_session_and_missing_review_fail) ... ok\ntest_missing_gold_and_replay_cannot_mature_prospective_recall (test_omni_evaluation.EvaluationTests.test_missing_gold_and_replay_cannot_mature_prospective_recall) ... ok\ntest_relabelled_sessions_or_reused_cycles_are_excluded (test_omni_evaluation.EvaluationTests.test_relabelled_sessions_or_reused_cycles_are_excluded) ... ok\ntest_synthetic_and_repeated_cases_do_not_mature (test_omni_evaluation.EvaluationTests.test_synthetic_and_repeated_cases_do_not_mature) ... ok\ntest_changed_policy_preserves_report_but_prevents_more_cases (test_omni_pilot.PilotTests.test_changed_policy_preserves_report_but_prevents_more_cases) ... ok\ntest_empty_plan_is_not_a_frozen_pilot (test_omni_pilot.PilotTests.test_empty_plan_is_not_a_frozen_pilot) ... ok\ntest_exact_adjudication_and_unique_event_case (test_omni_pilot.PilotTests.test_exact_adjudication_and_unique_event_case) ... ok\ntest_gold_detection_requires_nonsynthetic_exact_matching_evidence (test_omni_pilot.PilotTests.test_gold_detection_requires_nonsynthetic_exact_matching_evidence) ... ok\ntest_gold_match_is_one_to_one_and_frozen_corpus_stays_audit_only (test_omni_pilot.PilotTests.test_gold_match_is_one_to_one_and_frozen_corpus_stays_audit_only) ... ok\ntest_gold_wrong_source_cannot_match_an_unrelated_event (test_omni_pilot.PilotTests.test_gold_wrong_source_cannot_match_an_unrelated_event) ... ok\ntest_manual_run_is_not_scheduled_and_gold_miss_stays_visible (test_omni_pilot.PilotTests.test_manual_run_is_not_scheduled_and_gold_miss_stays_visible) ... ok\ntest_one_source_cycle_cannot_become_several_scheduled_sessions (test_omni_pilot.PilotTests.test_one_source_cycle_cannot_become_several_scheduled_sessions) ... ok\ntest_synthetic_cases_never_enter_prospective_denominator (test_omni_pilot.PilotTests.test_synthetic_cases_never_enter_prospective_denominator) ... ok\ntest_unknown_identity_is_durable_and_ops_does_not_invent_cost (test_omni_pilot.PilotTests.test_unknown_identity_is_durable_and_ops_does_not_invent_cost) ... ok\n\n----------------------------------------------------------------------\nRan 72 tests in 5.348s\n\nOK\n"
+    },
+    {
+      "command": [
+        {
+          "algorithm": "path",
+          "manifest": "workstream-3-python311-hashes.txt",
+          "entry": "p001"
+        },
+        "-m",
+        "compileall",
+        "-q",
+        "omni/prospective.py",
+        "omni/publications.py",
+        "omni/timing.py",
+        "omni/intervals.py",
+        "omni/holdout.py",
+        "omni/prospective_cli.py",
+        "test_omni_prospective.py"
+      ],
+      "started_at": "2026-10-20T18:13:00.459474+00:00",
+      "completed_at": "2026-10-20T18:13:00.496442+00:00",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "audit_hash_manifest": "workstream-3-python311-hashes.txt",
+  "audit_rendering": {
+    "contract": "audit-reference-rendering-1",
+    "format": "scan-friendly rendering; not original raw command stdout",
+    "transformation": "Exact Git/SHA values and absolute execution paths are represented by adjacent plain-text manifest references; embedded values use @audit tokens.",
+    "original_file": {
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "original_json_file"
+    },
+    "original_sha256": {
+      "algorithm": "sha256",
+      "manifest": "workstream-3-python311-hashes.txt",
+      "entry": "h001"
+    },
+    "original_bytes_preserved": true,
+    "reversible_content_check": "passed",
+    "test_rerun": false,
+    "scanner_baseline_and_rules_changed": false
+  }
+}

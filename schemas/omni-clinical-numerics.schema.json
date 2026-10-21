@@ -1,0 +1,1098 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/omni-clinical-numerics-1-and-2",
+  "title": "OMNI explicitly scoped clinical numeric result (AI draft)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "enum": [
+        "omni-clinical-numerics-1",
+        "omni-clinical-numerics-2"
+      ]
+    },
+    "scope": {
+      "$ref": "#/$defs/scope"
+    },
+    "statistics": {
+      "$ref": "#/$defs/statistics"
+    },
+    "human_review_status": {
+      "const": "pending"
+    },
+    "signal_eligible": {
+      "const": false
+    },
+    "support": {
+      "$ref": "#/$defs/support"
+    },
+    "missing_requirements": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "analysis_scope_id": {
+      "type": "string",
+      "pattern": "^analysis:[a-f0-9]{64}$"
+    },
+    "result_id": {
+      "type": "string",
+      "pattern": "^numeric:[a-f0-9]{64}$"
+    },
+    "scope_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract",
+        "trial_id",
+        "version_revision",
+        "source_native_id",
+        "phase",
+        "valid_from",
+        "valid_to",
+        "catalog_fingerprint",
+        "review_input_hash",
+        "human_review_status",
+        "signal_eligible",
+        "evidence_sources",
+        "disclosure_time",
+        "bindings"
+      ],
+      "properties": {
+        "contract": {
+          "const": "omni-clinical-scope-binding-1"
+        },
+        "trial_id": {
+          "type": "string",
+          "pattern": "^trial:NCT[0-9]{8}$"
+        },
+        "version_revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_native_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase": {
+          "$ref": "#/$defs/atom"
+        },
+        "valid_from": {
+          "$ref": "#/$defs/atom"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "catalog_fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "review_input_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "human_review_status": {
+          "const": "pending"
+        },
+        "signal_eligible": {
+          "const": false
+        },
+        "evidence_sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "evidence_id",
+              "revision_id",
+              "native_id",
+              "url",
+              "source_policy_id",
+              "source_policy_fingerprint"
+            ],
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "revision_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "native_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_policy_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_policy_fingerprint": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "disclosure_time": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "raw",
+            "precision",
+            "start",
+            "end"
+          ],
+          "properties": {
+            "raw": {
+              "type": "string",
+              "minLength": 1
+            },
+            "precision": {
+              "enum": [
+                "date",
+                "timestamp"
+              ]
+            },
+            "start": {
+              "type": "string",
+              "minLength": 1
+            },
+            "end": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "endpoint",
+            "analysis_population",
+            "treatment_arm",
+            "comparison_arm",
+            "cohort"
+          ],
+          "properties": {
+            "endpoint": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "canonical_id",
+                    "source_mention",
+                    "definition"
+                  ],
+                  "properties": {
+                    "canonical_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_mention": {
+                      "$ref": "#/$defs/support"
+                    },
+                    "definition": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "aliases",
+                        "endpoint_id",
+                        "definition",
+                        "rank"
+                      ],
+                      "properties": {
+                        "label": {
+                          "$ref": "#/$defs/atom"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/atom"
+                          }
+                        },
+                        "endpoint_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "definition": {
+                          "$ref": "#/$defs/atom"
+                        },
+                        "rank": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "value",
+                            "support"
+                          ],
+                          "properties": {
+                            "value": {
+                              "enum": [
+                                "primary",
+                                "secondary",
+                                "exploratory"
+                              ]
+                            },
+                            "support": {
+                              "$ref": "#/$defs/support"
+                            }
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "analysis_population": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "canonical_id",
+                    "source_mention",
+                    "definition"
+                  ],
+                  "properties": {
+                    "canonical_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_mention": {
+                      "$ref": "#/$defs/support"
+                    },
+                    "definition": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "aliases",
+                        "population_id",
+                        "definition",
+                        "denominator_kind"
+                      ],
+                      "properties": {
+                        "label": {
+                          "$ref": "#/$defs/atom"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/atom"
+                          }
+                        },
+                        "population_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "definition": {
+                          "$ref": "#/$defs/atom"
+                        },
+                        "denominator_kind": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "value",
+                            "support"
+                          ],
+                          "properties": {
+                            "value": {
+                              "enum": [
+                                "randomized",
+                                "evaluable",
+                                "treated",
+                                "safety",
+                                "other"
+                              ]
+                            },
+                            "support": {
+                              "$ref": "#/$defs/support"
+                            }
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "treatment_arm": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "canonical_id",
+                    "source_mention",
+                    "definition"
+                  ],
+                  "properties": {
+                    "canonical_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_mention": {
+                      "$ref": "#/$defs/support"
+                    },
+                    "definition": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "aliases",
+                        "arm_id",
+                        "role"
+                      ],
+                      "properties": {
+                        "label": {
+                          "$ref": "#/$defs/atom"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/atom"
+                          }
+                        },
+                        "arm_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "role": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "value",
+                            "support"
+                          ],
+                          "properties": {
+                            "value": {
+                              "enum": [
+                                "treatment",
+                                "comparator"
+                              ]
+                            },
+                            "support": {
+                              "$ref": "#/$defs/support"
+                            }
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "comparison_arm": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "canonical_id",
+                    "source_mention",
+                    "definition"
+                  ],
+                  "properties": {
+                    "canonical_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_mention": {
+                      "$ref": "#/$defs/support"
+                    },
+                    "definition": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "aliases",
+                        "arm_id",
+                        "role"
+                      ],
+                      "properties": {
+                        "label": {
+                          "$ref": "#/$defs/atom"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/atom"
+                          }
+                        },
+                        "arm_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "role": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "value",
+                            "support"
+                          ],
+                          "properties": {
+                            "value": {
+                              "enum": [
+                                "treatment",
+                                "comparator"
+                              ]
+                            },
+                            "support": {
+                              "$ref": "#/$defs/support"
+                            }
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "cohort": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "canonical_id",
+                    "source_mention",
+                    "definition"
+                  ],
+                  "properties": {
+                    "canonical_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_mention": {
+                      "$ref": "#/$defs/support"
+                    },
+                    "definition": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "aliases",
+                        "cohort_id",
+                        "definition"
+                      ],
+                      "properties": {
+                        "label": {
+                          "$ref": "#/$defs/atom"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/atom"
+                          }
+                        },
+                        "cohort_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "definition": {
+                          "$ref": "#/$defs/atom"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "source_form": {
+      "const": "complete_pipe_table_row"
+    },
+    "table_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "block",
+        "header",
+        "row",
+        "columns"
+      ],
+      "properties": {
+        "block": {
+          "$ref": "#/$defs/support"
+        },
+        "header": {
+          "$ref": "#/$defs/support"
+        },
+        "row": {
+          "$ref": "#/$defs/support"
+        },
+        "columns": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "header",
+              "cell"
+            ],
+            "properties": {
+              "name": {
+                "enum": [
+                  "trial",
+                  "phase",
+                  "endpoint",
+                  "rank",
+                  "population",
+                  "cohort",
+                  "treatment",
+                  "comparator",
+                  "timepoint",
+                  "analysis",
+                  "multiplicity",
+                  "statistics"
+                ]
+              },
+              "header": {
+                "$ref": "#/$defs/support"
+              },
+              "cell": {
+                "$ref": "#/$defs/support"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "contract",
+    "scope",
+    "statistics",
+    "human_review_status",
+    "signal_eligible",
+    "support",
+    "missing_requirements",
+    "analysis_scope_id",
+    "result_id"
+  ],
+  "$defs": {
+    "atom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "support"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "support": {
+          "$ref": "#/$defs/support"
+        }
+      }
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "revision_id": {
+          "type": "string"
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "evidence_id",
+        "revision_id",
+        "start",
+        "end",
+        "text"
+      ]
+    },
+    "duration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "$ref": "#/$defs/atom"
+        },
+        "unit": {
+          "$ref": "#/$defs/atom"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trial_id": {
+          "$ref": "#/$defs/atom"
+        },
+        "reported_phase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indication": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "endpoint": {
+          "$ref": "#/$defs/atom"
+        },
+        "endpoint_rank": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "analysis_population": {
+          "$ref": "#/$defs/atom"
+        },
+        "treatment_arm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "comparison_arm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_cutoff": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "analysis_type": {
+          "$ref": "#/$defs/atom"
+        },
+        "analysis_milestone": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atom"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timepoint": {
+          "$ref": "#/$defs/duration"
+        },
+        "follow_up": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/duration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cohort": {
+          "$ref": "#/$defs/atom"
+        },
+        "multiplicity": {
+          "$ref": "#/$defs/atom"
+        }
+      },
+      "required": [
+        "trial_id",
+        "reported_phase",
+        "indication",
+        "endpoint",
+        "endpoint_rank",
+        "analysis_population",
+        "treatment_arm",
+        "comparison_arm",
+        "data_cutoff",
+        "analysis_type",
+        "analysis_milestone",
+        "timepoint",
+        "follow_up"
+      ]
+    },
+    "statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hazard_ratio": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "estimate": {
+                  "$ref": "#/$defs/atom"
+                },
+                "unit": {
+                  "$ref": "#/$defs/atom"
+                }
+              },
+              "required": [
+                "estimate",
+                "unit"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence_interval": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "level_percent": {
+                  "$ref": "#/$defs/atom"
+                },
+                "lower": {
+                  "$ref": "#/$defs/atom"
+                },
+                "upper": {
+                  "$ref": "#/$defs/atom"
+                },
+                "unit": {
+                  "$ref": "#/$defs/atom"
+                },
+                "sidedness": {
+                  "$ref": "#/$defs/atom"
+                }
+              },
+              "required": [
+                "level_percent",
+                "lower",
+                "upper",
+                "unit"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p_value": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "$ref": "#/$defs/atom"
+                },
+                "operator": {
+                  "$ref": "#/$defs/atom"
+                },
+                "sidedness": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/atom"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "adjustment": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/atom"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "adjustment_method": {
+                  "$ref": "#/$defs/atom"
+                }
+              },
+              "required": [
+                "value",
+                "operator",
+                "sidedness",
+                "adjustment"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "absolute_counts": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "arm_role": {
+                "$ref": "#/$defs/atom"
+              },
+              "measure": {
+                "$ref": "#/$defs/atom"
+              },
+              "count": {
+                "$ref": "#/$defs/atom"
+              },
+              "denominator": {
+                "$ref": "#/$defs/atom"
+              },
+              "denominator_unit": {
+                "$ref": "#/$defs/atom"
+              }
+            },
+            "required": [
+              "arm_role",
+              "measure",
+              "count",
+              "denominator",
+              "denominator_unit"
+            ]
+          }
+        },
+        "effect_measure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "measure",
+            "estimate",
+            "unit"
+          ],
+          "properties": {
+            "measure": {
+              "$ref": "#/$defs/atom"
+            },
+            "estimate": {
+              "$ref": "#/$defs/atom"
+            },
+            "unit": {
+              "$ref": "#/$defs/atom"
+            }
+          }
+        }
+      },
+      "required": [
+        "hazard_ratio",
+        "confidence_interval",
+        "p_value",
+        "absolute_counts"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "contract": {
+            "const": "omni-clinical-numerics-1"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "scope_binding"
+              ]
+            },
+            {
+              "required": [
+                "source_form"
+              ]
+            },
+            {
+              "required": [
+                "table_proof"
+              ]
+            },
+            {
+              "properties": {
+                "scope": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "cohort"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "multiplicity"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "statistics": {
+                  "required": [
+                    "effect_measure"
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "statistics": {
+                  "properties": {
+                    "p_value": {
+                      "type": "object",
+                      "required": [
+                        "adjustment_method"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "statistics": {
+                  "properties": {
+                    "confidence_interval": {
+                      "type": "object",
+                      "required": [
+                        "sidedness"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "source_form"
+        ]
+      },
+      "then": {
+        "required": [
+          "table_proof"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "table_proof"
+        ]
+      },
+      "then": {
+        "required": [
+          "source_form"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "statistics": {
+            "required": [
+              "effect_measure"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "statistics": {
+            "properties": {
+              "hazard_ratio": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

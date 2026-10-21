@@ -1,0 +1,4 @@
+Repository: /workspace/scratch/3a31690b38a1/omni-completion-20261020
+Interpreter: /tmp/omni-venv312-20261020/bin/python
+Harness: /workspace/scratch/3a31690b38a1/omni-verify-candidate-20261020.py
+External network prohibited through scripts/offline_guard/sitecustomize.py; loopback permitted.

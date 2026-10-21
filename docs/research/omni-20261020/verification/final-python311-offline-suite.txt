@@ -1,0 +1,605 @@
+COMMAND ["/tmp/omni-venv311-20261020/bin/python", "scripts/run_offline_checks.py", "--report", "/workspace/scratch/3a31690b38a1/omni-completion-20261020/docs/research/omni-20261020/verification/final-offline-python311.json"]
+WORKING_DIRECTORY /workspace/scratch/3a31690b38a1/omni-completion-20261020
+STARTED 2026-10-20T18:24:28.335896+00:00
+
+RUN test_pipeline_hygiene.py
+v2.6.5 pipeline hygiene checks passed
+RUN test_temporal_integrity.py
+  [ERROR] fixture_source: ValueError: malformed upstream payload
+v2.6 temporal and transactional integrity checks passed
+RUN test_headline_providers.py
+Headline provider adapter checks passed
+RUN test_headlines_relevance.py
+Headline relevance, diversity, dedupe, and fail-soft checks passed
+RUN test_headline_lanes.py
+August 17 headline lane and exchange-prefix regression checks passed
+RUN test_editorial_ticker_tiers.py
+Editorial ticker-tier acceptance checks passed
+RUN test_coverage_policy.py
+PASS OMNI-01 cohorts, source-purpose denial, MRK identity, acquisition and sink contracts
+RUN test_evidence_intake.py
+Shadow evidence intake failed: RuntimeError
+PASS OMNI-02 pre-cap retention, replay, rights, provenance, gaps, failures and archive identity
+RUN test_omni_identities.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.036s
+
+OK
+RUN test_omni_events.py
+.................
+----------------------------------------------------------------------
+Ran 17 tests in 0.190s
+
+OK
+RUN test_omni_clinical_numerics.py
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 1.493s
+
+OK
+RUN test_omni_clinical_scope.py
+..........................
+----------------------------------------------------------------------
+Ran 26 tests in 0.943s
+
+OK
+RUN test_omni_scoped_amounts.py
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 1.096s
+
+OK
+RUN test_omni_acquisition.py
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 0.894s
+
+OK
+RUN test_omni_reconciliation.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.144s
+
+OK
+RUN test_omni_clinical.py
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.114s
+
+OK
+RUN test_omni_review.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.477s
+
+OK
+RUN test_omni_lifecycle.py
+...............
+----------------------------------------------------------------------
+Ran 15 tests in 1.106s
+
+OK
+RUN test_omni_routes.py
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.116s
+
+OK
+RUN test_omni_verticals.py
+.....................................
+----------------------------------------------------------------------
+Ran 37 tests in 0.707s
+
+OK
+RUN test_omni_operating.py
+.................
+----------------------------------------------------------------------
+Ran 17 tests in 2.325s
+
+OK
+RUN test_omni_gates.py
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 0.911s
+
+OK
+RUN test_omni_demo.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 1.835s
+
+OK
+RUN test_omni_expansion.py
+................................
+----------------------------------------------------------------------
+Ran 32 tests in 10.154s
+
+OK
+RUN test_omni_integration_scope.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 1.216s
+
+OK
+RUN test_omni_prospective.py
+.......................................................
+----------------------------------------------------------------------
+Ran 55 tests in 5.809s
+
+OK
+RUN test_omni_measurements.py
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK
+RUN test_omni_evaluation.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.004s
+
+OK
+RUN test_omni_pilot.py
+...........
+----------------------------------------------------------------------
+Ran 11 tests in 0.312s
+
+OK
+RUN test_omni_cli.py
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 2.588s
+
+OK
+RUN test_shadow_noninterference.py
+insider_clusters row ticker MRNA outside archived instrumented cohort; skipped
+insider_clusters row ticker VRTX outside archived instrumented cohort; skipped
+insider_clusters row ticker BEAM outside archived instrumented cohort; skipped
+insider_clusters row ticker RARE outside archived instrumented cohort; skipped
+insider_clusters row ticker CEG outside archived instrumented cohort; skipped
+insider_clusters row ticker LEU outside archived instrumented cohort; skipped
+insider_clusters row ticker BWXT outside archived instrumented cohort; skipped
+insider_clusters row ticker GEV outside archived instrumented cohort; skipped
+insider_clusters row ticker MP outside archived instrumented cohort; skipped
+insider_clusters row ticker NVDA outside archived instrumented cohort; skipped
+insider_clusters row ticker RKLB outside archived instrumented cohort; skipped
+insider_clusters row ticker HOOD outside archived instrumented cohort; skipped
+insider_clusters row ticker MRK outside archived instrumented cohort; skipped
+insider_clusters row ticker OUTSIDE outside archived instrumented cohort; skipped
+insider_clusters row ticker MRNA outside archived instrumented cohort; skipped
+insider_clusters row ticker VRTX outside archived instrumented cohort; skipped
+insider_clusters row ticker BEAM outside archived instrumented cohort; skipped
+insider_clusters row ticker RARE outside archived instrumented cohort; skipped
+insider_clusters row ticker CEG outside archived instrumented cohort; skipped
+insider_clusters row ticker LEU outside archived instrumented cohort; skipped
+insider_clusters row ticker BWXT outside archived instrumented cohort; skipped
+insider_clusters row ticker GEV outside archived instrumented cohort; skipped
+insider_clusters row ticker MP outside archived instrumented cohort; skipped
+insider_clusters row ticker NVDA outside archived instrumented cohort; skipped
+insider_clusters row ticker RKLB outside archived instrumented cohort; skipped
+insider_clusters row ticker HOOD outside archived instrumented cohort; skipped
+insider_clusters row ticker MRK outside archived instrumented cohort; skipped
+insider_clusters row ticker OUTSIDE outside archived instrumented cohort; skipped
+PASS complete frozen selected/focus projection and nonempty production state/ledger equivalence
+RUN test_dynamic_focus.py
+PR3 deterministic editorial-focus acceptance checks passed
+RUN test_focus_duplicate_occurrence.py
+PASS selected duplicate occurrence and rejected/conflicting-only negatives
+RUN test_focus_authority_floor.py
+Editorial-focus source-authority floor checks passed
+RUN test_headline_lane_edges.py
+Headline lane edge, mapping, dedupe, and provider diversity checks passed
+RUN test_headline_export_contract.py
+Headline export provenance and provider-health checks passed
+OMNI-01 legacy discovery shadow export is schema-valid
+RUN test_headline_publication.py
+Publication-stage headline projection checks passed
+RUN test_export_schema.py
+Daily brief JSON Schema positive and negative checks passed
+RUN test_signal_ledger.py
+run 2026-07-07_150000Z refused signal extraction: missing_instrumented_membership
+run 2026-07-07_150000Z refused signal extraction: missing_instrumented_membership
+attention extraction failed: sections.social_alerts must be a list
+Signal Ledger acceptance checks passed
+RUN test_sniper_signals.py
+Sniper signals (burst + entrances + FDA miner + registry diff + fragility + confluence) checks passed
+RUN test_timestamp_policy.py
+Timestamp policy (UTC Z, source-time, null-not-run-time) checks passed
+RUN test_twitter_health.py
+Nitter returned 429 for @DeItaone
+Nitter returned 404 for @zabormetrics
+Nitter returned 404 for @mcaborern
+Twitter partial-account health checks passed
+RUN test_apewisdom_social.py
+ApeWisdom social integration regression checks passed
+RUN test_social_validity.py
+ApeWisdom returned 503 for all-stocks
+Social validity M12-M14 regression checks passed
+RUN test_temporal_eligibility.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.006s
+
+OK
+RUN test_provenance_language.py
+M15 publisher-breadth provenance language checks passed
+RUN test_lean_brief.py
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.014s
+
+OK
+/tmp/tmpv_5hr0f8/share.json: 9,536 bytes (canonical brief 16,196 bytes)
+RUN test_narrative_guard.py
+Legacy narrative model guard checks passed
+RUN test_ceo_ca_verification.py
+[ResearchAgent] Gathered 5 CEO.ca/Uranium indicators (1 geology-qualified, 4 verified direct-API records)
+CEO.ca provenance and content-quality checks passed
+RUN test_cash_runway_missingness.py
+cash runway M17 missingness checks passed
+RUN test_earnings_calendar.py
+earnings calendar regression checks passed
+RUN test_insider_direction.py
+Insider distinct-filer cluster checks passed
+RUN test_openinsider_params.py
+OpenInsider parameter regression checks passed
+RUN test_openinsider_resilience.py
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): ConnectionError: [WinError 10061] target machine actively refused it
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider HTTP fallback parsed 4 narrative-only rows
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_error; retrying in 5.000s (attempt 2/4)
+OpenInsider returned 403
+OpenInsider returned 429
+OpenInsider returned 503
+OpenInsider request failed after 1 attempt(s): RuntimeError: unexpected transport bug
+OpenInsider rejected untrusted response URL: 'http://openinsider.com/screener'
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: timeout
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: timeout
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: timeout
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: timeout
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: timeout
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: timeout
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: source unavailable
+OpenInsider timeout; retrying in 2.000s (attempt 1/4)
+OpenInsider timeout; retrying in 5.000s (attempt 2/4)
+OpenInsider timeout; retrying in 10.000s (attempt 3/4)
+OpenInsider request failed after 4 attempt(s): Timeout: source unavailable
+OpenInsider cache write failed: [Errno 21] Is a directory: '/tmp/tmp9bh719q0/.cache-is-a-directory.z7_ljjc2.tmp' -> '/tmp/tmp9bh719q0/cache-is-a-directory'
+OpenInsider resilience checks passed
+RUN test_openinsider_integration.py
+OpenInsider produced no usable clusters (stale_cache_disallowed); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (insecure_http_disallowed); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (stale_cache_disallowed); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (insecure_http_disallowed); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (stale_cache_disallowed); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (insecure_http_disallowed); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (source_unavailable); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (no_qualifying_clusters); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (no_temporally_eligible_rows); falling back to SEC EDGAR Form 4 scan
+OpenInsider produced no usable clusters (no_watchlist_rows); falling back to SEC EDGAR Form 4 scan
+OpenInsider canonical run view failed: fixture acquisition failure
+OpenInsider produced no usable clusters (source_unavailable); falling back to SEC EDGAR Form 4 scan
+OpenInsider shared-consumer integration checks passed
+RUN test_reddit_rss_fallback.py
+Reddit RSS fallback regression checks passed
+RUN test_security_regressions.py
+OpenInsider rejected untrusted response URL: 'http://openinsider.com/screener'
+Security regression checks passed
+RUN test_acquisition_security.py
+.....OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 301
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 301
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 301
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 301
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 302
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 302
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 302
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 302
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 303
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 303
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 303
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 303
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 307
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 307
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 307
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 307
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 308
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 308
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 308
+OpenInsider connection_refused; retrying in 2.000s (attempt 1/4)
+OpenInsider connection_refused; retrying in 5.000s (attempt 2/4)
+OpenInsider connection_refused; retrying in 10.000s (attempt 3/4)
+OpenInsider returned 308
+.OpenInsider returned 301
+OpenInsider returned 301
+OpenInsider returned 301
+OpenInsider returned 301
+OpenInsider returned 302
+OpenInsider returned 302
+OpenInsider returned 302
+OpenInsider returned 302
+OpenInsider returned 303
+OpenInsider returned 303
+OpenInsider returned 303
+OpenInsider returned 303
+OpenInsider returned 307
+OpenInsider returned 307
+OpenInsider returned 307
+OpenInsider returned 307
+OpenInsider returned 308
+OpenInsider returned 308
+OpenInsider returned 308
+OpenInsider returned 308
+.
+----------------------------------------------------------------------
+Ran 7 tests in 0.623s
+
+OK
+RUN test_ledger_price_cache.py
+.price cache identity mismatch for TEST 2026-09-01..2026-09-08
+.......price fetch failed for TEST: synthetic timeout
+....
+----------------------------------------------------------------------
+Ran 12 tests in 0.006s
+
+OK
+RUN test_ledger_statistics.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+RUN test_session_returns.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.009s
+
+OK
+RUN test_watcher_comparisons.py
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.006s
+
+OK
+RUN test_universe_profile.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.034s
+
+OK
+RUN test_brief_tools.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.002s
+
+OK
+RUN test_dashboard_server.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 4.022s
+
+OK
+RUN test_dashboard_contract.py
+VALID /workspace/scratch/3a31690b38a1/omni-completion-20261020/fixtures/exports/daily_brief.demo.json
+Dashboard text-sink, offline-asset and synthetic-demo contracts passed
+RUN test_public_positioning.py
+Public neutral-research runtime wording checks passed
+RUN test_ledger_outcome_retry.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.019s
+
+OK
+RUN test_ledger_cohorts.py
+...run 2026-09-21_120000Z refused signal extraction: missing_instrumented_membership
+.
+----------------------------------------------------------------------
+Ran 4 tests in 0.057s
+
+OK
+RUN test_ledger_benchmark_revisions.py
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.088s
+
+OK
+RUN test_ledger_benchmark_retry_cap.py
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.065s
+
+OK
+RUN test_ledger_price_schema.py
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.022s
+
+OK
+RUN test_ledger_price_fetch_backoff.py
+..price fetch failed for TWO: network
+....
+----------------------------------------------------------------------
+Ran 6 tests in 0.082s
+
+OK
+RUN test_evaluation_holdout.py
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.000s
+
+OK
+RUN test_scheduled_launcher.py
+ssssssssss
+----------------------------------------------------------------------
+Ran 10 tests in 0.000s
+
+OK (skipped=10)
+RUN test_clock_guard.py
+.............[clock_guard] local clock is 45000.0 s behind network time (limit 300 s); run refused. Fix it with `w32tm /resync /force` in an administrator terminal, then rerun.
+[clock_guard] no time source reachable; clock not verified
+[clock_guard] only one non-NTP time source answered (http-date:a); clock not verified
+....
+----------------------------------------------------------------------
+Ran 17 tests in 0.003s
+
+OK
+{"checked_at_local": "2026-10-20T18:25:32Z", "errors": [], "max_skew_seconds": 300, "measurements": [{"offset_seconds": 0.2, "source": "ntp:a"}], "message": "local clock within tolerance (0.2 s behind network time)", "offset_seconds": 0.2, "status": "ok"}
+{"checked_at_local": "2026-10-20T18:25:32Z", "errors": [], "max_skew_seconds": 300, "measurements": [{"offset_seconds": 45000.0, "source": "ntp:a"}], "message": "local clock is 45000.0 s behind network time (limit 300 s); run refused. Fix it with `w32tm /resync /force` in an administrator terminal, then rerun.", "offset_seconds": 45000.0, "status": "skewed"}
+{"checked_at_local": "2026-10-20T18:25:32Z", "errors": [{"error": "OSError: down", "source": "ntp:a"}], "max_skew_seconds": 300, "measurements": [], "message": "no time source reachable; clock not verified", "offset_seconds": null, "status": "unverified"}
+{"checked_at_local": "2026-10-20T18:25:32Z", "errors": [], "max_skew_seconds": 300, "measurements": [{"offset_seconds": 0.2, "source": "http-date:a"}], "message": "only one non-NTP time source answered (http-date:a); clock not verified", "offset_seconds": null, "status": "unverified"}
+RUN test_event_history.py
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 1.052s
+
+OK
+RUN test_change_packet.py
+Error: No evidence history at /tmp/tmphjtmsezf/nowhere/history.db; build it with `python -m event_history import`
+...........................
+----------------------------------------------------------------------
+Ran 27 tests in 1.325s
+
+OK
+RUN test_change_packet_study.py
+................
+----------------------------------------------------------------------
+Ran 16 tests in 0.692s
+
+OK
+RUN test_instrument_registry.py
+.....................
+----------------------------------------------------------------------
+Ran 21 tests in 0.020s
+
+OK
+RUN test_registry_snapshot.py
+............
+----------------------------------------------------------------------
+Ran 12 tests in 3.339s
+
+OK
+{
+  "snapshot_complete": true,
+  "matched": [
+    "ALFA",
+    "GAMA",
+    "DLTA",
+    "FUND"
+  ],
+  "conflicts": {
+    "MISM": "issuer_name_disagrees"
+  },
+  "not_in_directory": [
+    "OTCX",
+    "VIXX",
+    "ZTST"
+  ],
+  "inferred_delistings": [],
+  "activations": []
+}
+RUN test_profile_export_contract.py
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 1.120s
+
+OK
+RUN test_profile_pipeline.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.961s
+
+OK
+RUN test_diagnostics.py
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.039s
+
+OK
+ALL 84 OFFLINE CHECKS PASSED
+
+COMPLETED 2026-10-20T18:25:42.218942+00:00
+EXIT_CODE 0

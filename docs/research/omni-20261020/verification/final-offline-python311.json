@@ -1,0 +1,513 @@
+{
+  "python": "3.11.17 (main, Oct  3 2026, 01:05:36) [Clang 22.1.3 ]",
+  "configured_checks": 84,
+  "executed_checks": 84,
+  "returncode": 0,
+  "results": [
+    {
+      "test": "test_pipeline_hygiene.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 2.027
+    },
+    {
+      "test": "test_temporal_integrity.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.822
+    },
+    {
+      "test": "test_headline_providers.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.165
+    },
+    {
+      "test": "test_headlines_relevance.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.215
+    },
+    {
+      "test": "test_headline_lanes.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.217
+    },
+    {
+      "test": "test_editorial_ticker_tiers.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.019
+    },
+    {
+      "test": "test_coverage_policy.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.718
+    },
+    {
+      "test": "test_evidence_intake.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.969
+    },
+    {
+      "test": "test_omni_identities.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_omni_events.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.265
+    },
+    {
+      "test": "test_omni_clinical_numerics.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.669
+    },
+    {
+      "test": "test_omni_clinical_scope.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.167
+    },
+    {
+      "test": "test_omni_scoped_amounts.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.168
+    },
+    {
+      "test": "test_omni_acquisition.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.118
+    },
+    {
+      "test": "test_omni_reconciliation.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.366
+    },
+    {
+      "test": "test_omni_clinical.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.315
+    },
+    {
+      "test": "test_omni_review.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.566
+    },
+    {
+      "test": "test_omni_lifecycle.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.323
+    },
+    {
+      "test": "test_omni_routes.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.318
+    },
+    {
+      "test": "test_omni_verticals.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.967
+    },
+    {
+      "test": "test_omni_operating.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 2.573
+    },
+    {
+      "test": "test_omni_gates.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.118
+    },
+    {
+      "test": "test_omni_demo.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 2.07
+    },
+    {
+      "test": "test_omni_expansion.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 10.399
+    },
+    {
+      "test": "test_omni_integration_scope.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.419
+    },
+    {
+      "test": "test_omni_prospective.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 6.033
+    },
+    {
+      "test": "test_omni_measurements.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_omni_evaluation.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_omni_pilot.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.515
+    },
+    {
+      "test": "test_omni_cli.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 2.673
+    },
+    {
+      "test": "test_shadow_noninterference.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.718
+    },
+    {
+      "test": "test_dynamic_focus.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.265
+    },
+    {
+      "test": "test_focus_duplicate_occurrence.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.117
+    },
+    {
+      "test": "test_focus_authority_floor.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.164
+    },
+    {
+      "test": "test_headline_lane_edges.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.766
+    },
+    {
+      "test": "test_headline_export_contract.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.719
+    },
+    {
+      "test": "test_headline_publication.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.82
+    },
+    {
+      "test": "test_export_schema.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.018
+    },
+    {
+      "test": "test_signal_ledger.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.215
+    },
+    {
+      "test": "test_sniper_signals.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_timestamp_policy.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.72
+    },
+    {
+      "test": "test_twitter_health.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.165
+    },
+    {
+      "test": "test_apewisdom_social.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.518
+    },
+    {
+      "test": "test_social_validity.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.519
+    },
+    {
+      "test": "test_temporal_eligibility.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.669
+    },
+    {
+      "test": "test_provenance_language.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_lean_brief.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_narrative_guard.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_ceo_ca_verification.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.518
+    },
+    {
+      "test": "test_cash_runway_missingness.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.569
+    },
+    {
+      "test": "test_earnings_calendar.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.518
+    },
+    {
+      "test": "test_insider_direction.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.668
+    },
+    {
+      "test": "test_openinsider_params.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.367
+    },
+    {
+      "test": "test_openinsider_resilience.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.518
+    },
+    {
+      "test": "test_openinsider_integration.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.568
+    },
+    {
+      "test": "test_reddit_rss_fallback.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.468
+    },
+    {
+      "test": "test_security_regressions.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.421
+    },
+    {
+      "test": "test_acquisition_security.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.021
+    },
+    {
+      "test": "test_ledger_price_cache.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_ledger_statistics.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_session_returns.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.317
+    },
+    {
+      "test": "test_watcher_comparisons.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.468
+    },
+    {
+      "test": "test_universe_profile.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_brief_tools.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_dashboard_server.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 4.128
+    },
+    {
+      "test": "test_dashboard_contract.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.164
+    },
+    {
+      "test": "test_public_positioning.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.032
+    },
+    {
+      "test": "test_ledger_outcome_retry.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_ledger_cohorts.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.165
+    },
+    {
+      "test": "test_ledger_benchmark_revisions.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.165
+    },
+    {
+      "test": "test_ledger_benchmark_retry_cap.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.167
+    },
+    {
+      "test": "test_ledger_price_schema.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_ledger_price_fetch_backoff.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.165
+    },
+    {
+      "test": "test_evaluation_holdout.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_scheduled_launcher.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.064
+    },
+    {
+      "test": "test_clock_guard.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_event_history.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.218
+    },
+    {
+      "test": "test_change_packet.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.419
+    },
+    {
+      "test": "test_change_packet_study.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.766
+    },
+    {
+      "test": "test_instrument_registry.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    },
+    {
+      "test": "test_registry_snapshot.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 3.426
+    },
+    {
+      "test": "test_profile_export_contract.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.268
+    },
+    {
+      "test": "test_profile_pipeline.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 1.123
+    },
+    {
+      "test": "test_diagnostics.py",
+      "status": "passed",
+      "returncode": 0,
+      "duration_seconds": 0.114
+    }
+  ],
+  "scope": "deterministic fixtures and local-loopback server checks; no live-provider certification"
+}

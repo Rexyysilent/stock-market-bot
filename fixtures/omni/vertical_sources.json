@@ -1,0 +1,454 @@
+{
+  "contract": "omni-vertical-acceptance-proposals-1",
+  "prepared_date": "2026-10-19",
+  "human_review_status": "pending",
+  "implementation_status": "implemented_offline_pending_human_review",
+  "automatic_activation": false,
+  "source_policy_changes": 0,
+  "membership_changes": 0,
+  "not_gold": true,
+  "not_pilot_evidence": true,
+  "fixture_count": 20,
+  "fixtures": [
+    {
+      "fixture_id": "D-V01",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T08",
+        "T14"
+      ],
+      "input": {
+        "subject": "SYN-ENRICHMENT",
+        "text": "Atlas plans a fuel-facility application in Q1 2027 and began pre-application engagement."
+      },
+      "expected": {
+        "stage": "pre_application",
+        "future_event_precision": "quarter",
+        "license_issued": false
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v01_nrc_preapplication_is_not_license"
+    },
+    {
+      "fixture_id": "D-V02",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T08",
+        "T14",
+        "T21"
+      ],
+      "input": {
+        "paragraphs": [
+          "SYN-ERWIN project expects an application next year.",
+          "SYN-OAKRIDGE opened in January.",
+          "The company refers to a previously announced $1.5 billion contract."
+        ]
+      },
+      "expected": {
+        "subjects_separate": true,
+        "new_license": false,
+        "new_obligation": false,
+        "contract_context": "historical"
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v02_facility_and_historical_contexts_remain_separate"
+    },
+    {
+      "fixture_id": "D-V03",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T14"
+      ],
+      "input": {
+        "DocumentDate": "2024-01-18",
+        "DateAddedTimestamp": "2024-01-23 08:34",
+        "observed_at": "2026-10-19T12:00:00Z"
+      },
+      "expected": {
+        "source_timezone": "unknown",
+        "normalized_posted_instant": null,
+        "precise_latency_eligible": false
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v03_unknown_timezone_preserved"
+    },
+    {
+      "fixture_id": "D-V04",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T22"
+      ],
+      "input": {
+        "accession": "SYN-ACCESSION-01",
+        "metadata_available": true,
+        "download_status": 404
+      },
+      "expected": {
+        "hydration": "pending",
+        "body_complete": false,
+        "coverage_gap": "document_not_available",
+        "new_claim": false
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v04_metadata_before_document_download"
+    },
+    {
+      "fixture_id": "D-V05",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T12"
+      ],
+      "input": {
+        "paths": [
+          "NRC",
+          "EIA"
+        ],
+        "unit": "SYN-UNIT-01",
+        "period": "2026-10-16",
+        "eia_lineage": "derived_from_NRC",
+        "lineage_proof": "synthetic"
+      },
+      "expected": {
+        "independent_origins": 1
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v05_same_unit_period_verified_lineage_counts_once"
+    },
+    {
+      "fixture_id": "D-V06",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T22"
+      ],
+      "input": {
+        "expected_period": "2026-10-18",
+        "response_kind": "empty_shell"
+      },
+      "expected": {
+        "observation": null,
+        "outage_zero": false,
+        "restart_inferred": false,
+        "coverage_gap": "source_content_unavailable"
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v06_empty_eia_shell_is_not_zero_or_restart"
+    },
+    {
+      "fixture_id": "D-V07",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [],
+      "input": {
+        "owner_file_complete": false,
+        "generator": "SYN-GEN-01",
+        "owner_rows": []
+      },
+      "expected": {
+        "ownership_percent": null,
+        "reason": "incomplete_ownership_source"
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v07_incomplete_owner_source_has_no_absence_fallback"
+    },
+    {
+      "fixture_id": "D-V08",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [],
+      "input": {
+        "owner_file_complete": true,
+        "vintage": 2025,
+        "resolved_generator": "SYN-GEN-01",
+        "matched_generator_and_operator": true,
+        "owner_rows": [],
+        "documented_absence_rule": true
+      },
+      "expected": {
+        "draft_snapshot_direct_stake": "100",
+        "as_of_basis": "2025 dataset only",
+        "current_parent": null,
+        "human_review_status": "pending"
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v08_complete_matching_vintage_supports_draft_absence_rule"
+    },
+    {
+      "fixture_id": "D-V09",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [],
+      "input": {
+        "unit": "SYN-UNIT-01",
+        "same_basis_same_interval_stakes": [
+          "60",
+          "60"
+        ]
+      },
+      "expected": {
+        "accepted": false,
+        "reason": "overlapping_or_inconsistent_stakes",
+        "residual_owner_created": false
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v09_inconsistent_direct_stakes_are_rejected"
+    },
+    {
+      "fixture_id": "D-V10",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [],
+      "input": {
+        "operator": "SYN-OPERATOR",
+        "owner": null,
+        "recipient_uei": "SYN-UEI",
+        "public_parent_field": null
+      },
+      "expected": {
+        "operator_equals_owner": null,
+        "issuer_parent": null,
+        "reason": "parent_unresolved",
+        "ownership_inferred_from_operator": false
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v10_unresolved_owner_and_parent_remain_unknown"
+    },
+    {
+      "fixture_id": "D-V11",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [],
+      "input": {
+        "mapping_known_from": "2026-10-19T12:00:00Z",
+        "mapping_effective_date": "2026-01-01",
+        "evaluation_known_by": "2026-10-01T12:00:00Z"
+      },
+      "expected": {
+        "mapping_visible": false,
+        "reason": "mapping_not_yet_known"
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v11_effective_date_never_backdates_mapping_knowledge"
+    },
+    {
+      "fixture_id": "D-V12",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [],
+      "input": {
+        "values": [
+          "0",
+          null,
+          "NaN"
+        ],
+        "metadata_unit": "source-defined power unit"
+      },
+      "expected": {
+        "normalized_values": [
+          "0",
+          null,
+          null
+        ],
+        "missing_equals_zero": false,
+        "nonfinite_rejected": true,
+        "unit_not_guessed": true
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v12_zero_missing_nonfinite_and_pinned_units"
+    },
+    {
+      "fixture_id": "D-V13",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T23"
+      ],
+      "input": {
+        "returned_rows": 250,
+        "advertised_total": 500,
+        "query_fingerprint": "synthetic-query",
+        "budget_remaining": 0
+      },
+      "expected": {
+        "complete": false,
+        "coverage_gap": "result_cap_before_coverage",
+        "continuation_retained": true
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v13_cap_and_budget_keep_continuation_and_gap"
+    },
+    {
+      "fixture_id": "D-V14",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [],
+      "input": {
+        "native_unit": "SYN-UNIT-01",
+        "period": "2026-10-16",
+        "old_value": "50",
+        "new_value": "40"
+      },
+      "expected": {
+        "append_revision": true,
+        "old_observation_preserved": true,
+        "re_review_required": true
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v14_revised_period_preserves_old_revision_and_requires_review"
+    },
+    {
+      "fixture_id": "D-V15",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T21"
+      ],
+      "input": {
+        "award": "SYN-AWARD-01",
+        "transaction": "SYN-MOD-02",
+        "signed_obligation_change": "-200000",
+        "ceiling": "5000000",
+        "unexercised_option": "1000000"
+      },
+      "expected": {
+        "obligation_change": "-200000",
+        "ceiling_separate": true,
+        "option_exercise": false,
+        "revenue_inferred": false
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v15_signed_obligation_is_separate_from_ceiling_and_option"
+    },
+    {
+      "fixture_id": "D-V16",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T20"
+      ],
+      "input": {
+        "text": "Synthetic Project FinanceCo may sell up to $20 million under an ATM facility.",
+        "cash_receipt": null
+      },
+      "expected": {
+        "authority_only": true,
+        "cash_proceeds": null,
+        "cash_runway_improvement": false
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v16_financing_authority_is_not_cash_or_runway"
+    },
+    {
+      "fixture_id": "D-V17",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T44"
+      ],
+      "input": {
+        "cycle_budget_remaining": 0,
+        "candidate_id": "SYN-LEAD-01"
+      },
+      "expected": {
+        "http_calls": 0,
+        "candidate_retained": true,
+        "reason": "budget_deferred",
+        "backlog_visible": true
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v17_no_budget_keeps_a_visible_backlog"
+    },
+    {
+      "fixture_id": "D-V18",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T28"
+      ],
+      "input": {
+        "credential_ref": "synthetic-local-handle",
+        "response_echo_contains_credential": true
+      },
+      "expected": {
+        "persisted_credential_value": false,
+        "redacted_echo": true,
+        "raw_url_logged": false,
+        "credential_ref_not_value": true
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v18_credential_echo_is_redacted_before_receipts"
+    },
+    {
+      "fixture_id": "D-V19",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T28"
+      ],
+      "input": {
+        "acquire_approved": false,
+        "method": "POST",
+        "body_kind": "search",
+        "public_host": true,
+        "policy_state": "valid_policy_matching_route"
+      },
+      "expected": {
+        "dns_calls": 0,
+        "http_calls": 0,
+        "budget_used": 0,
+        "reason": "purpose_not_approved"
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v19_denied_purpose_precedes_dns_and_budget"
+    },
+    {
+      "fixture_id": "D-V20",
+      "synthetic": true,
+      "execution": "executable_synthetic_offline_test",
+      "human_review_status": "pending",
+      "handoff_cases": [
+        "T21",
+        "T23"
+      ],
+      "input": {
+        "award_family": "SYN-AWARD-01",
+        "aggregate_change": "100000",
+        "transaction_id": null,
+        "deletion_window_unverified": true
+      },
+      "expected": {
+        "new_award_inferred": false,
+        "new_obligation_inferred": false,
+        "coverage_gap": "transaction_and_correction_coverage_unverified"
+      },
+      "signal_eligible": false,
+      "test": "test_omni_verticals.VerticalTests.test_d_v20_aggregate_change_cannot_establish_transaction"
+    }
+  ],
+  "implemented_date": "2026-10-20",
+  "execution_receipt": "docs/research/omni-20261020/vertical-test-receipt.json"
+}

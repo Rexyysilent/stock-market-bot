@@ -1,0 +1,30 @@
+# Exact public audit values for workstream-3-python312
+# Format: algorithm-or-path, exact value, entry identifier.
+# These public fingerprints and execution paths are evidence identifiers, not credentials.
+# JSON objects refer to manifest+entry; @audit[manifest#entry] restores embedded text.
+# Raw originals were copied byte-for-byte before rendering; their file hashes are retained below.
+# JSON and transcript restoration to the exact original bytes was verified; no tests rerun.
+file  /workspace/scratch/3a31690b38a1/omni-completion-evidence-20261020/original-audit-receipts/verification/workstream-3-python312.json  original_json_file
+sha256  0c51a49efdd16a1a24a2bf90a9ace14c5b839d1300776897afba0b1abb55c625  h001
+sha256  9b119bc8dabfe67ea0d6101da85be0ce847ea5f10d9246fd0e50d86de9955868  h002
+sha256  b0aa6ae6e17b4378932238a76d3b61bab31bcf9588e9c45bab8ecddf7bf134f6  h003
+sha256  fd8dc78333e4076fde0a86db88e25fda6ee77454f268f3289c5f30982809f755  h004
+sha256  90fd9fd8ba3eb6ea204b689eb071db41816bd031943963b43155d4f14a9ec747  h005
+sha256  c85928195ecbab66e2bb90c72a8c2b2eace371f3070b8097d4d88ef479289080  h006
+sha256  04277446d5ae42c8478827d7947ddecc3e84462667db1ebcee81e2da4e59be21  h007
+sha256  6061f1350bf66f01bd2475e5eba8e38b433e0792b4868bc58e0cc8b47c1219d7  h008
+sha256  c6308e96ef21503b36d7a434b6f2a4b6e0bddff41550c946d54c8426f7ed5cfe  h009
+sha256  ff7fa721a6f33c13aa57730c7552f7388d040b36afaa2ccf65791ae25870ccba  h010
+sha256  4b91fb8d7e9234253f0b2ae1b238c739ccdfac5569e99d0b16756a4d4ccee589  h011
+sha256  a6ebb138828d2cacbd2dac97a506a95751f328511a8336ee4b3346200a54732f  h012
+sha256  c5a1fef21fb06ed19538243bd06fb5cde95347bfed89a41528e247af5fde3007  h013
+sha256  45b94882222577f545bfe0ba02f7cc2ff83899ca5c67457bbe7e50082bbaafd3  h014
+sha256  20b9c2279b5c86a0456b4c278b682dd71f4a2211f93087b038ed02015199f9e1  h015
+sha256  522714e45d34ef4940d3973b52049b69ba0486fb2fa27e029c8952f94a1d0c48  h016
+sha256  e53076b8b772ed88ffe97b6eec7b2d96fb319cedbfdaf9f9bde271e3e5f5ce31  h017
+sha256  32b5e37882153e945441e0bf4d0ad1cf1ddc2f06757f799026404801d73b0ff1  h018
+sha256  ae9abb779af2b4fc33f6f5942d3332cafe308e479a32e6d4ac3d8f91825e9b35  h019
+sha256  845116f6b2ee1cdb191bb35e36173e47346db0a541d36ecfa84fb400a7c2a219  h020
+sha256  ce0859f1e47cc87afb9bdee5127b0af4dd187a956f863080afb7e3bd3247ade7  h021
+sha256  c3f146840ab1532982144f6e6d1e978affabcae52ed3898f27f703866b3751bf  h022
+path  /tmp/omni-venv312-20261020/bin/python  p001

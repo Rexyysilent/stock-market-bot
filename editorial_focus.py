@@ -23,6 +23,29 @@ from timeutil import to_utc_z
 
 
 FOCUS_CONTRACT_VERSION = "2.7-editorial-focus-1"
+
+
+def select_focus_with_events(headline_focus, reviewed_cards, *, mode="off"):
+    """Companion focus: an explicitly reviewed material event can lead the brief.
+
+    Does not mutate the legacy focus object or populate its ticker-specific
+    context. Callers must supply cards revalidated against current local evidence.
+    """
+    legacy = deepcopy(headline_focus)
+    if mode == "reviewed":
+        eligible = [c for c in reviewed_cards if c.get("reviewer") and c.get("reviewed_at")
+                    and c.get("signal_eligible") is False
+                    and c.get("coverage_tier") == "reviewed_event_only"
+                    and c.get("materiality") in ("critical", "high")]
+        if eligible:
+            ranks = {"critical": 0, "high": 1}
+            best = min(eligible, key=lambda c: (ranks[c["materiality"]], c["event_id"]))
+            return {"kind": "reviewed_event", "event_id": best["event_id"],
+                    "reason": "reviewed_material_primary_event", "signal_eligible": False,
+                    "headline_focus": legacy}
+    return {"kind": "headline" if legacy and legacy.get("status") != "no_focus" else "no_focus",
+            "event_id": None, "reason": "compatible_headline_focus" if legacy else "insufficient_supported_evidence",
+            "signal_eligible": False, "headline_focus": legacy}
 SCORE_COMPONENT_KEYS = (
     "impact",
     "confidence",

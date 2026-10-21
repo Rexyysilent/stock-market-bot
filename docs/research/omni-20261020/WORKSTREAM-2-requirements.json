@@ -1,0 +1,217 @@
+{
+  "workstream": 2,
+  "automatic_activation": false,
+  "real_human_labels_created": 0,
+  "new_source_approvals": 0,
+  "source_cases_status": "all nine unchanged AI drafts",
+  "requirements": [
+    {
+      "id": "WS2-C1",
+      "requirement": "Versioned endpoint definitions, arm/cohort aliases and disclosure-time trial versions",
+      "files_functions": [
+        "omni/clinical_scope.py:checked_versions",
+        "omni/clinical_scope.py:bind_scope",
+        "omni/identities.py:EntityRegistry",
+        "schemas/omni-clinical-scope.schema.json"
+      ],
+      "tests": [
+        "test_omni_clinical_scope.ClinicalScopeTests"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-C2",
+      "requirement": "Canonical identity and validator checks for source scope, rank, phase and aliases",
+      "files_functions": [
+        "omni/clinical_numerics.py:canonical_scope",
+        "omni/clinical_scope.py:binding_identity",
+        "omni/validator.py:validate"
+      ],
+      "tests": [
+        "test_omni_clinical_scope.ClinicalScopeTests.test_exact_catalog_and_alias_binding_remain_pending",
+        "test_omni_clinical_scope.ClinicalScopeTests.test_primary_secondary_and_arm_direction_are_checked",
+        "test_omni_clinical_scope.ClinicalScopeTests.test_validator_reparses_mapping_and_missing_catalog"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-C3",
+      "requirement": "Exact plain-text table representation with row/column/footnote adversaries",
+      "files_functions": [
+        "omni/clinical_tables.py:parse_tables",
+        "fixtures/omni/clinical_scope.json"
+      ],
+      "tests": [
+        "test_omni_clinical_scope.ClinicalFormsTests.test_table_complete_rows_have_exact_cell_and_header_proofs",
+        "test_omni_clinical_scope.ClinicalFormsTests.test_table_footnote_merged_cells_column_swap_or_missing_scope_refuse",
+        "test_omni_clinical_scope.ClinicalFormsTests.test_table_validator_rejects_changed_header_and_cropped_statistics"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-C4",
+      "requirement": "Multiplicity, non-HR measures and explicit disposition/safety refusals",
+      "files_functions": [
+        "omni/clinical_numerics.py:parse_sentence",
+        "schemas/omni-clinical-numerics.schema.json",
+        "fixtures/omni/clinical_scope.json"
+      ],
+      "tests": [
+        "test_omni_clinical_scope.ClinicalFormsTests.test_non_hr_measures_keep_exact_measure_units_and_signed_bounds",
+        "test_omni_clinical_scope.ClinicalFormsTests.test_multiplicity_methods_no_alpha_and_ci_side_remain_explicit",
+        "test_omni_clinical_scope.ClinicalFormsTests.test_censoring_unevaluable_and_severity_never_become_efficacy_or_seriousness"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-C5",
+      "requirement": "Retain nine supplied negative controls and existing clinical contamination/resume tests",
+      "files_functions": [
+        "omni/clinical_numerics.py:parse_sentence",
+        "omni/classifier.py:extract",
+        "omni/validator.py:validate"
+      ],
+      "tests": [
+        "test_omni_clinical_numerics.NumericTests.test_postposed_p_qualifiers_cannot_be_silently_discarded",
+        "test_omni_clinical_numerics.NumericTests.test_conflicting_p_qualifiers_abstain_through_validator",
+        "test_omni_clinical_numerics.NumericTests.test_ci_qualifier_does_not_become_p_qualifier",
+        "test_omni_clinical_numerics.NumericTests.test_negated_or_compound_analysis_label_abstains",
+        "test_omni_clinical_numerics.NumericTests.test_resumed_exhibits_combine_numeric_results_without_double_counting"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-C6",
+      "requirement": "Independent definition-source policies and dependency lookup",
+      "files_functions": [
+        "omni/clinical_scope.py:binding_documents",
+        "omni/clinical_scope.py:referenced_documents",
+        "omni/validator.py:validate"
+      ],
+      "tests": [
+        "test_omni_clinical_scope.ClinicalScopeTests.test_definition_sources_have_separate_current_purpose_and_lineage_checks"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-M1",
+      "requirement": "Exact scoped amount atoms with role, identity, period, condition, additivity and revision evidence",
+      "files_functions": [
+        "omni/amounts.py:parse_amount_sentence",
+        "schemas/omni-scoped-amount.schema.json"
+      ],
+      "tests": [
+        "test_omni_scoped_amounts.ScopedAmountTests.test_every_material_atom_has_exact_revision_support_and_schema",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_current_obligation_change_and_reduction_are_separate_kinds",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_condition_words_do_not_assert_exercise_or_amount_frequency"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-M2",
+      "requirement": "Ceiling/options/obligation/authority/gross/net roles; bounds/ranges/approximation and unknowns",
+      "files_functions": [
+        "omni/amounts.py:parse_amount_sentence",
+        "omni/amounts.py:contract_amounts"
+      ],
+      "tests": [
+        "test_omni_scoped_amounts.ScopedAmountTests.test_included_and_incremental_options_bind_the_source_target_without_sum",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_bounds_ranges_and_approximations_never_supply_legacy_exact_scalar",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_currency_period_identity_and_option_status_unknowns_are_not_filled"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-M3",
+      "requirement": "Reject aggregation/conversion/annualization/realization inference and unsupported grammar",
+      "files_functions": [
+        "omni/amounts.py:parse_amount_sentence",
+        "fixtures/omni/scoped_amounts.json"
+      ],
+      "tests": [
+        "test_omni_scoped_amounts.ScopedAmountTests.test_extended_positive_and_ambiguous_fixtures",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_negated_or_unsupported_realization_never_creates_an_amount_claim",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_future_proceeds_are_planned_and_atm_authority_is_not_received_cash"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-M4",
+      "requirement": "Update all twelve existing amount scenarios while retaining legacy exact-USD controls",
+      "files_functions": [
+        "fixtures/omni/coverage_rules.json",
+        "fixtures/omni/scoped_amounts.json",
+        "omni/amounts.py:contract_amounts"
+      ],
+      "tests": [
+        "test_omni_scoped_amounts.ScopedAmountTests.test_twelve_existing_scenarios_keep_legacy_and_declared_new_outcomes",
+        "test_omni_events.EventTests.test_contract_amounts_keep_currency_stage_and_revenue_boundary"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-M5",
+      "requirement": "Validated packet projection and cross-source revision safety",
+      "files_functions": [
+        "omni/classifier.py:extract",
+        "omni/validator.py:validate",
+        "omni/amounts.py:amount_projection"
+      ],
+      "tests": [
+        "test_omni_scoped_amounts.ScopedAmountTests.test_numeric_projection_is_present_and_validator_reparses_full_sentence",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_revised_or_replayed_evidence_cannot_replace_exact_support",
+        "test_omni_scoped_amounts.ScopedAmountTests.test_same_scope_conflicts_and_distinct_roles_do_not_share_outcomes"
+      ],
+      "status": "fixture-verified"
+    },
+    {
+      "id": "WS2-R1",
+      "requirement": "Real reviewed definitions, rights, human pilot and real adjudication evidence",
+      "files_functions": [
+        "docs/research/omni-20261019/source-cases.json",
+        "docs/research/omni-20261019/source-policy-register.json"
+      ],
+      "tests": [],
+      "status": "requires real/operator evidence"
+    }
+  ],
+  "root_integration_hooks": [
+    {
+      "file": "omni/runner.py",
+      "action": "Recompute scoped_amounts with amount_projection after merged or resumed exhibits."
+    },
+    {
+      "file": "omni/review.py",
+      "action": "Expose scoped_amounts in cards; preserve legacy exact-USD fields."
+    },
+    {
+      "files": [
+        "omni/store.py",
+        "omni/runner.py",
+        "omni/review.py"
+      ],
+      "action": "Use referenced_documents(event,registry) for definition dependency ingestion, quarantine and field-purpose rights; historical definition sources are not current-result recency evidence."
+    },
+    {
+      "file": "omni/__main__.py",
+      "action": "Pass optional clinical catalog path to every registry load, with no default activation."
+    }
+  ],
+  "unsupported_forms": [
+    "general prose mapping or cross-sentence inference",
+    "HTML/PDF/merged-cell/inherited-scope or footnoted tables",
+    "censoring/unevaluable/missing assessment risk-set arithmetic",
+    "safety severity/seriousness/causality and SAE/TEAE derivation",
+    "unlisted/model-adjusted/transformed/approximate clinical statistics",
+    "unknown multiplicity procedures and postposed/contradictory p qualifiers",
+    "money tables or shared-currency range shorthand",
+    "m/bn/k scales and non-time-unit rates",
+    "currency conversion/aggregation/annualization or inferred cash/revenue/runway",
+    "multiple labelled contract or financing identities in one sentence"
+  ],
+  "migration": "No WS2 database schema migration; old artifacts remain immutable. Parser/validator version changes and catalog fingerprints require current revalidation. Root lifecycle/version handling owns approvals and quarantine.",
+  "verification": "See receipts/ws2-* for current isolated-candidate focused checks; root final combined release gates are separate.",
+  "starting_commit_ref": "receipts/ws2-public-git-objects.txt#starting_commit",
+  "starting_tree_ref": "receipts/ws2-public-git-objects.txt#starting_tree",
+  "public_base_ref": "receipts/ws2-public-git-objects.txt#public_base"
+}
