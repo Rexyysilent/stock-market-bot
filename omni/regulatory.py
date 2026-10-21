@@ -55,7 +55,12 @@ def watch_notifications(store,client,*,now):
         'initial_seed':prior_count==0,'new_metadata_candidates':new,'claims_validated':0,
         'gaps':parsed['gaps'],'raw_sha256':parsed['sha256'],'rows':len(parsed['rows']),'requests':dict(client.counts)}
     receipt['receipt_id']='fda-index:'+digest(receipt)
+    from .coverage import observation_from_rows
+    observations=[] if parsed['sha256'] is None else [observation_from_rows(parsed['rows'],source_id=source,
+        route_id='fda-oncology-index',family='oncology_notification',acquired_at=now,window_start=now,window_end=now,
+        policy_hash=digest(client.policy),raw_response_hash=parsed['sha256'],query={'url':INDEX},
+        gaps=parsed['gaps'],capped='regulatory_index_cap' in parsed['gaps'],end_of_results=not parsed['gaps'])]
     store.commit_cycle(cycle_id=receipt['receipt_id'],source_id=source,observed_at=now,
-        documents=[],events=[],decisions=[],candidates=parsed['rows'],source_receipts=[receipt],
+        documents=[],events=[],decisions=[],candidates=parsed['rows'],source_receipts=[receipt],coverage_observations=observations,
         complete=False,preserve_cursor=True,gaps=parsed['gaps'] or ['scoped_index_not_continuous_coverage'],metrics=receipt)
     return receipt

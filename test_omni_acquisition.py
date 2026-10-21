@@ -1,5 +1,6 @@
 """OMNI-05 source budgets, durable cursors and crash/outbox acceptance."""
 from copy import deepcopy
+import json
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -13,6 +14,7 @@ from omni.store import EventStore
 from omni.validator import validate
 from omni.runner import watch_edgar, analyze_documents
 from omni.feeds import parse_feed, watch_feed
+from omni.evidence import source_decision
 from source_request_gate import wait_for_sec
 from test_omni_events import make_doc, POLICY, POLICIES, NOW
 
@@ -50,7 +52,7 @@ class AcquisitionTests(unittest.TestCase):
 
     def test_t22_exhibits_not_assumed_and_empty_shell_rejected(self):
         html=b'<table class="tableFile"><tr><td>1</td><td>Release</td><td><a href="release-other.htm">doc</a></td><td>EX-99.2</td></tr></table>'
-        docs=filing_documents(html,filing_url="https://www.sec.gov/Archives/edgar/data/1/2/index.htm")
+        docs=filing_documents(html,filing_url="https://www.sec.gov/Archives/edgar/data/1/000000012326000004/index.htm")
         self.assertTrue(docs["documents"][0]["url"].endswith("release-other.htm"))
         self.assertEqual(filing_documents(b'<html></html>',filing_url="https://www.sec.gov/Archives/edgar/data/1/x")["gaps"],["exhibit_listing_missing"])
         self.assertFalse(extract_document_text(b'<html><script>fake results</script>Enable Javascript</html>')["body_complete"])
@@ -81,6 +83,29 @@ class AcquisitionTests(unittest.TestCase):
         session=Mock(); session.get.return_value=response(b'x'*5_000_001)
         with self.assertRaisesRegex(Deferred,"response_size_limit"):
             self.client(session).get("https://issuer.example/releases/1")
+
+    def test_noncanonical_paths_are_rejected_before_dns_budget_or_request(self):
+        policy=json.loads((Path(__file__).parent/'registry/event-sources.json').read_text())['policies']['sec-edgar']
+        client=self.client(); client.policy=policy; client.resolver=Mock()
+        good='https://www.sec.gov/Archives/edgar/data/123/0000000123-26-000001-index.html'
+        self.assertIsNone(source_decision(policy,good,'acquire'))
+        for path in ('../../../../files/unapproved.pdf','%2e%2e/%2e%2e/files/unapproved.pdf',
+                     '%252e%252e/files/unapproved.pdf','123%2f..%2ffiles/unapproved.pdf','123/%5cfiles/unapproved.pdf',
+                     '123/%00file.htm'):
+            url='https://www.sec.gov/Archives/edgar/data/'+path
+            with self.subTest(path=path),self.assertRaisesRegex(PermissionError,'untrusted_url'):
+                client.get(url)
+        client.resolver.assert_not_called(); client.session.get.assert_not_called()
+        self.assertEqual(client.counts,{'metadata':0,'attempt':0,'document':0})
+
+    def test_sec_gate_failure_persists_coverage_debt_without_http(self):
+        client=self.client(); client.sec_gate=Mock(side_effect=RuntimeError('SEC request gate backlog or clock skew'))
+        result=watch_edgar(self.store,client,load_registry(),now=NOW)
+        self.assertIn('sec_rate_gate_unavailable',result['coverage']['gaps'])
+        self.assertFalse(result['coverage']['complete']); self.assertEqual(result['status'],'partial')
+        self.assertIsNone(self.store.cursor(client.policy['policy_id'])['watermark'])
+        self.assertEqual(self.store.inventory()['source_cycles'],1)
+        client.session.get.assert_not_called()
 
     def batch(self):
         registry=load_registry(); doc=make_doc("INTerpath-001 met its primary endpoint.")
@@ -118,7 +143,7 @@ class AcquisitionTests(unittest.TestCase):
         self.assertEqual(self.store.inventory()["evidence"],2)
         self.assertEqual(len(self.store.pending()),1)
 
-    def test_same_origin_keeps_both_evidence_paths_without_duplicate_event(self):
+    def test_unreviewed_caller_origin_cannot_merge_distinct_evidence(self):
         from omni.review import event_packet
         registry=load_registry()
         for i in range(2):
@@ -128,9 +153,8 @@ class AcquisitionTests(unittest.TestCase):
                 decisions=[validate(e,[doc],registry,POLICIES,now=NOW) for e in events])
         event=events[0]
         packet=event_packet(self.store,event["event_id"],event["event_revision"])
-        self.assertEqual(self.store.inventory()["events"],1)
-        self.assertEqual(len(packet["alternate_evidence_paths"]),1)
-        self.assertEqual(packet["alternate_evidence_paths"][0]["origin_cluster_id"],packet["documents"][0]["origin_cluster_id"])
+        self.assertEqual(self.store.inventory()["events"],2)
+        self.assertEqual(packet["alternate_evidence_paths"],[])
 
     def test_refuse_production_database_before_journal_mutation(self):
         path=self.root/"ledger.db"
@@ -145,7 +169,7 @@ class AcquisitionTests(unittest.TestCase):
         self.assertAlmostEqual(delays[0],1/3); self.assertAlmostEqual(delays[1],2/3)
 
     def test_watch_path_recovers_incomplete_body_without_advancing_event(self):
-        feed=b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>synthetic-filing</id><title>8-K - Synthetic issuer</title><updated>2026-10-18T10:00:00Z</updated><link href="https://www.sec.gov/Archives/edgar/data/1/2/index.htm"/></entry></feed>'
+        feed=b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>urn:tag:sec.gov,2008:accession-number=0000000123-26-000001</id><title>8-K - Synthetic issuer</title><updated>2026-10-18T10:00:00Z</updated><link href="https://www.sec.gov/Archives/edgar/data/1/000000012326000004/index.htm"/></entry></feed>'
         listing=b'<table class="tableFile"><tr><td>1</td><td>Release</td><td><a href="other.htm">doc</a></td><td>EX-99.2</td></tr></table>'
         complete=b'<p>INTerpath-001 met its primary endpoint.</p><p>This is a synthetic filing fixture for a deterministic acquisition test. No real clinical result is asserted by this document.</p>'
         def client_for(body):
@@ -166,7 +190,7 @@ class AcquisitionTests(unittest.TestCase):
         self.assertEqual(len(self.store.pending()),1)
 
     def test_more_than_three_exhibits_resume_without_refetching_completed_bodies(self):
-        feed=b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>five</id><title>8-K - Synthetic issuer</title><updated>2026-10-18T10:00:00Z</updated><link href="https://www.sec.gov/Archives/edgar/data/1/2/index.htm"/></entry></feed>'
+        feed=b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>urn:tag:sec.gov,2008:accession-number=0000000123-26-000005</id><title>8-K - Synthetic issuer</title><updated>2026-10-18T10:00:00Z</updated><link href="https://www.sec.gov/Archives/edgar/data/1/000000012326000004/index.htm"/></entry></feed>'
         listing=('<table class="tableFile">'+''.join(f'<tr><td>{i}</td><td>Release</td><td><a href="{i}.htm">doc</a></td><td>EX-99.{i}</td></tr>' for i in range(5))+'</table>').encode()
         body=b'<p>INTerpath-001 met its primary endpoint.</p><p>This synthetic filing is deliberately long enough to exercise complete document hydration with five exhibits.</p>'
         calls=[]
@@ -197,25 +221,100 @@ class AcquisitionTests(unittest.TestCase):
         self.store.commit_cycle(**batch)
         session=Mock(); session.get.return_value=response(b'<rss><channel/></rss>')
         result=watch_feed(self.store,self.client(session),load_registry(),feed_url="https://issuer.example/releases/feed",now=NOW)
-        self.assertIn("feed_window_before_watermark",result["coverage_gaps"])
-        self.assertEqual(self.store.cursor(POLICY["policy_id"])["watermark"],batch["watermark"])
+        self.assertIn("empty_feed_inventory",result["coverage_gaps"])
+        self.assertIn("initial_window_only",result["coverage_gaps"])
+        self.assertIsNone(self.store.cursor(POLICY["policy_id"])["watermark"])
+
+    def test_feed_intervals_use_prior_observation_clock_and_exact_route_query_family(self):
+        from email.utils import format_datetime
+        from omni.receipts import get_receipt
+        from omni.identities import digest, instant
+        from omni.feeds import feed_query_plan
+        url="https://issuer.example/releases/feed"
+        def poll(at, published, *, target_family="clinical_result", feed_url=url):
+            rows=''.join(f'<item><guid>native-{i}</guid><title>Source row {i}</title><link>https://issuer.example/releases/{i}</link><pubDate>{format_datetime(instant(stamp))}</pubDate></item>' for i,stamp in enumerate(published))
+            session=Mock(); session.get.return_value=response(('<rss><channel>'+rows+'</channel></rss>').encode())
+            watch_feed(self.store,self.client(session),load_registry(),feed_url=feed_url,now=at,target_family=target_family)
+            health=json.loads(self.store.conn.execute('SELECT health FROM source_cycles ORDER BY rowid DESC LIMIT 1').fetchone()[0])
+            return get_receipt(self.store,health['observation_receipt_ids'][0])['payload'],health
+        first,_=poll(NOW,["2026-10-18T10:00:00Z"])
+        later="2026-10-18T12:01:00Z"
+        second,health=poll(later,["2026-10-18T10:00:00Z","2026-10-18T11:00:00Z"])
+        self.assertEqual((first['window_start'],first['window_end']),(NOW,NOW))
+        self.assertEqual((second['window_start'],second['window_end']),(NOW,later))
+        self.assertEqual(first['query_hash'],second['query_hash'])
+        self.assertEqual(second['query_hash'],digest(feed_query_plan(url)))
+        self.assertNotEqual(first['request_context_hash'],second['request_context_hash'])
+        self.assertEqual(health['metrics']['request_counts']['attempt'],1)
+        changed_at="2026-10-18T12:02:00Z"
+        third,_=poll(changed_at,["2026-10-18T11:00:00Z"],feed_url=url+"-different")
+        self.assertEqual((third['window_start'],third['window_end']),(changed_at,changed_at))
+        changed_family_at="2026-10-18T12:03:00Z"
+        fourth,_=poll(changed_family_at,["2026-10-18T11:00:00Z"],target_family="regulatory",feed_url=url+"-different")
+        self.assertEqual((fourth['window_start'],fourth['window_end']),(changed_family_at,changed_family_at))
+
+    def test_measured_feed_preserves_all_native_rows_and_actual_request_counts(self):
+        import test_omni_expansion as expansion_support
+        import test_omni_prospective as prospective_support
+        from omni.feeds import feed_query_plan
+        from omni.identities import digest
+        from omni.receipts import get_receipt
+        h=expansion_support.ExpansionTests(); h.setUp(); self.addCleanup(h.doCleanups)
+        url="https://issuer.example/releases/feed"
+        scope={**h.h.spec()['source_scope'][0],'route_id':'explicit-policy-feed','query_hash':digest(feed_query_plan(url))}
+        proposal=h.freeze(spec_changes={'source_scope':[scope]})
+        raw=b'<rss><channel><item><guid>unknown-native-issuer</guid><title>Unresolved source record</title><link>https://issuer.example/releases/unknown</link><pubDate>Wed, 21 Oct 2026 09:30:00 +0000</pubDate></item></channel></rss>'
+        session=Mock(); session.get.return_value=response(raw)
+        client=SourceClient(h.store,h.policies[prospective_support.SOURCE],user_agent="Synthetic tests qa@example.org",
+            now=prospective_support.OBSERVED,session=session,
+            resolver=lambda *a,**k:[(None,None,None,None,("93.184.216.34",443))],sleep=lambda n:None)
+        kwargs=dict(feed_url=url,now=prospective_support.OBSERVED,policies=h.policies,
+            measurement_proposal=proposal['receipt_id'],measurement_arm='expanded',current_coverage=h.current,
+            instruments=h.instruments)
+        with self.assertRaisesRegex(ValueError,'actual prospective'):
+            watch_feed(h.store,client,h.registry,**kwargs)
+        session.get.assert_not_called()
+        with self.assertRaisesRegex(ValueError,'query differs'):
+            watch_feed(h.store,client,h.registry,**{**kwargs,'feed_url':url+'-different'},allow_synthetic_measurement=True)
+        session.get.assert_not_called()
+        watch_feed(h.store,client,h.registry,**kwargs,allow_synthetic_measurement=True)
+        health=json.loads(h.store.conn.execute('SELECT health FROM source_cycles ORDER BY rowid DESC LIMIT 1').fetchone()[0])
+        observation=get_receipt(h.store,health['observation_receipt_ids'][0])['payload']
+        self.assertEqual(observation['family'],'clinical_result')
+        self.assertEqual([row['native_id'] for row in observation['native_inventory']],['unknown-native-issuer'])
+        self.assertEqual(health['metrics']['expansion_scope_hash'],proposal['payload']['expanded_scope_hash'])
+        self.assertEqual(health['metrics']['request_counts']['attempt'],session.get.call_count)
+        self.assertFalse(health['metrics']['collection_scope']['classifier_filter_applied'])
+        self.assertEqual(h.store.inventory()['events'],0)
+
+    def test_measurement_pairs_and_family_fail_before_transport(self):
+        client=self.client()
+        for kwargs in ({'measurement_proposal':'unresolved'}, {'measurement_arm':'baseline'},
+                       {'target_family':'invalid family with source text'}):
+            with self.subTest(kwargs=kwargs),self.assertRaises(ValueError):
+                watch_edgar(self.store,client,load_registry(),now=NOW,**kwargs)
+        client.session.get.assert_not_called()
+        self.assertEqual(self.store.inventory()['source_cycles'],0)
 
     def test_conflicting_exhibits_are_combined_and_deferred_exhibits_block_review(self):
-        docs=[make_doc(text,native_id=str(i),origin_reference='one-filing') for i,text in enumerate((
+        native='urn:tag:sec.gov,2008:accession-number=0000000123-26-000001'
+        filing_policy={**POLICY,'source_class':'filing'}
+        docs=[make_doc(text,policy=filing_policy,source_class='filing',native_id=native+'/'+str(i),origin_reference=['filing-accession',native]) for i,text in enumerate((
             'INTerpath-001 met its primary endpoint.','INTerpath-001 did not meet its primary endpoint.'))]
-        events,decisions,_=analyze_documents(docs,load_registry(),POLICIES,now=NOW)
+        events,decisions,_=analyze_documents(docs,load_registry(),{POLICY["policy_id"]:filing_policy},now=NOW)
         self.assertEqual(len(events),1)
         self.assertEqual(set(c['value'] for c in events[0]['claims']),{'met','not_met'})
         self.assertIn('contradiction_unresolved',decisions[0]['reason_codes'])
-        self.assertEqual(decisions[0]['independent_origins'],1)
-        partial,checked,_=analyze_documents(docs[:1],load_registry(),POLICIES,now=NOW,gaps=['document_budget_deferred'])
+        self.assertEqual(decisions[0]['assertion_origin_units'],1)
+        self.assertIsNone(decisions[0]['independent_origins'])
+        partial,checked,_=analyze_documents(docs[:1],load_registry(),{POLICY["policy_id"]:filing_policy},now=NOW,gaps=['document_budget_deferred'])
         self.assertIn('filing_documents_incomplete',checked[0]['reason_codes'])
-        complete,_,_=analyze_documents(docs[:1],load_registry(),POLICIES,now=NOW)
+        complete,_,_=analyze_documents(docs[:1],load_registry(),{POLICY["policy_id"]:filing_policy},now=NOW)
         self.assertNotEqual(partial[0]['event_revision'],complete[0]['event_revision'])
 
     def test_conflict_discovered_on_resumed_exhibit_batch_keeps_previous_claims(self):
         import json
-        feed=b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>four</id><title>8-K - Synthetic issuer</title><updated>2026-10-18T10:00:00Z</updated><link href="https://www.sec.gov/Archives/edgar/data/1/2/index.htm"/></entry></feed>'
+        feed=b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>urn:tag:sec.gov,2008:accession-number=0000000123-26-000004</id><title>8-K - Synthetic issuer</title><updated>2026-10-18T10:00:00Z</updated><link href="https://www.sec.gov/Archives/edgar/data/1/000000012326000004/index.htm"/></entry></feed>'
         listing=('<table class="tableFile">'+''.join(f'<tr><td>{i}</td><td>Release</td><td><a href="{i}.htm">doc</a></td><td>EX-99.{i}</td></tr>' for i in range(4))+'</table>').encode()
         def get(url,**kwargs):
             text=('INTerpath-001 did not meet its primary endpoint.' if url.endswith('/3.htm') else 'INTerpath-001 met its primary endpoint.')

@@ -1,0 +1,8 @@
+COMMAND ["/tmp/omni-venv311-20261020/bin/python", "scripts/validate_export_schema.py"]
+WORKING_DIRECTORY /workspace/scratch/3a31690b38a1/omni-completion-20261020
+STARTED 2026-10-20T18:24:28.171203+00:00
+
+VALID /workspace/scratch/3a31690b38a1/omni-completion-20261020/fixtures/exports/daily_brief.valid.json
+
+COMPLETED 2026-10-20T18:24:28.335787+00:00
+EXIT_CODE 0

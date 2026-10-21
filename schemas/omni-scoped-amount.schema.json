@@ -1,0 +1,793 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/omni-scoped-amount-1",
+  "title": "Scoped source amount; pending human review",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "revision_id": {
+          "type": "string"
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "evidence_id",
+        "revision_id",
+        "start",
+        "end",
+        "text"
+      ]
+    },
+    "atom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "support"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "support": {
+          "$ref": "#/$defs/support"
+        }
+      }
+    }
+  },
+  "properties": {
+    "contract": {
+      "const": "omni-scoped-amount-1"
+    },
+    "currency": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "support"
+          ],
+          "properties": {
+            "value": {
+              "enum": [
+                "USD",
+                "EUR",
+                "GBP",
+                "CAD",
+                "AUD",
+                "JPY",
+                "CHF",
+                "CNY",
+                "INR"
+              ]
+            },
+            "support": {
+              "$ref": "#/$defs/support"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "support"
+      ],
+      "properties": {
+        "value": {
+          "enum": [
+            "equal",
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "approximate",
+            "range"
+          ]
+        },
+        "support": {
+          "$ref": "#/$defs/support"
+        }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "support"
+      ],
+      "properties": {
+        "value": {
+          "enum": [
+            "ceiling",
+            "option",
+            "obligation",
+            "financing_authority",
+            "gross_proceeds",
+            "net_proceeds"
+          ]
+        },
+        "support": {
+          "$ref": "#/$defs/support"
+        }
+      }
+    },
+    "period": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value",
+            "unit",
+            "precision"
+          ],
+          "properties": {
+            "kind": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "support"
+              ],
+              "properties": {
+                "value": {
+                  "enum": [
+                    "rate",
+                    "through",
+                    "duration"
+                  ]
+                },
+                "support": {
+                  "$ref": "#/$defs/support"
+                }
+              }
+            },
+            "value": {
+              "$ref": "#/$defs/atom"
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "support"
+                  ],
+                  "properties": {
+                    "value": {
+                      "enum": [
+                        "year",
+                        "month",
+                        "week",
+                        "day"
+                      ]
+                    },
+                    "support": {
+                      "$ref": "#/$defs/support"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "support"
+                  ],
+                  "properties": {
+                    "value": {
+                      "enum": [
+                        "year",
+                        "month",
+                        "date"
+                      ]
+                    },
+                    "support": {
+                      "$ref": "#/$defs/support"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "additivity": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "support"
+          ],
+          "properties": {
+            "value": {
+              "enum": [
+                "included",
+                "incremental",
+                "alternative"
+              ]
+            },
+            "support": {
+              "$ref": "#/$defs/support"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "option_status": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "support"
+          ],
+          "properties": {
+            "value": {
+              "enum": [
+                "exercised",
+                "unexercised"
+              ]
+            },
+            "support": {
+              "$ref": "#/$defs/support"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "obligation_kind": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "support"
+          ],
+          "properties": {
+            "value": {
+              "enum": [
+                "current",
+                "transaction_change",
+                "reduction"
+              ]
+            },
+            "support": {
+              "$ref": "#/$defs/support"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source_evidence_id": {
+      "type": "string"
+    },
+    "source_revision_id": {
+      "type": "string"
+    },
+    "support": {
+      "$ref": "#/$defs/support"
+    },
+    "human_review_status": {
+      "const": "pending"
+    },
+    "signal_eligible": {
+      "const": false
+    },
+    "inferred_revenue": {
+      "type": "null"
+    },
+    "inferred_cash_received": {
+      "type": "null"
+    },
+    "inferred_runway": {
+      "type": "null"
+    },
+    "missing_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "currency",
+          "period",
+          "contract_or_financing_id"
+        ]
+      }
+    },
+    "amount_scope_id": {
+      "type": "string",
+      "pattern": "^amount-scope:[a-f0-9]{64}$"
+    },
+    "amount_id": {
+      "type": "string",
+      "pattern": "^amount:[a-f0-9]{64}$"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "support"
+          ],
+          "properties": {
+            "value": {
+              "type": "string",
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            "support": {
+              "$ref": "#/$defs/support"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lower": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "support"
+          ],
+          "properties": {
+            "value": {
+              "type": "string",
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            "support": {
+              "$ref": "#/$defs/support"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "upper": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "support"
+          ],
+          "properties": {
+            "value": {
+              "type": "string",
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            "support": {
+              "$ref": "#/$defs/support"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scale": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/atom"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "contract_or_financing_id": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/atom"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "condition": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/atom"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "additivity_target": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "role",
+            "currency",
+            "operator",
+            "value",
+            "lower",
+            "upper",
+            "contract_or_financing_id"
+          ],
+          "properties": {
+            "role": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "support"
+              ],
+              "properties": {
+                "value": {
+                  "enum": [
+                    "ceiling",
+                    "option",
+                    "obligation",
+                    "financing_authority",
+                    "gross_proceeds",
+                    "net_proceeds"
+                  ]
+                },
+                "support": {
+                  "$ref": "#/$defs/support"
+                }
+              }
+            },
+            "currency": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "support"
+                  ],
+                  "properties": {
+                    "value": {
+                      "enum": [
+                        "USD",
+                        "EUR",
+                        "GBP",
+                        "CAD",
+                        "AUD",
+                        "JPY",
+                        "CHF",
+                        "CNY",
+                        "INR"
+                      ]
+                    },
+                    "support": {
+                      "$ref": "#/$defs/support"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "operator": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "support"
+              ],
+              "properties": {
+                "value": {
+                  "enum": [
+                    "equal",
+                    "<",
+                    "<=",
+                    ">",
+                    ">=",
+                    "approximate",
+                    "range"
+                  ]
+                },
+                "support": {
+                  "$ref": "#/$defs/support"
+                }
+              }
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "support"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    },
+                    "support": {
+                      "$ref": "#/$defs/support"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "lower": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "support"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    },
+                    "support": {
+                      "$ref": "#/$defs/support"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "upper": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "support"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    },
+                    "support": {
+                      "$ref": "#/$defs/support"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contract_or_financing_id": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/atom"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "contract",
+    "currency",
+    "operator",
+    "role",
+    "period",
+    "additivity",
+    "option_status",
+    "obligation_kind",
+    "source_evidence_id",
+    "source_revision_id",
+    "support",
+    "human_review_status",
+    "signal_eligible",
+    "inferred_revenue",
+    "inferred_cash_received",
+    "inferred_runway",
+    "missing_fields",
+    "amount_scope_id",
+    "amount_id",
+    "value",
+    "lower",
+    "upper",
+    "scale",
+    "contract_or_financing_id",
+    "condition",
+    "additivity_target"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operator": {
+            "properties": {
+              "value": {
+                "enum": [
+                  "equal",
+                  "approximate"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "object"
+          },
+          "lower": {
+            "type": "null"
+          },
+          "upper": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operator": {
+            "properties": {
+              "value": {
+                "enum": [
+                  "<",
+                  "<="
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "upper": {
+            "type": "object"
+          },
+          "value": {
+            "type": "null"
+          },
+          "lower": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operator": {
+            "properties": {
+              "value": {
+                "enum": [
+                  ">",
+                  ">="
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "lower": {
+            "type": "object"
+          },
+          "value": {
+            "type": "null"
+          },
+          "upper": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operator": {
+            "properties": {
+              "value": {
+                "enum": [
+                  "range"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "lower": {
+            "type": "object"
+          },
+          "upper": {
+            "type": "object"
+          },
+          "value": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

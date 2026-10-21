@@ -1,0 +1,31 @@
+{
+  "scope": "isolated WS1 focused tests before later stages; not final combined verification",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "command": "python -m unittest test_omni_lifecycle test_omni_routes test_omni_review test_omni_acquisition test_omni_reconciliation test_omni_clinical test_omni_events test_omni_cli -v",
+  "runs": [
+    {
+      "python": "Python 3.11.17",
+      "exit_code": 0,
+      "stdout_stderr": "workstream-1-python311.txt",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "workstream-1-test-receipt-hashes.txt",
+        "entry": "/runs/0/sha256"
+      },
+      "test_count": 79
+    },
+    {
+      "python": "Python 3.12.14",
+      "exit_code": 0,
+      "stdout_stderr": "workstream-1-python312.txt",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "workstream-1-test-receipt-hashes.txt",
+        "entry": "/runs/1/sha256"
+      },
+      "test_count": 79
+    }
+  ],
+  "synthetic_only": true,
+  "public_push": false
+}

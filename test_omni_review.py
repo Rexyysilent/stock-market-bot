@@ -49,7 +49,7 @@ class ReviewTests(unittest.TestCase):
         e=self.ingest("INTerpath-001 met its primary endpoint."); self.approve(e)
         self.ingest("INTerpath-001 did not meet its primary endpoint.",cycle="correction")
         self.assertEqual(build_brief(self.store,self.registry,POLICIES,now=NOW,mode="reviewed")["cards"],[])
-        e=self.ingest("INTerpath-001 met its primary endpoint.",native_id="two",cycle="two"); self.approve(e)
+        e=self.ingest("KEYNOTE-942 met its primary endpoint.",native_id="two",cycle="two"); self.approve(e)
         self.assertEqual(build_brief(self.store,self.registry,POLICIES,now="2026-10-25T12:00:00Z",mode="reviewed")["cards"],[])
     def test_review_cannot_override_primary_source_gates(self):
         e=self.ingest("Unknown trial met its primary endpoint.")
@@ -68,7 +68,8 @@ class ReviewTests(unittest.TestCase):
 
     def test_conflicting_current_sources_stay_contested_after_individual_reviews(self):
         self.approve(self.ingest("INTerpath-001 met its primary endpoint.",native_id="source-a",cycle="a"))
-        self.approve(self.ingest("INTerpath-001 did not meet its primary endpoint.",native_id="source-b",cycle="b"))
+        with self.assertRaisesRegex(ValueError,"cross_source_outcome_conflict"):
+            self.approve(self.ingest("INTerpath-001 did not meet its primary endpoint.",native_id="source-b",cycle="b"))
         brief=build_brief(self.store,self.registry,POLICIES,now=NOW,mode="reviewed")
         self.assertEqual(brief["cards"],[])
         self.assertTrue(all("cross_source_outcome_conflict" in r["reason_codes"] for r in brief["withheld"]))

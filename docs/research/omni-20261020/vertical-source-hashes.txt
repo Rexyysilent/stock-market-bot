@@ -1,0 +1,8 @@
+# Exact audit hashes for vertical-source-contract-ledger.json
+# Format: algorithm, digest, JSON pointer. These are audit identifiers, not executable paths.
+git_commit  d35f667aebd3c2590cabbbe80e51076b3a1fa788  /base_public_revision
+git_commit  1a0ae6d2a277642e9466495323c11469f43f911a  /corrected_candidate
+sha256  a898906ba7e618df80d3c4f9deb26d9a9a5a1fc864ec0ba3f6d142f1e00f7c85  /sources/3/json_sha256
+sha256  2b27929d26cc1da9ad6a530da1cac6718cd8496098ee560c4d47cfffd96d08ba  /sources/5/zip_sha256
+sha256  69d3262a78e91d60a78121a73808b5e2dff457a32fa91b1f8378accea6ea8348  /sources/6/sha256
+sha256  76a50f3445670d8ee5488770d6583a7f6399a093a903dabfbab77344f1eba078  /sources/7/sha256

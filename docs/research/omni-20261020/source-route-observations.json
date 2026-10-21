@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://investors.beamtx.com/rss/news-releases.xml",
+    "retrieved_at": "2026-10-20T17:18:51.850874+00:00",
+    "purpose": "source_contract_research_not_pilot",
+    "status": 200,
+    "content_type": "application/rss+xml; charset=utf-8",
+    "location": null,
+    "last_modified": "Sat, 17 Oct 2026 00:14:55 GMT",
+    "bytes": 8463,
+    "sha256": {
+      "algorithm": "sha256",
+      "manifest": "source-route-observations-hashes.txt",
+      "entry": "/0/sha256"
+    },
+    "root": "rss",
+    "item_count": 10,
+    "items_with_guid": 10,
+    "items_with_date": 10,
+    "date_samples": [
+      "Tue, 13 Oct 2026 07:00:41 -0400",
+      "Tue, 08 Sep 2026 06:00:35 -0400"
+    ],
+    "link_hosts": [
+      "investors.beamtx.com"
+    ]
+  },
+  {
+    "url": "https://www.fda.gov/AboutFDA/ContactFDA/StayInformed/RSSFeeds/MedWatch/rss.xml",
+    "retrieved_at": "2026-10-20T17:18:52.191629+00:00",
+    "purpose": "source_contract_research_not_pilot",
+    "status": 302,
+    "content_type": "text/html; charset=iso-8859-1",
+    "location": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml",
+    "last_modified": null,
+    "bytes": 386,
+    "sha256": {
+      "algorithm": "sha256",
+      "manifest": "source-route-observations-hashes.txt",
+      "entry": "/1/sha256"
+    }
+  },
+  {
+    "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml",
+    "retrieved_at": "2026-10-20T17:19:54.383051+00:00",
+    "status": 200,
+    "content_type": "application/rss+xml; charset=utf-8",
+    "location": null,
+    "bytes": 16106,
+    "sha256": {
+      "algorithm": "sha256",
+      "manifest": "source-route-observations-hashes.txt",
+      "entry": "/2/sha256"
+    },
+    "purpose": "source_contract_research_not_pilot",
+    "root": "rss",
+    "item_count": 20,
+    "items_with_guid": 20,
+    "items_with_date": 20,
+    "date_samples": [
+      "Tue, 20 Oct 2026 00:00:00 EDT",
+      "Tue, 20 Oct 2026 00:00:00 EDT"
+    ]
+  }
+]

@@ -1,0 +1,79 @@
+{
+  "purpose": "isolated WS2 final static validation after public checksum metadata migration; no live pilot",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "commands": [
+    {
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "started_at": "2026-10-20T17:48:34.642197+00:00",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/omni-venv312-20261020/bin/python",
+        "scripts/validate_export_schema.py"
+      ],
+      "started_at": "2026-10-20T17:48:34.647852+00:00",
+      "exit_code": 0,
+      "stdout": "VALID /workspace/scratch/3a31690b38a1/omni-stage-clinical-20261020/fixtures/exports/daily_brief.valid.json\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "node",
+        "--check",
+        "dashboard/app.js"
+      ],
+      "started_at": "2026-10-20T17:48:34.754405+00:00",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/tmp/omni-venv312-20261020/bin/python",
+        "scripts/run_secret_scan.py"
+      ],
+      "started_at": "2026-10-20T17:48:34.781530+00:00",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "compiled_changed_python": [
+    "omni/amounts.py",
+    "omni/classifier.py",
+    "omni/clinical_numerics.py",
+    "omni/clinical_scope.py",
+    "omni/clinical_tables.py",
+    "omni/identities.py",
+    "omni/validator.py",
+    "test_omni_clinical_scope.py",
+    "test_omni_scoped_amounts.py"
+  ],
+  "manifest_checks": [
+    {
+      "manifest": "ws2-tested-inputs.sha256",
+      "files_checked": 43,
+      "mismatches": []
+    },
+    {
+      "manifest": "ws2-result-artifacts.sha256",
+      "files_checked": 3,
+      "mismatches": []
+    }
+  ],
+  "source_case_ledger_unchanged": true,
+  "initial_failed_scan_receipt": "ws2-static-validation-initial.json",
+  "scan_rules_or_baseline_changed": false,
+  "no_live_sources_or_pilot": true,
+  "root_final_combined_offline_suite": "separate required integration gate",
+  "changed_files_hash_manifest": "ws2-changed-files.sha256"
+}

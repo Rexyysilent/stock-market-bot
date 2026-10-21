@@ -69,11 +69,18 @@ class EventStore:
             if version is None or version[0] != "omni-store-1":
                 self.conn.close()
                 raise ValueError("unsupported OMNI database")
+            extension=self.conn.execute("SELECT value FROM metadata WHERE key='extensions_contract'").fetchone()
+            from .migrations import VERSION as extension_version
+            if extension and extension[0]!=extension_version:
+                self.conn.close()
+                raise ValueError("unsupported OMNI extension schema")
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(SCHEMA)
         self.conn.execute("INSERT OR IGNORE INTO event_heads SELECT e.event_id,e.revision_id,e.first_observed_at FROM events e WHERE e.rowid=(SELECT max(n.rowid) FROM events n WHERE n.event_id=e.event_id)")
         self.conn.execute("INSERT OR IGNORE INTO metadata VALUES('contract','omni-store-1')")
         self.conn.commit()
+        from .migrations import upgrade
+        self.migration = upgrade(self.conn)
 
     def close(self):
         self.conn.close()
@@ -84,21 +91,53 @@ class EventStore:
 
     def commit_cycle(self, *, cycle_id, source_id, observed_at, documents, events, decisions,
                      watermark=None, complete=False, continuation=None, gaps=(), metrics=None, fail_at=None,
-                     candidates=(), initial_seed=False, document_jobs=(), source_receipts=(), leads=(), manage_transaction=True, preserve_cursor=False):
+                     candidates=(), initial_seed=False, document_jobs=(), source_receipts=(), leads=(), manage_transaction=True, preserve_cursor=False,
+                     coverage_proof=None, coverage_observations=(), registry=None):
         instant(observed_at)
         if watermark:
             instant(watermark)
         if len(events) != len(decisions):
             raise ValueError("every event needs a decision")
+        from .clinical_scope import dependency_references, referenced_documents
+        # Result and historical definition evidence share immutable storage and
+        # correction lineage, but retain separate recency and rights purposes.
+        supplied={(d["evidence_id"],d["revision_id"]):d for d in documents}
+        if registry is not None:
+            for event in events:
+                for doc in referenced_documents(event,registry):
+                    key=(doc["evidence_id"],doc["revision_id"])
+                    if key in supplied and supplied[key]!=doc:
+                        raise ValueError("conflicting clinical definition evidence")
+                    supplied[key]=doc
+        documents=list(supplied.values())
+        for event in events:
+            for eid,revision in dependency_references(event):
+                if (eid,revision) not in supplied and not self.conn.execute(
+                    "SELECT 1 FROM evidence WHERE evidence_id=? AND revision_id=?",(eid,revision)).fetchone():
+                    raise ValueError("clinical definition dependency missing; supply its exact catalog or document")
         for doc in documents:
             check_document(doc)
         for event, decision in zip(events, decisions):
             if event.get("signal_eligible") is not False or decision.get("signal_status") != "ineligible":
                 raise ValueError("event store cannot promote production signals")
+        input_hash = digest([source_id, observed_at, documents, events, decisions, watermark, complete,
+            continuation, list(gaps), metrics, candidates, initial_seed, document_jobs, source_receipts,
+            leads, preserve_cursor, coverage_proof, coverage_observations])
+        from .coverage import cursor_proof, seed_proof, record_observation
+        old_cursor = self.cursor(source_id)
+        verified_interval = cursor_proof(coverage_proof, source_id=source_id, old_watermark=old_cursor["watermark"],
+                                        watermark=watermark, observed_at=observed_at) if watermark else False
+        proof_pages = (coverage_proof or {}).get("pages", [])
+        matched_observations = bool(coverage_observations) and all(any(
+            o.get("source_id") == source_id and o.get("raw_response_hash") == p.get("raw_sha256")
+            and [r["native_id"] for r in o.get("native_inventory", [])] == p.get("native_ids")
+            for o in coverage_observations) for p in proof_pages)
+        if complete and watermark and (not verified_interval or not matched_observations) and not preserve_cursor:
+            gaps = tuple(gaps) + ("feed_interval_unverified",)
         health = {"status": "complete" if complete and not gaps else "partial", "gaps": sorted(set(gaps)),
                   "metrics": metrics or {}, "watermark_candidate": watermark, "continuation": continuation}
+        health["coverage_proof"] = coverage_proof
         health["initial_seed"] = initial_seed
-        input_hash = digest([source_id, documents, events, decisions, health, candidates, document_jobs, source_receipts,leads,preserve_cursor])
         inserted = 0
         try:
             if manage_transaction: self.conn.execute("BEGIN IMMEDIATE")
@@ -109,6 +148,17 @@ class EventStore:
                     raise ValueError("cycle ID reused with different input")
                 if manage_transaction: self.conn.rollback()
                 return {"status": "duplicate_cycle", "new_events": 0}
+            from .lifecycle import observe_candidate, observe_document, link_late_events
+            health["observation_receipt_ids"] = [
+                record_observation(self, obs, now=observed_at, manage_transaction=False)["receipt_id"]
+                for obs in coverage_observations]
+            if len({d["evidence_id"] for d in documents}) != len(documents):
+                raise ValueError("one current revision per evidence identity per cycle required")
+            policy_versions = {d["source_policy_fingerprint"] for d in documents if d["source_policy_id"]==source_id}
+            policy_versions.update(o["policy_hash"] for o in coverage_observations)
+            policy_version = next(iter(policy_versions)) if len(policy_versions)==1 else None
+            accepted_candidates = {candidate["native_id"] for candidate in candidates
+                if observe_candidate(self, source_id, candidate, observed_at=observed_at, policy_hash=policy_version)}
             for job in document_jobs:
                 self.conn.execute("INSERT OR REPLACE INTO document_jobs VALUES(?,?,?,?)",(
                     source_id,job["native_id"],job["url"],encode(job)))
@@ -119,36 +169,56 @@ class EventStore:
                 self.conn.execute("INSERT OR IGNORE INTO discovery_leads VALUES(?,?,?,?)",(
                     lead["lead_id"],source_id,observed_at,encode(lead)))
             for doc in documents:
+                observe_document(self, doc, observed_at=observed_at)
                 # The first observation of an evidence identity never advances on rerun.
                 first = self.conn.execute("SELECT min(first_observed_at) FROM evidence WHERE evidence_id=?", (doc["evidence_id"],)).fetchone()[0]
                 self.conn.execute("INSERT OR IGNORE INTO evidence VALUES(?,?,?,?)", (
                     doc["evidence_id"], doc["revision_id"], first or doc["first_observed_at"], encode(doc)))
             for row in candidates:
+                if row["native_id"] not in accepted_candidates:
+                    continue
                 self.conn.execute("INSERT INTO acquisition_queue VALUES(?,?,?,?,?) ON CONFLICT(source_id,native_id) DO UPDATE SET payload=excluded.payload,state=excluded.state", (
                     source_id, row["native_id"], observed_at, encode(row), row.get("hydration_status", "metadata_only")))
             for event, decision in zip(events, decisions):
                 first = self.conn.execute("SELECT min(first_observed_at) FROM events WHERE event_id=?", (event["event_id"],)).fetchone()[0]
+                event = dict(event, first_observed_at=first or event["first_observed_at"])
                 head = self.conn.execute("SELECT revision_id FROM event_heads WHERE event_id=?", (event["event_id"],)).fetchone()
                 changed = head is None or head[0] != event["event_revision"]
+                current_refs = {(r[0], r[1]) for r in self.conn.execute("SELECT evidence_id,revision_id FROM evidence_heads")}
+                support_refs={(c["support"]["evidence_id"],c["support"]["revision_id"]) for c in event["claims"]}
+                support_refs.update(dependency_references(event))
+                stale_evidence = any(ref not in current_refs for ref in support_refs)
+                changed = changed and not stale_evidence
                 wrote = self.conn.execute("INSERT OR IGNORE INTO events VALUES(?,?,?,?,?)", (
                     event["event_id"], event["event_revision"], first or event["first_observed_at"], encode(event), encode(decision))).rowcount
                 inserted += wrote
-                for claim in event["claims"]:
-                    support=claim["support"]
+                packet_hash = digest(event)
+                prior_packet = self.conn.execute("SELECT packet_hash FROM event_packet_heads WHERE event_id=? AND revision_id=?",
+                    (event["event_id"], event["event_revision"])).fetchone()
+                packet_changed = not stale_evidence and (not prior_packet or prior_packet[0] != packet_hash)
+                self.conn.execute("INSERT OR IGNORE INTO event_packets VALUES(?,?,?,?,?)",
+                    (event["event_id"], event["event_revision"], packet_hash, encode(event), observed_at))
+                if not stale_evidence:
+                    self.conn.execute("INSERT OR REPLACE INTO event_packet_heads VALUES(?,?,?)",
+                        (event["event_id"], event["event_revision"], packet_hash))
+                for eid,revision in sorted(support_refs):
                     self.conn.execute("INSERT OR IGNORE INTO event_evidence VALUES(?,?,?,?)", (
-                        event["event_id"],event["event_revision"],support["evidence_id"],support["revision_id"]))
-                if changed:
+                        event["event_id"],event["event_revision"],eid,revision))
+                if changed or packet_changed:
                     self.conn.execute("INSERT OR REPLACE INTO event_heads VALUES(?,?,?)", (event["event_id"],event["event_revision"],observed_at))
-                if changed and decision["editorial_status"] != "suppressed":
+                if (changed or packet_changed) and decision["editorial_status"] != "suppressed":
                     delivery_id = "review:" + digest([event["event_id"], event["event_revision"]])
                     self.conn.execute("INSERT OR IGNORE INTO outbox(delivery_id,event_id,revision_id) VALUES(?,?,?)", (
                         delivery_id, event["event_id"], event["event_revision"]))
                     self.conn.execute("UPDATE outbox SET state='pending',acknowledged_at=NULL WHERE delivery_id=?", (delivery_id,))
+            link_late_events(self, events, observed_at=observed_at)
             if fail_at == "after_events":
                 raise RuntimeError("injected crash before progress commit")
             old = self.cursor(source_id)
             next_mark = watermark if complete and not gaps else old["watermark"]
-            if initial_seed and old["watermark"] is None and set(gaps) <= {"initial_window_only"}:
+            if (initial_seed and old["watermark"] is None and set(gaps) <= {"initial_window_only"}
+                    and matched_observations and seed_proof(coverage_proof,source_id=source_id,
+                        watermark=watermark,observed_at=observed_at)):
                 # Seed defines a new observed interval; it is not backfilled history.
                 next_mark = watermark
             if old["watermark"] and next_mark and instant(next_mark) < instant(old["watermark"]):
@@ -224,4 +294,4 @@ class EventStore:
 
     def inventory(self):
         return {table: self.conn.execute("SELECT count(*) FROM " + table).fetchone()[0]
-                for table in ("evidence", "events", "source_cycles", "outbox", "reviews", "trial_snapshots", "trial_changes", "acquisition_queue", "document_jobs", "source_receipts", "discovery_leads", "pilot_records")}
+                for table in ("evidence", "events", "source_cycles", "outbox", "reviews", "trial_snapshots", "trial_changes", "acquisition_queue", "document_jobs", "source_receipts", "discovery_leads", "pilot_records", "omni_receipts", "event_change_links")}

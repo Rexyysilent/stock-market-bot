@@ -11,8 +11,44 @@ from zoneinfo import ZoneInfo
 from .acquisition import MAX_BYTES,Deferred
 from .identities import digest,instant
 
-VERSION='omni-edgar-index-1'
+VERSION='omni-edgar-index-2'
 NY=ZoneInfo('America/New_York')
+INDEX_FIELDS=('native_id','title','form','cik','url','submission_url','filed_date','registrants')
+
+
+def merge_index_candidate(row, prior, *, observed_at, raw_sha256):
+    """Keep fresh index facts and receipt differences without rewriting evidence.
+
+    A change here is an observed metadata difference, not an adjudicated SEC
+    correction, automatic document refresh, claim revocation or coverage proof.
+    """
+    current={key:row[key] for key in INDEX_FIELDS}
+    merged=dict(row)
+    change=None
+    if prior:
+        previous=prior.get('index_metadata') or {key:prior[key] for key in INDEX_FIELDS if key in prior}
+        changed=sorted(key for key in current if key in previous and previous[key]!=current[key])
+        added=sorted(set(current)-set(previous))
+        if changed or added:
+            change={'native_id':row['native_id'],
+                    'comparison_basis':'prior_index_observation' if prior.get('index_day') else 'prior_candidate_metadata',
+                    'previous_metadata':previous,'current_metadata':current,
+                    'previous_metadata_hash':digest(previous),'current_metadata_hash':digest(current),
+                    'changed_fields':changed,'newly_observed_fields':added,
+                    'human_review_status':'pending','claim_revocation_performed':False}
+        # The date-only index cannot replace a separately observed feed clock.
+        if prior.get('published'):
+            instant(prior['published'])
+            merged['published']=prior['published']; merged['time_precision']='timestamp'
+        if 'summary' in prior: merged['summary']=prior['summary']
+        # Cached listing/jobs remain useful for the same accession route/form.
+        # A changed route/form must rediscover its applicable document listing.
+        if prior.get('url')==row['url'] and (not prior.get('form') or prior['form']==row['form']):
+            for key in ('hydration_status','document_listing'):
+                if key in prior: merged[key]=prior[key]
+    merged.update(index_metadata=current,index_metadata_hash=digest(current),
+                  index_observed_at=observed_at,index_raw_sha256=raw_sha256)
+    return merged,change
 
 
 def daily_index_url(day):
@@ -66,7 +102,7 @@ def reconcile_days(store,client,*,start_day,end_day,now):
     start,end=date.fromisoformat(start_day),date.fromisoformat(end_day)
     if not 0<=(end-start).days<7: raise ValueError('reconciliation range must be one to seven calendar days')
     clock=instant(now); source_id=client.policy['policy_id']
-    receipts=[]; candidates=[]; gaps=[]
+    receipts=[]; candidates=[]; gaps=[]; observations=[]
     for offset in range((end-start).days+1):
         day=start+timedelta(days=offset); key=day.isoformat()
         if datetime.combine(day+timedelta(days=1),time(6),NY)>clock:
@@ -77,15 +113,18 @@ def reconcile_days(store,client,*,start_day,end_day,now):
             parsed=parse_daily_index(client.get(daily_index_url(key),content_types=('text/plain','application/octet-stream')),day=key)
         except (Deferred,ValueError,PermissionError) as exc:
             gaps.append({'day':key,'reason':str(exc)}); continue
+        from .coverage import observation_from_rows
+        observations.append(observation_from_rows(parsed['rows'],source_id=source_id,route_id='sec-daily-index',
+            family='sec_filings',acquired_at=now,window_start=now,window_end=now,policy_hash=digest(client.policy),
+            raw_response_hash=parsed['raw_sha256'],query={'day':key},end_of_results=True))
+        changes=[]
         for row in parsed['rows']:
             prior=store.candidate(source_id,row['native_id'])
-            if prior:
-                # An index supplies filing-date precision; retain a previously
-                # observed feed timestamp and already completed hydration jobs.
-                row={**row,**prior,'index_day':key,'filed_date':row['filed_date']}
+            row,change=merge_index_candidate(row,prior,observed_at=now,raw_sha256=parsed['raw_sha256'])
+            if change: changes.append(change)
             candidates.append(row)
         receipts.append({'day':key,'status':'index_records_acquired','url':daily_index_url(key),
-                         **{k:v for k,v in parsed.items() if k!='rows'}})
+                         **{k:v for k,v in parsed.items() if k!='rows'},'metadata_changes':changes})
     batch={'contract':VERSION,'start_day':start_day,'end_day':end_day,'observed_at':now,
            'days':receipts,'gaps':gaps,'status':'partial' if gaps else 'index_range_acquired',
            'coverage_scope':'records listed in the retrieved daily indexes; later corrections/removals are not certified',
@@ -94,7 +133,7 @@ def reconcile_days(store,client,*,start_day,end_day,now):
     # Independent reconciliation cursor: never overwrite feed progress with a
     # filing date, midnight guess or an index retrieval timestamp.
     receipt=store.commit_cycle(cycle_id=batch['receipt_id'],source_id=source_id,observed_at=now,
-        documents=[],events=[],decisions=[],candidates=candidates,source_receipts=[batch],
+        documents=[],events=[],decisions=[],candidates=candidates,source_receipts=[batch],coverage_observations=observations,
         watermark=store.cursor(source_id)['watermark'],complete=False,preserve_cursor=True,
         continuation=store.cursor(source_id)['continuation'],gaps=['index_reconciliation_separate_from_feed'],
         metrics={'index_receipt':batch['receipt_id'],'candidate_count':len(candidates)})

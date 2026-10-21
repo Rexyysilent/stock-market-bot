@@ -1,11 +1,14 @@
 """Synthetic source-to-review OMNI-04 acceptance; no provider requests."""
 from copy import deepcopy
+import json
+from pathlib import Path
 import unittest
 
 from omni.classifier import extract, predicates
 from omni.evidence import document, public_url, span
 from omni.identities import load_registry
 from omni.validator import validate
+from omni.amounts import contract_amounts
 
 NOW = "2026-10-18T12:00:00Z"
 POLICY = {"policy_id": "synthetic-issuer", "version": "1", "evidence": ["synthetic_fixture"],
@@ -26,6 +29,13 @@ def make_doc(text, **kwargs):
 class EventTests(unittest.TestCase):
     def setUp(self):
         self.registry = load_registry()
+
+    def test_complex_amount_rule_fixtures_remain_uninferred(self):
+        corpus=json.loads((Path(__file__).parent/'fixtures/omni/coverage_rules.json').read_text())
+        self.assertTrue(corpus['synthetic']); self.assertTrue(corpus['not_gold_or_pilot'])
+        for row in corpus['amount_cases']:
+            with self.subTest(fixture=row['fixture_id']):
+                self.assertEqual([list(r) for r in contract_amounts(row['text'],stage=row['stage'])],row['expected_existing_results'])
 
     def test_malformed_evidence_cannot_be_reviewed(self):
         doc, events=self.run_doc("INTerpath-001 met its primary endpoint.")
@@ -85,12 +95,15 @@ class EventTests(unittest.TestCase):
             self.assertEqual(events[0]["claims"][0]["value"], stage)
         self.assertNotIn(("regulatory_stage", "approved"), predicates("Moderna expects approval."))
 
-    def test_t12_mirrors_one_origin_different_milestones_separate(self):
+    def test_t12_unreviewed_mirror_hints_cannot_merge_source_origins(self):
         text = "INTerpath-001 met its primary endpoint."
         doc1, first = self.run_doc(text, origin_reference="verified-release-1")
         doc2, mirror = self.run_doc(text, native_id="wire-1", origin_reference="verified-release-1")
-        self.assertEqual(first[0]["event_id"], mirror[0]["event_id"])
-        self.assertEqual(validate(first[0], [doc1, doc2], self.registry, POLICIES, now=NOW)["independent_origins"], 1)
+        self.assertNotEqual(first[0]["event_id"], mirror[0]["event_id"])
+        checked=validate(first[0], [doc1, doc2], self.registry, POLICIES, now=NOW)
+        self.assertEqual(checked["assertion_origin_units"],2)
+        self.assertIsNone(checked["independent_origins"])
+        self.assertFalse(checked["independence_assessed"])
         _, later = self.run_doc(text, native_id="release-2")
         self.assertNotEqual(first[0]["event_id"], later[0]["event_id"])
 

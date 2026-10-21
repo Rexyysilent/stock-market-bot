@@ -10,42 +10,58 @@ import json
 from .identities import digest, instant
 from .store import encode
 from .validator import validate
+from .lifecycle import lifecycle_state, validate_current
+from .receipts import transaction
+from .clinical_scope import dependency_references
 
-VERSION = "omni-review-1"
+VERSION = "omni-review-2"
 
 
 def event_packet(store, event_id, revision_id):
     row=store.conn.execute("SELECT payload,decision,first_observed_at FROM events WHERE event_id=? AND revision_id=?", (event_id,revision_id)).fetchone()
     if not row: raise ValueError("unknown event revision")
-    event=json.loads(row[0]); documents=[]
+    packet_row=store.conn.execute("SELECT p.payload FROM event_packets p JOIN event_packet_heads h "
+        "ON p.event_id=h.event_id AND p.revision_id=h.revision_id AND p.packet_hash=h.packet_hash "
+        "WHERE p.event_id=? AND p.revision_id=?",(event_id,revision_id)).fetchone()
+    event=json.loads(packet_row[0] if packet_row else row[0]); documents=[]; scope_documents=[]
     refs={(c["support"]["evidence_id"],c["support"]["revision_id"]) for c in event["claims"]}
     for eid, revision in sorted(refs):
         evidence=store.conn.execute("SELECT payload FROM evidence WHERE evidence_id=? AND revision_id=?", (eid,revision)).fetchone()
         if not evidence: raise ValueError("event evidence missing")
         documents.append(json.loads(evidence[0]))
+    scope_refs=dependency_references(event)
+    for eid, revision in sorted(scope_refs-refs):
+        evidence=store.conn.execute("SELECT payload FROM evidence WHERE evidence_id=? AND revision_id=?",(eid,revision)).fetchone()
+        if not evidence: raise ValueError("clinical definition evidence missing")
+        scope_documents.append(json.loads(evidence[0]))
     alternate=[]
     for eid, revision in store.conn.execute("SELECT evidence_id,evidence_revision FROM event_evidence WHERE event_id=? AND revision_id=?",(event_id,revision_id)):
-        if (eid,revision) in refs: continue
+        if (eid,revision) in refs|scope_refs: continue
         evidence=store.conn.execute("SELECT payload FROM evidence WHERE evidence_id=? AND revision_id=?",(eid,revision)).fetchone()
         if evidence:
             d=json.loads(evidence[0])
             alternate.append({k:d[k] for k in ("evidence_id","revision_id","url","origin_cluster_id","source_policy_id")})
-    return {"event":event,"documents":documents,"alternate_evidence_paths":alternate,
-            "decision":json.loads(row[1]),"first_observed_at":row[2]}
+    return {"event":event,"documents":documents,"scope_documents":scope_documents,"alternate_evidence_paths":alternate,
+            "decision":json.loads(row[1]),"first_observed_at":row[2],
+            "lifecycle":lifecycle_state(store,event,documents+scope_documents)}
 
 
 def record_review(store, event_id, revision_id, registry, policies, *, now, reviewer, action, note=""):
     """Called only for an explicit operator decision; tests use synthetic reviewers."""
     if action not in ("approve","reject") or not reviewer.strip() or len(reviewer)>120:
         raise ValueError("explicit reviewer and approve/reject decision required")
-    packet=event_packet(store,event_id,revision_id)
-    current=validate(packet["event"],packet["documents"],registry,policies,now=now)
-    review={"decision":action,"reviewer":reviewer,"reviewed_at":now,"input_hash":current["input_hash"],"note":note[:2000]}
-    checked=validate(packet["event"],packet["documents"],registry,policies,now=now,review=review)
-    if action=="approve" and checked["editorial_status"]!="eligible":
-        raise ValueError("mandatory gates still fail: "+", ".join(checked["reason_codes"]))
-    review_id="review:"+digest([event_id,revision_id,review])
-    with store.conn:
+    with transaction(store):
+        packet=event_packet(store,event_id,revision_id)
+        current=validate_current(store,packet,registry,policies,now=now)
+        previous=store.conn.execute("SELECT review_id FROM reviews WHERE event_id=? ORDER BY rowid DESC LIMIT 1",(event_id,)).fetchone()
+        review={"decision":action,"reviewer":reviewer,"reviewed_at":now,"input_hash":current["input_hash"],
+                "current_state_hash":current["current_state_hash"],"resolved_change_refs":current["lifecycle"]["change_refs"],
+                "supersedes_review":previous[0] if previous else None,"note":note[:2000],
+                "authentication":"operator_assertion_not_authenticated_by_software"}
+        checked=validate_current(store,packet,registry,policies,now=now,review=review)
+        if action=="approve" and checked["editorial_status"]!="eligible":
+            raise ValueError("mandatory gates still fail: "+", ".join(checked["reason_codes"]))
+        review_id="review:"+digest([event_id,revision_id,review])
         store.conn.execute("INSERT OR IGNORE INTO reviews VALUES(?,?,?,?)", (review_id,event_id,revision_id,encode(review)))
         store.conn.execute("UPDATE outbox SET state='acknowledged',acknowledged_at=? WHERE event_id=? AND revision_id=?",(now,event_id,revision_id))
     return {"review_id":review_id,"review":review,"validation":checked}
@@ -76,7 +92,11 @@ def card(packet, decision, registry):
                        "units":c.get("units"),"qualifiers":c.get("qualifiers",[])} for c in event["claims"]],
             "evidence":[{"evidence_id":d["evidence_id"],"revision_id":d["revision_id"],"url":d["url"],"published":d["publication"]} for d in packet["documents"]],
             "alternate_evidence_paths":packet["alternate_evidence_paths"],
-            "clinical_context":event.get("clinical_context"),"first_observed_at":packet["first_observed_at"],
+            "corrections":decision["lifecycle"]["change_refs"],"current_state_hash":decision["current_state_hash"],
+            "assertion_origin_units":decision["assertion_origin_units"],"independence_assessed":False,
+            "assertion_origins":sorted({r["origin_id"] for r in decision["origin_resolution"]}),
+            "clinical_context":event.get("clinical_context"),"scoped_amounts":event.get("scoped_amounts",[]),
+            "first_observed_at":packet["first_observed_at"],
             "reviewer":decision["reviewer"],"reviewed_at":decision["reviewed_at"],
             "signal_eligible":False,"coverage_tier":"reviewed_event_only","market_reaction":None}
 
@@ -93,12 +113,13 @@ def build_brief(store, registry, policies, *, now, mode="shadow", legacy_focus=N
         rows=store.conn.execute("SELECT event_id,revision_id,changed_at FROM event_heads ORDER BY changed_at DESC,event_id LIMIT 500").fetchall()
         queue_deferred=max(0,store.conn.execute("SELECT count(*) FROM event_heads").fetchone()[0]-len(rows))
         for eid, rev, changed_at in rows:
+            if instant(changed_at)>instant(now): continue
             packet=event_packet(store,eid,rev)
-            review_row=store.conn.execute("SELECT payload FROM reviews WHERE event_id=? AND revision_id=? ORDER BY rowid DESC LIMIT 1",(eid,rev)).fetchone()
-            review=json.loads(review_row[0]) if review_row else None
+            review=next((value for r in store.conn.execute("SELECT payload FROM reviews WHERE event_id=? AND revision_id=? ORDER BY rowid DESC",(eid,rev))
+                if instant((value:=json.loads(r[0]))["reviewed_at"])<=instant(now)),None)
             if review and instant(review["reviewed_at"]) < instant(changed_at):
                 review=None
-            decision=validate(packet["event"],packet["documents"],registry,policies,now=now,review=review)
+            decision=validate_current(store,packet,registry,policies,now=now,review=review)
             checked.append((packet,decision))
         # Current contradictory outcomes for a known trial require resolution
         # even if each source independently has a human approval. Mirrors do
@@ -119,6 +140,17 @@ def build_brief(store, registry, policies, *, now, mode="shadow", legacy_focus=N
                 candidates.append(card(packet,decision,registry))
             else:
                 withheld.append({"event_id":eid,"revision_id":rev,"reason_codes":decision["reason_codes"] or ["shadow_only"]})
+    deduplicated={}
+    for item in candidates:
+        semantic=sorted(digest({k:c.get(k) for k in ("predicate","value","units","qualifiers")}) for c in item["claims"])
+        key=digest([item["assertion_origins"],item["family"],item["scope_id"],semantic])
+        if key in deduplicated:
+            prior=deduplicated[key]
+            prior.setdefault("same_assertion_event_ids",[prior["event_id"]]).append(item["event_id"])
+            prior["alternate_evidence_paths"].extend(item["evidence"]+item["alternate_evidence_paths"])
+        else:
+            deduplicated[key]=item
+    candidates=list(deduplicated.values())
     ranks={"critical":0,"high":1,"routine":2,"unknown":3}
     candidates.sort(key=lambda c:(ranks[c["materiality"]],c["event_id"],c["event_revision"]))
     chosen=candidates[:limit]

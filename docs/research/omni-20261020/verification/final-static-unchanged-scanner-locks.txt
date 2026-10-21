@@ -1,0 +1,8 @@
+AUDIT_RENDERING Public Git checkpoint uses a manifest reference; exact original command transcript is preserved in delivery evidence/original-audit-receipts/verification.
+COMMAND ["git", "diff", "--quiet", "@audit[migration-python311-hashes.txt#h002]", "--", ".secrets.baseline", "scripts/run_secret_scan.py", "requirements.lock", "requirements-ci.lock"]
+WORKING_DIRECTORY /workspace/scratch/3a31690b38a1/omni-completion-20261020
+STARTED 2026-10-20T18:32:05.872047+00:00
+
+
+COMPLETED 2026-10-20T18:32:05.875716+00:00
+EXIT_CODE 0

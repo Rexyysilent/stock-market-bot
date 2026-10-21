@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 import ipaddress
+import hashlib
 import json
 import re
 import socket
@@ -16,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from source_request_gate import wait_for_sec
 from .evidence import public_url, source_decision
-from .identities import instant
+from .identities import instant, digest
 
 MAX_BYTES = 5_000_000
 
@@ -65,7 +66,12 @@ class SourceClient:
         for attempt in range(3):
             self._reserve("attempt")
             if host in ("www.sec.gov", "data.sec.gov"):
-                self.sec_gate()
+                try:
+                    self.sec_gate()
+                except RuntimeError as exc:
+                    # The local shared gate may refuse backlog/clock skew. Keep
+                    # that outage visible as coverage debt without an HTTP call.
+                    raise Deferred("sec_rate_gate_unavailable") from exc
             try:
                 response = self.session.get(url, headers=self.headers, timeout=(5,20), allow_redirects=False, stream=True)
             except requests.RequestException:
@@ -125,7 +131,8 @@ def parse_atom(raw, *, base_url, result_cap=100):
     entries = root.findall("{http://www.w3.org/2005/Atom}entry")
     if root.tag != "{http://www.w3.org/2005/Atom}feed":
         raise ValueError("not an Atom feed")
-    rows, gaps = [], []
+    rows, gaps, seen = [], [], {}
+    if not entries: gaps.append("empty_feed_inventory")
     for entry in entries[:result_cap]:
         val = lambda name: entry.findtext("{http://www.w3.org/2005/Atom}" + name)
         link = entry.find("{http://www.w3.org/2005/Atom}link")
@@ -139,8 +146,12 @@ def parse_atom(raw, *, base_url, result_cap=100):
         if not val("id") or not val("title") or not public_url(url):
             gaps.append("malformed_feed_entry")
             continue
-        rows.append({"native_id": val("id"), "title": val("title"), "url": url,
-                     "published": stamp, "summary": val("summary"), "signal_eligible": False})
+        row={"native_id": val("id"), "title": val("title"), "url": url,
+             "published": stamp, "summary": val("summary"), "signal_eligible": False}
+        if row["native_id"] in seen:
+            gaps.append("conflicting_duplicate_native_id" if row!=seen[row["native_id"]] else "duplicate_native_id")
+            continue
+        seen[row["native_id"]]=row; rows.append(row)
     return {"rows": rows, "result_cap_reached": len(entries) >= result_cap, "gaps": sorted(set(gaps))}
 
 
@@ -160,13 +171,22 @@ def collect_edgar(client, *, watermark=None, max_pages=3, continuation=None):
         raise ValueError("invalid reconciliation offset")
     start = max(0, offset-100)
     rows, gaps, newest, reached = [], [], None, False
+    page_proofs, observations = [], []
     seen = set()
     for page in range(max_pages):
         try:
-            parsed = parse_atom(client.get(edgar_url(start+page*100)), base_url="https://www.sec.gov")
+            raw = client.get(edgar_url(start+page*100))
+            parsed = parse_atom(raw, base_url="https://www.sec.gov")
         except (Deferred, ValueError, ET.ParseError) as exc:
             gaps.append(str(exc)); break
         gaps.extend(parsed["gaps"])
+        page_proofs.append({"offset": start+page*100, "raw_sha256": hashlib.sha256(raw).hexdigest(),
+                            "native_ids": [r["native_id"] for r in parsed["rows"]],
+                            "publication_times": [r["published"] for r in parsed["rows"]],
+                            "response_complete": not parsed["gaps"]})
+        observations.append({"rows": parsed["rows"], "raw_sha256": hashlib.sha256(raw).hexdigest(),
+                             "offset": start+page*100, "gaps": parsed["gaps"],
+                             "result_cap_reached": parsed["result_cap_reached"]})
         for row in parsed["rows"]:
             stamp = instant(row["published"])
             newest = row["published"] if newest is None or stamp > instant(newest) else newest
@@ -188,10 +208,15 @@ def collect_edgar(client, *, watermark=None, max_pages=3, continuation=None):
         # uninterrupted interval. Keep the gap until a head scan reaches the
         # old watermark or a separately verified index reconciliation exists.
         gaps.append("reconciliation_requires_contiguous_verification")
+    proof = {"contract": "omni-feed-traversal-1", "source_id": client.policy["policy_id"],
+             "previous_watermark": watermark, "watermark": newest, "started_from_head": start == 0 and not continuation,
+             "pages": page_proofs, "gaps": sorted(set(gaps))}
+    proof["proof_hash"] = digest(proof)
     return {"rows": rows, "watermark": newest, "complete": reached and not gaps,
             "initial_seed": previous is None,
             "gaps": sorted(set(gaps)), "continuation": None if reached else str(start+(page+1)*100),
-            "request_counts": dict(client.counts), "scope": "latest EDGAR filings, not SEC newsroom"}
+            "request_counts": dict(client.counts), "scope": "latest EDGAR filings, not SEC newsroom",
+            "coverage_proof": proof, "page_observations": observations}
 
 
 def filing_documents(raw, *, filing_url, limit=3):

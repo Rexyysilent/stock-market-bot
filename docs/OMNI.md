@@ -1,191 +1,179 @@
-# OMNI local event workbench
+# OMNI local evidence and review workbench
 
-OMNI is an optional local evidence and review path. The default mode is `off`.
-Nothing installs a scheduler, sends messages, calls a model, expands acquisition
-cohorts, or promotes event rows into production signals. The canonical daily
-brief remains schema 2.8 / pipeline 2.6.5. This workbench has its own versioned
-contracts and SQLite database, `history/omni-events.db`.
+OMNI remains off by default. The completion candidate implements all six engineering
+workstreams from the 2026-10-20 handoff, with explicit refusals where source or
+clinical contracts are missing. Source activation, human adjudication, real pilot
+observations, membership changes and distribution remain pending operator work.
+AI and domain labels remain pending human review. Synthetic tests give no real
+pilot, customer, rights or operating-cost credit.
 
-## What is implemented
+The canonical daily brief remains schema 2.8 / pipeline 2.6.5. This workbench uses
+its own versioned contracts and SQLite store. It installs no scheduler, sends no
+messages, invokes no model and does not promote OMNI events to production signals.
 
-| Package | Local implementation | Release boundary |
-|---|---|---|
-| 03 | Sourced issuer/security/asset/trial graph, scoped aliases, separate relationship roles, precision-preserving times | Unknown identities remain review items; the graph is a seed, not universal coverage |
-| 04 | Deterministic clinical, regulatory, financing and contract claims; exact evidence spans; mandatory validator | Conservative grammar only; numeric clinical results and broad natural-language interpretation remain unsupported |
-| 05 | Bounded EDGAR feed and daily-index reconciliation, durable per-exhibit jobs, optional issuer feeds, atomic cursor/event/outbox commit, shared local SEC rate gate | Source permissions and live coverage must be verified; incomplete intervals stay partial |
-| 06 | Version-pinned ClinicalTrials.gov seeds and changes with atomic progress; FDA MedWatch and oncology notification metadata | Results posting does not establish outcome or approval; FDA notification indexes have explicitly limited scope |
-| 07 | Explicit approve/reject audit and evidence-backed companion focus; six or more intake candidates survive the five-card display limit | Human approval is bound to the exact inputs and revalidated; no automatic publication |
-| 08 | Separate observation-quality, sample/readiness and information-sequence validators, alongside existing ledger checks | No new production family or performance claim; runtime measurements remain in their captured era |
-| 09 | Frozen pilot corpus, durable case/run/gold/coverage receipts, actual precision/recall denominators, Wilson intervals and version checks | Prospective evidence pending; synthetic tests cannot mature a gate |
-| 10–12 | Explicit dependency and missing-evidence reports; operator-supplied expansion candidates exclude existing names | No bundled expansion list or automatic membership/distribution change |
+## Implemented workstreams
 
-Contracts include `omni-identity-1`, `omni-evidence-1`, `omni-store-1`,
-`omni-validator-3`, `omni-review-1`, `omni-clinical-1` and `omni-evaluation-1`.
-Events, evidence revisions and review receipts are separate objects. A changed
-source timestamp without changed claims does not create another event revision.
-An amendment with changed claims needs a new review. Source copies count as one
-origin only when an explicit verified origin reference establishes equivalence.
+| Workstream | Implemented behavior | Remaining boundary |
+| --- | --- | --- |
+| 1 — source lifecycle | Immutable change observations, durable quarantine, current-state re-review, reviewed copy correspondence, observed feed intervals, index sets and correction surveillance; disabled verified route adapters | A copied assertion is not independent corroboration; missing source records are discrepancies, not automatic withdrawals; backfill cannot recover unobserved availability |
+| 2 — clinical scope and amounts | Optional versioned endpoint/arm/cohort catalog; exact sentence and bounded pipe-table parsing; scoped HR/RR/OR/risk-difference/CI/p/count fields; scoped currency/amount atoms and semantic display projections | Real definition approvals are absent; unsupported tables, safety/disposition grammar and amount inference abstain |
+| 3 — prospective evaluation | Future frozen protocol, independent source inventory, complete scoped publication census, timing/retention proofs, supplied adjudications, untouched custody and version-bound reports | Genuine prospective observations, scheduler clocks, human decisions and external custody cannot be fabricated |
+| 4 — disabled verticals | NRC APS, EIA API, EIA-860 2025 and delayed USAspending parsers; explicit collectors; narrow read-only GET/POST contracts; all 20 proposed fixtures executable | Credentials, actual route metadata, reviewed identities, rights and live coverage remain missing where documented |
+| 5 — measured expansion | Operator candidate set difference, frozen baseline/expanded scopes, source-first yield/recall/error reports, request/retry census, review effort and aligned incremental economics | Produces a proposal only; no built-in Wave B list, fanout or membership mutation |
+| 6 — operating tools | Exact field/purpose rights, local neutral brief preview/export, correction history, typed operating records, workbook-aligned economics and OMNI-10/11/12 checks | Record consistency is not human authentication or legal approval; actual costs, customers, rights and value evidence remain absent |
 
-## Commands
+Use the [operator guide](research/omni-20261020/OPERATOR-GUIDE.md) for runnable
+commands, the [requirement matrix](research/omni-20261020/REQUIREMENTS-MATRIX.md)
+for implementation/test mapping, and the
+[source gap ledger](research/omni-20261020/SOURCE-GAPS.md) for unresolved contracts.
+The [final report](research/omni-20261020/FINAL-REPORT.md) separates engineering
+verification from real operating readiness.
 
-Run from the repository's Python environment. Global options precede the command.
+## Contracts and preservation
 
-```powershell
+| Area | Current contract |
+| --- | --- |
+| Identity / legacy base store | `omni-identity-1` / `omni-store-1` |
+| Additive store extension / immutable receipts | `omni-extension-schema-1` / `omni-receipt-1` |
+| Evidence / classifier / validator / review | `omni-evidence-2` / `omni-classifier-5` / `omni-validator-5` / `omni-review-2` |
+| Clinical numeric grammar | `omni-clinical-numerics-1` plus explicit `omni-clinical-numerics-2` forms |
+| Definition catalog / binding | `omni-clinical-scope-catalog-1` / `omni-clinical-scope-binding-1` |
+| Scoped amounts | `omni-scoped-amount-1` |
+| Source coverage / prospective workflow | `omni-source-coverage-1` / `omni-prospective-1` |
+| Legacy audit / evaluator | `omni-pilot-3` / `omni-evaluation-3` |
+| Rights / reviewed brief / operating observations | `omni-field-rights-1` / `omni-reviewed-brief-1` / `omni-operating-observation-1` |
+
+Legacy evidence v1 remains readable. Old receipts and archived event revisions are
+not rewritten into new approvals or prospective observations. Existing approvals
+without current lifecycle/version binding require a new exact-state review.
+[Migration and rollback](research/omni-20261020/MIGRATION-AND-ROLLBACK.md) preserve
+both legacy and upgraded stores through checked backups and new restore paths.
+
+A material source change, stale policy, changed catalog definition, conflicting
+current outcome or incomplete exhibit set withholds the event until its current
+state passes validation and review. Hydration status, cached source text, an old
+approval or process restart cannot clear quarantine. Enrichment without changed
+meaning is recorded separately. Historical conflict handling is conservative:
+different primary outcomes under one trial scope can remain contested until their
+separate analysis/endpoint scope is evidenced; the workbench does not invent a
+conflict-resolution decision.
+
+Source/native/revision correspondence needs source-supported proof and a supplied
+exact review. `same_release`, `republishes`, `independently_reports`, `corrects`
+and `retracts` remain distinct. Transitive copies count once. An origin count is
+an assertion count; the workbench leaves `independence_assessed=false`.
+
+## Source and extraction boundaries
+
+`registry/event-sources.json` retains its default policies. New routes are disabled
+and source-purpose grants are absent. Public availability supplies research
+material, not blanket permission for storage, review, model use or distribution.
+Operator policy snapshots and receipts belong in ignored local paths.
+
+The GET source client retains route/DNS/TLS checks, redirect refusal, bounded
+responses, shared local SEC pacing, finite attempt budgets and Retry-After
+backoff. Body hydration remains opt-in and requires the appropriate source uses.
+The new POST transport permits only verified read-only search contracts with exact
+method/path/query/body allowlists and typed current route approval. It neither
+obtains credentials nor broadens the existing GET client.
+
+Feed windows retain source publication, local acquisition and prior observed poll
+clocks separately. A first fetch is only an initial window. A later interval needs
+captured matching route/query/family/policy observations and actual traversal to
+the previous watermark. Source retention and original availability are separate
+proofs. Daily/full/quarterly indexes never imply continuous real-time coverage.
+The SEC full index is scoped to the observed New York calendar quarter so a quarter
+rollover cannot appear to retract the entire previous quarter.
+
+Clinical values need literal revision-bound scope. Optional catalog definitions
+must have their own exact evidence, policy and display rights; their historical
+dates are separate from result recency. The bounded table grammar requires complete
+pipe tables with repeated explicit scope. General HTML/PDF reconstruction,
+footnotes, inherited cells, censoring/unevaluable populations, severity/seriousness
+and unimplemented effects/multiplicity methods remain explicit refusals.
+
+Amounts retain decimal strings, currency or unknown currency, operator, role,
+period, contract/financing identity, contingency and additivity evidence. Ceilings,
+options, obligations, authority and gross/net proceeds remain separate. Bounds,
+ranges and approximations never become exact scalars. The original exact-USD
+control remains. No aggregate, conversion, annualization, received cash, revenue
+or runway is inferred.
+
+The nine [Work Package A source cases](research/omni-20261019/source-cases.json)
+and original A/B/C/D research remain intact. They are research cases with AI draft
+labels, not human-approved pilot observations. Both supplied numeric-parser fixes
+and their nine negative examples remain covered.
+
+## Review, rights and evaluation
+
+`queue` exposes pending identifiers. `leads` and ingest diagnostics expose bounded
+reason codes and identifiers, withholding nested source spans. `packet`, `history`,
+reviewed brief preview and local export enforce field/purpose rights. Raw internal
+storage and parser APIs are trusted local engineering interfaces, not a public
+service or a replacement for the rights-filtered views.
+
+Required attribution/scope/review/coverage fields with missing rights withhold a
+card. Optional fields have independent grants. Numeric and amount projections
+remove proof text; raw source text requires its separate right. Export revalidates
+current source state, exact review and rights, and writes only a new local JSON,
+Markdown or HTML file. A correction cannot revoke bytes already copied elsewhere;
+no distribution or recall service is implemented.
+
+Prospective recall comes from native source inventories independent of classifier
+discoveries. Proposed-publication precision comes from a separate complete census
+of emitted proposals in the frozen source/family strata, including withheld,
+rejected, incorrect and non-event proposals. False matches across event families
+are rejected. Missing labels stay pending. Generic receipt imports cannot remove
+hard examples, invent source cycles or assert detections without correspondence.
+
+The original release floors remain: 10 eligible distinct scheduled sessions and
+100 meaningful new-issuer cases for manual review, then 300 proposed publications,
+per-family/source evidence, at least 98% precision and a 95% Wilson lower bound of
+at least 95%, plus prespecified recall/timing and untouched evidence. These are
+necessary evidence requirements, not activation instructions. Typed dependent
+gates can become ready for human review only; automatic activation stays false.
+
+## Start locally
+
+```sh
 python -m omni plan
-python -m omni watch sec-edgar
-python -m omni --db history/omni-events.db watch sec-edgar --execute --max-pages 1
-python -m omni --db history/omni-events.db status
-python -m omni --db history/omni-events.db queue
-python -m omni --db history/omni-events.db operations
-python -m omni --db history/omni-events.db leads --limit 100
-python -m omni --db history/omni-events.db history EVENT_ID
-python -m omni --db history/omni-events.db packet EVENT_ID REVISION_ID
-python -m omni --db history/omni-events.db review EVENT_ID REVISION_ID --reviewer NAME --decision approve
-python -m omni --db history/omni-events.db brief --mode reviewed --legacy-brief daily_brief.json
-python -m omni evaluate LOCAL_EVALUATION_INPUT.json
-python -m omni reconcile-index --start-day 2026-10-16 --end-day 2026-10-16
-python -m omni regulatory
-python -m omni pilot-plan
-python -m omni pilot-freeze REVIEWED_CORPUS.json
-python -m omni pilot-record PILOT_ID case HUMAN_CASE_RECEIPT.json
-python -m omni pilot-record PILOT_ID run SCHEDULED_RUN_RECEIPT.json
-python -m omni pilot-record PILOT_ID gold GOLD_OBSERVATION_RECEIPT.json
-python -m omni pilot-record PILOT_ID coverage SOURCE_COVERAGE_RECEIPT.json
-python -m omni pilot-report PILOT_ID
+python -m omni watch sec-edgar --target-family clinical_result
+python -m omni vertical-plan
+python -m omni expansion-plan
+python -m omni --db omni-local/events.db status
+python -m omni --db omni-local/events.db operations
+python -m omni --db omni-local/events.db queue
+python -m omni --db omni-local/events.db leads --limit 100
+python -m omni --db omni-local/events.db brief --mode off
 ```
 
-`plan`, `pilot-plan` and watch/clinical/regulatory/reconcile-index commands without `--execute` make no network requests
-and create no database. `brief` prints a companion JSON document; it does not
-rewrite `daily_brief.json`. `--mode off` restores the supplied legacy focus.
-Run `python -m omni COMMAND --help` for command options. `--db` must name an OMNI
-database; an existing production ledger is rejected before journal changes.
+Plans and watch commands without `--execute` perform no acquisition. The synthetic
+operating demonstration writes to a new directory outside the checkout:
 
-The source client requires a contact User-Agent (default `SEC_USER_AGENT`).
-It enforces route allowlists, public DNS destinations, TLS verification, no
-redirects, bounded responses, request budgets, retry limits and persistent
-Retry-After backoff. Every HTTP attempt consumes the attempt budget. Initial
-limits are 12 metadata requests, 8 document requests and 30 attempts per cycle;
-300 metadata requests, 80 document requests and 750 attempts per UTC day in one
-workbench database. All SEC users in this checkout share a local rate gate at
-three reservations per second. Separate machines/databases are not coordinated.
+```sh
+python scripts/omni_synthetic_demo.py --output ../omni-synthetic-preview
+```
 
-If an EDGAR scan reaches its cap before the old watermark, its cursor remains
-unchanged and its next offset is queued. Use `watch sec-edgar --execute
---reconcile` to consume bounded backfill with an overlapping page. Mutable feed
-offsets cannot certify continuity: a contiguous scan to the previous watermark
-or independently verified index reconciliation is still required. Initial
-imports establish an observation boundary and explicitly report
-`initial_window_only`. They do not manufacture historical coverage.
+The guide explains backup-before-upgrade and future authorized collection. Do not
+replace missing real approvals with the synthetic demonstration's receipts.
 
-Body hydration is opt-in (`--hydrate`) and also requires approved `store_text`
-and `local_analysis` purposes. Empty/blocked bodies and missing/deferred exhibits
-remain in the acquisition queue. A filing may have more than the three-document
-cycle cap; successful exhibits are cached and subsequent hydrated cycles resume
-the remaining jobs. `--refresh-documents` explicitly rechecks the listing and
-bodies. Claims from current exhibits of one filing are combined before validation;
-conflicting outcomes remain contested, and incomplete exhibit sets cannot be
-approved. Negated or withdrawn stage assertions remain unestablished.
+## Verification
 
-Contract claims can retain one exact, explicitly denominated USD amount as a
-ceiling, option or obligation. The original sentence remains the evidence, and
-the card carries currency and a stated-amount/not-revenue qualifier. Bare dollar
-signs, multiple amounts or stages, approximations, unsupported units and competing
-numeric scopes remain unparsed. No revenue, cash receipt or accounting equivalence
-is inferred. Clinical numerical results remain unsupported rather than borrowed
-from another trial or analysis.
+Run both hash-locked Python 3.11 and 3.12 environments, then:
 
-`reconcile-index --execute` retrieves at most seven calendar days of SEC daily
-indexes. It waits until 06:00 New York time on the following day, preserves filing
-dates as dates, records content hashes and co-registrants, and merges metadata
-without moving the current-feed watermark. Its completion means the listed
-records in the observed index were parsed; it does not certify later corrections,
-real-time dissemination or comprehensive source coverage. Missing indexes remain
-gaps. Source budgets also apply to this command.
+```sh
+python scripts/validate_export_schema.py
+python scripts/run_offline_checks.py --report review-results/offline.json
+python -m compileall -q omni scripts
+node --check dashboard/app.js
+python scripts/run_secret_scan.py
+git diff --check
+```
 
-Clinical collection checks the registry version before and after paging. A version
-change restarts an old continuation or discards a mixed-version batch. Trial
-snapshots, changes and cursor updates commit in one transaction. Initial snapshots
-remain seeds. FDA oncology intake records index metadata only and reports unknown
-dates, route restrictions and result caps; no approval claim is inferred from a row.
-
-`operations` reports exact queue counts, source cycles, budgets and job states.
-`leads` preserves unclassified/unknown-identity items for investigation. `history`
-shows event revisions and reviews. These reports omit source bodies. Monetary and
-review-time costs remain unknown until genuine operating receipts exist.
-
-## Source-use and review policy
-
-`registry/event-sources.json` permits only the described local discovery
-metadata. Body storage, review display, model processing and commercial display
-are unapproved by default. A source URL or public availability does not itself
-grant those purposes. There are no configured issuer feeds. FDA metadata is an
-explicit command, with no automatic poller enabled.
-
-Keep local policies, corpora, pilot receipts and generated reports under the
-Git-ignored `omni-local/` directory. Never commit operator data, source bodies,
-private configuration or actual evaluation records. The bundled identity graph
-contains public identity facts and provenance references for the existing example
-coverage; it is not universal coverage or a portfolio. Test event statements are
-synthetic, including those using real entity names.
-
-Use an operator-reviewed `--sources omni-local/sources.json` snapshot when actual
-source-use decisions exist. Policy fields include `policy_id`, `version`,
-`evidence`, exact host/path routes, `source_class`, `reporting_parties`, and
-separate boolean `uses`. Source documents cannot change those permissions.
-Policy fingerprints bind evidence to the approved snapshot; policy changes
-require revalidation. Any downstream distribution requires its own source-purpose
-and deployment review; this repository does not activate a distribution service.
-
-Local `ingest` accepts the keyword fields of `omni.evidence.document` (excluding
-`policy`, which comes from `--sources`): URL, native identity, text, title,
-publication and observation times, source class, reporting party and completeness.
-Its default evidence kind is `unverified_local_input`; it does not become a
-prospective observation merely because it was imported today.
-
-## Release evidence
-
-`pilot-plan` creates only a draft. `pilot-freeze` requires a nonempty prespecified
-corpus with actual human adjudication references; synthetic records are rejected.
-The frozen manifest binds implementation, source policy, registry and coverage.
-New receipts are rejected after those versions change. A report can still show an
-older pilot but marks it ineligible for the current implementation. Only distinct
-event IDs count as cases. Scheduled runs need actual complete source cycles and a
-scheduler receipt; a manual command cannot become a scheduled session. Gold misses
-remain in the recall denominator. No pilot is frozen by installation.
-
-An evaluation input contains `manifest`, `cases`, `runs`, `gold` and optional
-`operating_evidence`. Optional `expansion_candidates` are supplied explicitly by
-the operator and default to an empty list. The manifest must freeze `implementation_hash`,
-`corpus_hash`, `source_scope_hash` and `frozen_at`. Case rows require matching
-versions, distinct event IDs, prospective observation times, meaningful exercise,
-an adjudicator and an adjudication receipt. Gold rows require the frozen corpus
-and scope, prespecification and adjudication receipts. Receipt references must
-be audited by the operator; this evaluator does not authenticate human identity
-or inspect arbitrary receipt files.
-
-The manual-pilot gate needs 10 eligible distinct scheduled sessions and 100
-meaningful new-issuer cases, no critical leakage, reviewed outside-cohort
-publications and source-coverage evidence. Automatic activation is always false.
-Eligibility for a later activation review additionally needs 300 proposed
-publications, per-family/source evidence, precision at least 98%, a 95% Wilson
-lower bound at least 95%, prespecified recall and timing evidence, and an
-untouched test receipt. Correlated cases still require sampling review.
-
-Missing pilot, source-use or operating records leave the corresponding gates
-pending. Passing offline fixtures establishes only those fixture behaviors;
-prospective accuracy, recall and usefulness require actual reviewed observations.
-
-## Verification and rollback
-
-The ten `test_omni_*.py` scripts are part of the existing offline suite. They
-cover identities, exact claims, source failure/caps, crash rollback, replay,
-posted clinical changes, reviews, quality denominators, release gates and actual
-CLI subprocesses. The acquisition suite exercises feed → body → evidence →
-event → local review queue using synthetic requests. Live canary receipts must
-be reported separately with their actual source failures and limitations.
-
-To stop the workbench, stop issuing its explicit commands and select `off`.
-Keep its database as evidence; do not rewrite archives or production history.
-Rollback the workbench together with the SEC adapter changes that import its
-shared request gate. Preserve local databases and permitted evidence separately;
-removing the new modules alone would leave those adapter imports broken.
+The offline suite includes all OMNI extensions and existing dashboard/security
+regressions. It allows loopback tests and rejects external provider access.
+Final combined receipts are under
+[verification](research/omni-20261020/verification/final-combined.json). Earlier
+focused stage checks and public CI for the old revision do not establish that a
+new candidate passes. No live pilot, Windows run of this candidate, deployment,
+model execution or scheduler validation is claimed by Linux fixture tests.

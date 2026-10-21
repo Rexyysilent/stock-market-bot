@@ -1,10 +1,13 @@
 """Daily index backfill preserves date precision, gaps and existing feed clocks."""
 from pathlib import Path
+import json
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock,patch
 from omni.acquisition import Deferred
-from omni.reconciliation import parse_daily_index,reconcile_days,daily_index_url
+from omni.reconciliation import parse_daily_index,reconcile_days,daily_index_url,merge_index_candidate
+from omni.runner import watch_edgar
+from omni.identities import load_registry
 from omni.store import EventStore
 from test_omni_events import NOW
 
@@ -57,6 +60,50 @@ class IndexTests(unittest.TestCase):
         result=parse_daily_index(raw,day='2026-10-16')
         self.assertEqual(result['unique_accessions'],1)
         self.assertEqual(len(result['rows'][0]['registrants']),2)
+
+    def test_corrected_registrants_survive_with_receipted_history_and_cached_work(self):
+        reconcile_days(self.store,self.client,start_day='2026-10-16',end_day='2026-10-16',now=NOW)
+        row=parse_daily_index(RAW,day='2026-10-16')['rows'][0]
+        candidate=self.store.candidate('sec-edgar',row['native_id'])
+        candidate.update(published='2026-10-16T16:00:00Z',hydration_status='parsed',
+                         document_listing={'documents':[{'url':row['url']+'/synthetic.htm'}],'gaps':[]})
+        job={'native_id':row['native_id'],'url':row['url']+'/synthetic.htm','state':'parsed','attempts':1}
+        self.store.commit_cycle(cycle_id='feed',source_id='sec-edgar',observed_at=NOW,documents=[],events=[],decisions=[],
+            candidates=[candidate],document_jobs=[job],watermark='2026-10-16T16:00:00Z',complete=True)
+        cursor=self.store.cursor('sec-edgar')
+        self.client.get.return_value=RAW+RAW.splitlines()[-1].replace(b'123|Synthetic Issuer',b'456|Synthetic Co-registrant').replace(b'edgar/data/123/',b'edgar/data/456/')+b'\n'
+        result=reconcile_days(self.store,self.client,start_day='2026-10-16',end_day='2026-10-16',now='2026-10-19T12:01:00Z')
+        saved=self.store.candidate('sec-edgar',row['native_id'])
+        self.assertEqual([r['cik'] for r in saved['registrants']],['123','456'])
+        self.assertEqual(saved['published'],candidate['published']); self.assertEqual(saved['time_precision'],'timestamp')
+        self.assertEqual(saved['hydration_status'],'parsed'); self.assertEqual(saved['document_listing'],candidate['document_listing'])
+        self.assertEqual(self.store.jobs('sec-edgar',row['native_id']),{job['url']:job})
+        self.assertEqual(self.store.cursor('sec-edgar'),cursor)
+        change=result['days'][0]['metadata_changes'][0]
+        self.assertEqual(change['changed_fields'],['registrants'])
+        self.assertNotEqual(change['previous_metadata_hash'],change['current_metadata_hash'])
+        self.assertEqual(len(change['previous_metadata']['registrants']),1)
+        self.assertEqual(len(change['current_metadata']['registrants']),2)
+        self.assertEqual(change['human_review_status'],'pending'); self.assertFalse(change['claim_revocation_performed'])
+        receipts=[json.loads(r[0]) for r in self.store.conn.execute('SELECT payload FROM source_receipts ORDER BY rowid')]
+        self.assertEqual(receipts[0]['days'][0]['index_rows'],1)
+        self.assertEqual(receipts[1]['days'][0]['metadata_changes'][0],change)
+        repeated=reconcile_days(self.store,self.client,start_day='2026-10-16',end_day='2026-10-16',now='2026-10-19T12:02:00Z')
+        self.assertEqual(repeated['days'][0]['metadata_changes'],[])
+        # A subsequent narrow feed entry must not erase index-only identity facts.
+        acquisition={'rows':[{k:saved[k] for k in ('native_id','title','url','published')}],
+                     'watermark':saved['published'],'complete':True,'initial_seed':False,'continuation':None,'gaps':[]}
+        with patch('omni.runner.collect_edgar',return_value=acquisition):
+            watch_edgar(self.store,self.client,load_registry(),now='2026-10-19T12:03:00Z')
+        self.assertEqual(self.store.candidate('sec-edgar',row['native_id'])['registrants'],saved['registrants'])
+
+    def test_changed_form_does_not_reuse_inapplicable_listing_or_hydration_status(self):
+        prior=parse_daily_index(RAW,day='2026-10-16')['rows'][0]
+        prior.update(hydration_status='parsed',document_listing={'documents':[{'url':'https://www.sec.gov/old.htm'}]})
+        current=parse_daily_index(RAW.replace(b'|8-K|',b'|10-K|'),day='2026-10-16')['rows'][0]
+        merged,change=merge_index_candidate(current,prior,observed_at=NOW,raw_sha256='synthetic-hash')
+        self.assertEqual(merged['form'],'10-K'); self.assertEqual(merged['hydration_status'],'not_applicable')
+        self.assertNotIn('document_listing',merged); self.assertIn('form',change['changed_fields'])
 
 
 if __name__=='__main__': unittest.main()

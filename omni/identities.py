@@ -64,10 +64,16 @@ def time_interval(value):
 
 
 class EntityRegistry:
-    def __init__(self, data):
+    def __init__(self, data, *, clinical_catalog=None):
         self.data = copy.deepcopy(data)
         if data.get("version") != VERSION:
             raise ValueError("unsupported entity registry version")
+        if clinical_catalog is not None:
+            self.data["clinical_catalog"] = copy.deepcopy(clinical_catalog)
+        # This optional catalog is fingerprinted with the identity snapshot.
+        # Its own evidence, review and disclosure-time gates are checked by the
+        # clinical parser. Merely including pending rows grants no mapping.
+        self.clinical_catalog = self.data.get("clinical_catalog")
         self.entities = {}
         for row in self.data.get("entities", []):
             key = row["entity_id"]
@@ -146,8 +152,10 @@ class EntityRegistry:
                 "signal_eligible": False}
 
 
-def load_registry(path=None):
-    return EntityRegistry(json.loads(Path(path or ROOT / "registry/event-entities.json").read_text(encoding="utf-8")))
+def load_registry(path=None, *, clinical_catalog_path=None):
+    catalog = json.loads(Path(clinical_catalog_path).read_text(encoding="utf-8")) if clinical_catalog_path else None
+    return EntityRegistry(json.loads(Path(path or ROOT / "registry/event-entities.json").read_text(encoding="utf-8")),
+                          clinical_catalog=catalog)
 
 
 def from_instruments(instruments, *, known_from, aliases=None):

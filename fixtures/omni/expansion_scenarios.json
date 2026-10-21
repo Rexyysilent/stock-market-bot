@@ -1,0 +1,21 @@
+{
+  "contract": "omni-expansion-scenarios-1",
+  "evidence_kind": "synthetic",
+  "human_review_status": "pending",
+  "not_pilot_evidence": true,
+  "candidates": ["MRNA"],
+  "baseline_coverage": [],
+  "cases": [
+    {"id": "E-01", "name": "complete referenced measurements remain synthetic", "changes": {}, "useful": 1, "incremental_cost": "6", "unit_cost": "6"},
+    {"id": "E-02", "name": "missing measurements remain unknown", "changes": {"operating": false, "requests": false, "assessments": false}, "useful": 0, "incremental_cost": null, "unit_cost": null, "reason": "useful_event_assessments_incomplete"},
+    {"id": "E-03", "name": "unmatched cost window cannot be compared", "changes": {"mismatched_window": true}, "useful": 1, "incremental_cost": null, "unit_cost": null, "reason": "expanded:operating_window_or_version_mismatch"},
+    {"id": "E-04", "name": "duplicate usefulness evidence is ambiguous", "changes": {"duplicate_assessment": true}, "useful": 0, "incremental_cost": "6", "unit_cost": null, "reason": "duplicate_assessment_or_source_evidence"},
+    {"id": "E-05", "name": "zero useful denominator has no finite unit cost", "changes": {"useful": false}, "useful": 0, "incremental_cost": "6", "unit_cost": null, "reason": "zero_useful_candidate_events"},
+    {"id": "E-06", "name": "negative incremental cost remains visible", "changes": {"expanded_cost": "4"}, "useful": 1, "incremental_cost": "-6", "unit_cost": "-6"},
+    {"id": "E-07", "name": "duplicate invoice evidence cannot become extra cost", "changes": {"duplicate_cost": true}, "useful": 1, "incremental_cost": null, "unit_cost": null, "reason": "expanded:duplicate_operating_observation_or_evidence"},
+    {"id": "E-08", "name": "a completeness claim cannot create missing zero costs", "changes": {"omit_category": "other"}, "useful": 1, "incremental_cost": null, "unit_cost": null, "reason": "expanded:cost_category_observations_incomplete"},
+    {"id": "E-09", "name": "sparse candidates cannot mature a gate", "changes": {"minimum_independent_cases": 100}, "useful": 1, "incremental_cost": "6", "unit_cost": "6", "reason": "candidate_independent_sample_below_prespecified_floor"},
+    {"id": "E-10", "name": "a candidate backlog remains a measured negative", "changes": {"miss_state": "backlog"}, "useful": 1, "incremental_cost": "6", "unit_cost": "6", "backlog": 1},
+    {"id": "E-11", "name": "duplicate request evidence makes retries unknown", "changes": {"duplicate_request": true}, "useful": 1, "incremental_cost": "6", "unit_cost": "6", "reason": "expanded:duplicate_request_attempt_or_source_evidence"}
+  ]
+}

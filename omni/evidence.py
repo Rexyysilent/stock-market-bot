@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import ipaddress
-from urllib.parse import urlsplit
+import re
+from urllib.parse import unquote, urlsplit
 
 from .identities import digest, instant, time_interval
 
-VERSION = "omni-evidence-1"
+VERSION = "omni-evidence-2"
+LEGACY_VERSION = "omni-evidence-1"
 MAX_TEXT = 500_000
 USES = {"acquire", "store_text", "local_analysis", "review_display", "model_processing", "commercial_display"}
 
@@ -15,6 +17,13 @@ def public_url(url):
     try:
         parsed = urlsplit(url)
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.port not in (None, 443):
+            return False
+        # Requests and origin servers can normalize paths after a raw prefix
+        # check. Reject dot segments, encoded separators and nested escapes so
+        # permission always describes the route actually requested.
+        if (re.search(r"%(?:2f|5c|25)|%(?![0-9a-f]{2})", parsed.path, re.I)
+                or any(part in (".", "..") for part in unquote(parsed.path).split("/"))
+                or any(ord(c)<32 or ord(c)==127 for c in unquote(url))):
             return False
         host = parsed.hostname.lower()
         if host in ("localhost",) or host.endswith((".local", ".internal")) or "." not in host:
@@ -62,25 +71,42 @@ def document(*, policy, url, native_id, text, title, published, observed_at,
             raise PermissionError(reason)
     eid = "evidence:" + digest([policy["policy_id"], native_id])
     content_hash = digest(text)
-    revision = digest([content_hash, title, published, body_complete, list(completeness_reasons)])
+    publication = time_interval(published)
     # Cross-route origin equivalence requires a separately verified reference.
     # Caller must not fill this from vendor related tags or similar headline text.
-    origin = origin_reference or [policy["policy_id"], native_id]
-    return {"contract": VERSION, "evidence_id": eid, "revision_id": revision,
+    filing_reference = (source_class == "filing" and isinstance(origin_reference, list)
+        and len(origin_reference) == 2 and origin_reference[0] == "filing-accession"
+        and isinstance(origin_reference[1], str)
+        and re.fullmatch(r"urn:tag:sec.gov,2008:accession-number=\d{10}-\d{2}-\d{6}", origin_reference[1])
+        and native_id.startswith(origin_reference[1] + "/")
+        and (evidence_kind == "synthetic" or (urlsplit(url).hostname == "www.sec.gov"
+            and origin_reference[1].rsplit("=",1)[1].replace("-", "") in urlsplit(url).path)))
+    origin = origin_reference if filing_reference else [policy["policy_id"], native_id]
+    record = {"contract": VERSION, "evidence_id": eid,
             "evidence_kind": evidence_kind,
             "native_id": native_id, "url": url, "title": title, "text": text,
             "content_hash": content_hash, "source_policy_id": policy["policy_id"],
             "source_policy_fingerprint": digest(policy), "source_class": source_class,
-            "reporting_party": reporting_party, "publication": time_interval(published),
+            "reporting_party": reporting_party, "publication": publication,
             "first_observed_at": observed_at, "retrieved_at": observed_at,
             "body_complete": body_complete is True, "completeness_reasons": list(completeness_reasons),
             "origin_cluster_id": "origin:" + digest(origin),
-            "origin_basis": "verified_reference" if origin_reference else "source_native",
+            "origin_basis": "filing_native_group" if filing_reference else "source_native",
+            "origin_reference": origin if filing_reference else None,
+            "unreviewed_origin_reference": origin_reference if origin_reference and not filing_reference else None,
             "signal_eligible": False}
+    record["revision_id"] = digest(_revision_fields(record))
+    return record
+
+
+def _revision_fields(doc):
+    return {k: doc.get(k) for k in ("content_hash", "title", "publication", "body_complete",
+        "completeness_reasons", "url", "native_id", "source_policy_id", "source_policy_fingerprint",
+        "source_class", "reporting_party", "origin_cluster_id", "origin_basis", "origin_reference", "evidence_kind")}
 
 
 def check_document(doc):
-    if not isinstance(doc, dict) or doc.get("contract") != VERSION:
+    if not isinstance(doc, dict) or doc.get("contract") not in (VERSION, LEGACY_VERSION):
         raise ValueError("invalid evidence contract")
     required_strings = ("evidence_id", "revision_id", "native_id", "url", "title", "text",
                         "content_hash", "source_policy_id", "source_policy_fingerprint",
@@ -103,6 +129,11 @@ def check_document(doc):
         raise ValueError("invalid evidence contract or content hash")
     expected = digest([doc["content_hash"], doc["title"], doc["publication"]["raw"],
                        doc["body_complete"], doc["completeness_reasons"]])
+    if doc["contract"] == VERSION:
+        expected = digest(_revision_fields(doc))
+        origin = doc.get("origin_reference") if doc["origin_basis"] == "filing_native_group" else [doc["source_policy_id"], doc["native_id"]]
+        if doc["origin_cluster_id"] != "origin:" + digest(origin):
+            raise ValueError("unverified origin identity")
     if doc["revision_id"] != expected:
         raise ValueError("evidence revision mismatch")
     instant(doc["first_observed_at"])

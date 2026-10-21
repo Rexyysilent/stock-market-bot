@@ -1,0 +1,72 @@
+# Exact public audit values for migration-python311
+# Format: algorithm-or-path, exact value, entry identifier.
+# These public fingerprints and execution paths are evidence identifiers, not credentials.
+# JSON objects refer to manifest+entry; @audit[manifest#entry] restores embedded text.
+# Raw originals were copied byte-for-byte before rendering; their file hashes are retained below.
+# JSON and transcript restoration to the exact original bytes was verified; no tests rerun.
+file  /workspace/scratch/3a31690b38a1/omni-completion-evidence-20261020/original-audit-receipts/verification/migration-python311.json  original_json_file
+file  /workspace/scratch/3a31690b38a1/omni-completion-evidence-20261020/original-audit-receipts/verification/migration-python311.txt  original_txt_file
+sha256  ffcc303a3f7d8eff39a6196ef3c6a61eae0eff49e613bd865e6088223bf9d821  h001
+git_commit  1a0ae6d2a277642e9466495323c11469f43f911a  h002
+path  /workspace/scratch/3a31690b38a1/omni-completion-20261020  p001
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020  p002
+sha256  5fc4f484893a75f50d76b4b1b2ed578a3c641d63aeee5712ca83b149c3106ab6  h003
+path  /tmp/omni-venv311-20261020/bin/python  p003
+path  /workspace/scratch/3a31690b38a1/omni-migration-replay-20261020.py  p004
+path  /workspace/scratch/3a31690b38a1/omni-completion-20261020/docs/research/omni-20261020/verification/migration-python311  p005
+sha256  b0aa6ae6e17b4378932238a76d3b61bab31bcf9588e9c45bab8ecddf7bf134f6  h004
+sha256  fd8dc78333e4076fde0a86db88e25fda6ee77454f268f3289c5f30982809f755  h005
+sha256  15896afa4388dccf24abe129599a7102a49e220370874d031bcb0d8a40b336da  h006
+git_commit  d778796fc3a3cb310b3571ae48c0d01487e3e12e  h007
+sha256  35cf17dc971c6615180cc24e3eeb3a318981ccd36c081f2fe1a64fa30a60dac0  h008
+sha256  686560bcd94a5a3fe8187b7c4fc49beaff41c87eccb79908cd3da863ec30e52e  h009
+sha256  9261363b733079a641c2e4cc9bc46ffa1d8336945a87f807b6cf68847dbc9b09  h010
+sha256  9ca5ae460766ce09e8d2e010898e997392b16ad23fe22461ce59a62b43026e83  h011
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/legacy-working.sqlite3  p006
+path  /workspace/scratch/3a31690b38a1/omni-completion-20261020/registry/event-sources.json  p007
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/legacy-backup.sqlite3  p008
+sha256  f5a764d483039e016eb354b2fb9ec5b0eb20845ff7fe0d1b63340b3126b3c97e  h012
+sha256  730f996b02b6fb6ba0e00197d026ca3e30c906525f60d4e793a2604fb5c5e7a6  h013
+sha256  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  h014
+sha256  5ab81e25d12e296a1200069369b30adbfb97e9c0af31aec66662285e65cce097  h015
+sha256  28d166bfc2c4cd437641f9afbe21d2e0fed0f27304317ef5a52e7a6c618a4ef0  h016
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/synthetic-receipt-0.json  p009
+sha256  79af40d135ab11ff44dc31ed78350458ecb9c0120377613ebfb5a006c1e933e6  h017
+sha256  2d6000110a98e302e57b153a489abb4e2d6d32477475f64b26c910419507bbd8  h018
+sha256  8bcef6b01ed80198ead7a1b84be8613673aeee8b2744328ed2096c306782c226  h019
+sha256  7db138d9a48ed81568a30ab3ac20003de63fcd3642c00df343e6ec3d190ccdf1  h020
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/synthetic-receipt-1.json  p010
+sha256  fd9b965adc5eedf8907e76e27f771cfabf077cd1e51ad4e749f5c3ca2e78c630  h021
+sha256  0953c9818a4fbdb3ea746b446f8c158a56f77631708d570cbc71564164816914  h022
+sha256  f9a56c18d71e705121215bed7494d691a6658790f76ffc03e39198b1f2df6c8b  h023
+sha256  3d8d5d2a1ce54447f1ceefbc8fc4dc68e75ff6c4ebe01522335abb3c04119a5c  h024
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/upgraded-backup.sqlite3  p011
+sha256  47ea4bcae933ae0e0822f7c8b74b41dcefb78bf3d305ed1e175cb3a6d704a5c0  h025
+sha256  e31e01dc8a30e21bb4dfc04d72f9a894fbc5360d79694d2b3b44d4ad0fdf2586  h026
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/legacy-restored.sqlite3  p012
+sha256  6b00782cbb77ade1d7d4375b39a0cf63a950c2fc675c20b6255bf6ab5a55af68  h027
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/upgraded-restored.sqlite3  p013
+sha256  64eb406748f0e4d6050cf43f844d0d6b10b1e92f9614806f2f12a884d6350cd6  h028
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/wrong-hash-must-not-exist.sqlite3  p014
+sha256  0000000000000000000000000000000000000000000000000000000000000000  h029
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/unsupported-extension.sqlite3  p015
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/synthetic-preexisting-production-ledger.sqlite3  p016
+path  /workspace/scratch/3a31690b38a1/omni-migration-disposable-311-20261020/unsupported-store-contract.sqlite3  p017
+sha256  73ca9991125d0793e272b659d79c85eb1fb114ed7a88bcd5f8982c7f4ea70928  h030
+sha256  4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945  h031
+sha256  3518cf4f09eccf7ea5f9448d2a77e5671e1637b7d1f79832c447f1a514190907  h032
+sha256  fbe3b5624ad0864dfc4fcfa0b3e6a9a802f78cc17c6426076c5947ccb8ea9197  h033
+sha256  3f1b42dedcbf0d4d5220149b1a26b39fc7669d09176d820b3ae4c80b30eb5882  h034
+sha256  79bd081e1ef43dffe288c7e76e6892712b37ca96c14f920b34fc16e69607058b  h035
+sha256  362880d296a075b350241611518c719cad7009d2b0f11ac3265e7562caac10cd  h036
+sha256  b6e2ef0d8f33870e3f3c968fe7fe01fd0e20737e06cfc3e83627063c7358d937  h037
+sha256  ce98ed7744cd6a30c0abba445db21b52c3c7f762df27a047f95d39afcf6d2ca4  h038
+sha256  f51e09e8f22fa3f22b5e7c69e55d6f2b54ba32b86d4d769809ac5316285ab8d1  h039
+sha256  6ee16fed296f4053945b1f5e74879a239c10760843570797de99b336c6425f33  h040
+sha256  6a15715b934307071f9e71cec6a509012836f0eb134af69bbb56adc88be41108  h041
+sha256  f4223caa1ca1eac0a1c2c45529bba7959420f1968993811a08d943891789492e  h042
+sha256  45c7dd6092006823d70675487f6ec8260fd02773f50f34bcebbc33ea7d4135ef  h043
+sha256  2234508c9c107a46e5e58b578dd9b8ea1fde122289ffbfdaf4f3b67f3bd744bc  h044
+sha256  4d01a18ee91e4dacf0bbab901922dff278573a8c3399e9b55bbde77d0f4a7936  h045
+sha256  5569484ef19e48ab9d56c28047b8ecc98784bb5d57970933dab4dfa7b36d8a55  h046
+sha256  e13e3f7fb4c78c726ff30bb65031a91a22802fef1528603ce4d65a92830bfa9b  h047

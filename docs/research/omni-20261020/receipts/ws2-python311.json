@@ -1,0 +1,25 @@
+{
+  "purpose": "isolated WS2 focused synthetic verification; no live pilot",
+  "started_at": "2026-10-20T17:42:41.995334+00:00",
+  "finished_at": "2026-10-20T17:42:47.153437+00:00",
+  "python": "3.11.17 (main, Oct  3 2026, 01:05:36) [Clang 22.1.3 ]",
+  "executable": "/tmp/omni-venv311-20261020/bin/python",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "command": [
+    "/tmp/omni-venv311-20261020/bin/python",
+    "-m",
+    "unittest",
+    "-v",
+    "test_omni_clinical_numerics",
+    "test_omni_clinical_scope",
+    "test_omni_scoped_amounts",
+    "test_omni_events",
+    "test_omni_identities"
+  ],
+  "exit_code": 0,
+  "stdout_path": "docs/research/omni-20261020/receipts/ws2-python311.stdout.txt",
+  "starting_commit_ref": "ws2-public-git-objects.txt#starting_commit",
+  "input_hash_manifest": "ws2-tested-inputs.sha256",
+  "stdout_hash_manifest": "ws2-result-artifacts.sha256",
+  "hash_note": "Exact hashes are in plain SHA-256 manifests; no scan rules or baselines changed."
+}

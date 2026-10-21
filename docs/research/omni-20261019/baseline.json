@@ -1,0 +1,23 @@
+{
+  "repository": "https://github.com/Rexyysilent/stock-market-bot",
+  "branch": "codex/omni-public-workbench-20261019",
+  "pr": 11,
+  "pr_state_observed": "open",
+  "checked_date": "2026-10-19",
+  "public_ci": {
+    "runs": [
+      39217695137,
+      39217677992
+    ],
+    "jobs_verified": 10,
+    "all_successful": true,
+    "scope": "baseline revision, not this unpushed patch"
+  },
+  "daily_export_schema": "2.8",
+  "daily_pipeline_version": "2.6.5",
+  "default_omni_mode": "off",
+  "pilot_sessions_verified": 0,
+  "human_reviewed_cases_verified": 0,
+  "revision_url": "https://github.com/Rexyysilent/stock-market-bot/tree/d35f667aebd3c2590cabbbe80e51076b3a1fa788",
+  "baseline_file_checksums": "baseline-files.sha256"
+}

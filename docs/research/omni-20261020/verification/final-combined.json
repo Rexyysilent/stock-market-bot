@@ -1,0 +1,203 @@
+{
+  "contract": "omni-final-combined-verification-1",
+  "candidate_kind": "local_engineering_completion_candidate",
+  "public_base_url": "https://github.com/Rexyysilent/stock-market-bot/commit/d35f667aebd3c2590cabbbe80e51076b3a1fa788",
+  "runtime_verification": "passed",
+  "runtimes": [
+    {
+      "label": "python311",
+      "python": "3.11.17 (main, Oct  3 2026, 01:05:36) [Clang 22.1.3 ]",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "runtime_receipt": "final-python311.json",
+      "offline_receipt": "final-offline-python311.json",
+      "status": "passed",
+      "configured_scripts": 84,
+      "executed_scripts": 84,
+      "omni_modules": 22,
+      "omni_test_methods": 343,
+      "omni_test_counts": {
+        "test_omni_identities.py": 8,
+        "test_omni_events.py": 17,
+        "test_omni_clinical_numerics.py": 20,
+        "test_omni_clinical_scope.py": 26,
+        "test_omni_scoped_amounts.py": 13,
+        "test_omni_acquisition.py": 20,
+        "test_omni_reconciliation.py": 7,
+        "test_omni_clinical.py": 9,
+        "test_omni_review.py": 7,
+        "test_omni_lifecycle.py": 15,
+        "test_omni_routes.py": 5,
+        "test_omni_verticals.py": 37,
+        "test_omni_operating.py": 17,
+        "test_omni_gates.py": 18,
+        "test_omni_demo.py": 2,
+        "test_omni_expansion.py": 32,
+        "test_omni_integration_scope.py": 7,
+        "test_omni_prospective.py": 55,
+        "test_omni_measurements.py": 5,
+        "test_omni_evaluation.py": 7,
+        "test_omni_pilot.py": 11,
+        "test_omni_cli.py": 5
+      },
+      "selected_input_files": 256,
+      "inputs_unchanged": true,
+      "started_at": "2026-10-20T18:24:27.261556+00:00",
+      "completed_at": "2026-10-20T18:25:42.258483+00:00",
+      "commands": [
+        {
+          "name": "runtime",
+          "exit_code": 0,
+          "transcript": "final-python311-runtime.txt"
+        },
+        {
+          "name": "dependencies",
+          "exit_code": 0,
+          "transcript": "final-python311-dependencies.txt"
+        },
+        {
+          "name": "pip-check",
+          "exit_code": 0,
+          "transcript": "final-python311-pip-check.txt"
+        },
+        {
+          "name": "compilation",
+          "exit_code": 0,
+          "transcript": "final-python311-compilation.txt"
+        },
+        {
+          "name": "export-schema",
+          "exit_code": 0,
+          "transcript": "final-python311-export-schema.txt"
+        },
+        {
+          "name": "offline-suite",
+          "exit_code": 0,
+          "transcript": "final-python311-offline-suite.txt"
+        },
+        {
+          "name": "javascript",
+          "exit_code": 0,
+          "transcript": "final-python311-javascript.txt"
+        }
+      ],
+      "migration_receipt": "migration-python311.json",
+      "migration_main_cli_commands": 17,
+      "migration_expected_refusals": 7,
+      "migration_checks": 67,
+      "migration_checks_passed": 67
+    },
+    {
+      "label": "python312",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "runtime_receipt": "final-python312.json",
+      "offline_receipt": "final-offline-python312.json",
+      "status": "passed",
+      "configured_scripts": 84,
+      "executed_scripts": 84,
+      "omni_modules": 22,
+      "omni_test_methods": 343,
+      "omni_test_counts": {
+        "test_omni_identities.py": 8,
+        "test_omni_events.py": 17,
+        "test_omni_clinical_numerics.py": 20,
+        "test_omni_clinical_scope.py": 26,
+        "test_omni_scoped_amounts.py": 13,
+        "test_omni_acquisition.py": 20,
+        "test_omni_reconciliation.py": 7,
+        "test_omni_clinical.py": 9,
+        "test_omni_review.py": 7,
+        "test_omni_lifecycle.py": 15,
+        "test_omni_routes.py": 5,
+        "test_omni_verticals.py": 37,
+        "test_omni_operating.py": 17,
+        "test_omni_gates.py": 18,
+        "test_omni_demo.py": 2,
+        "test_omni_expansion.py": 32,
+        "test_omni_integration_scope.py": 7,
+        "test_omni_prospective.py": 55,
+        "test_omni_measurements.py": 5,
+        "test_omni_evaluation.py": 7,
+        "test_omni_pilot.py": 11,
+        "test_omni_cli.py": 5
+      },
+      "selected_input_files": 256,
+      "inputs_unchanged": true,
+      "started_at": "2026-10-20T18:22:27.882097+00:00",
+      "completed_at": "2026-10-20T18:23:47.798636+00:00",
+      "commands": [
+        {
+          "name": "runtime",
+          "exit_code": 0,
+          "transcript": "final-python312-runtime.txt"
+        },
+        {
+          "name": "dependencies",
+          "exit_code": 0,
+          "transcript": "final-python312-dependencies.txt"
+        },
+        {
+          "name": "pip-check",
+          "exit_code": 0,
+          "transcript": "final-python312-pip-check.txt"
+        },
+        {
+          "name": "compilation",
+          "exit_code": 0,
+          "transcript": "final-python312-compilation.txt"
+        },
+        {
+          "name": "export-schema",
+          "exit_code": 0,
+          "transcript": "final-python312-export-schema.txt"
+        },
+        {
+          "name": "offline-suite",
+          "exit_code": 0,
+          "transcript": "final-python312-offline-suite.txt"
+        },
+        {
+          "name": "javascript",
+          "exit_code": 0,
+          "transcript": "final-python312-javascript.txt"
+        }
+      ],
+      "migration_receipt": "migration-python312.json",
+      "migration_main_cli_commands": 17,
+      "migration_expected_refusals": 7,
+      "migration_checks": 67,
+      "migration_checks_passed": 67
+    }
+  ],
+  "selected_input_manifests_equal": true,
+  "current_selected_inputs_match": true,
+  "dependency_installation": "Both unmodified hash-locked requirements files; exact installed versions in runtime dependencies transcripts; pip check passed",
+  "offline_boundary": "External network prohibited through scripts/offline_guard; local loopback allowed for existing transport/dashboard tests. Synthetic demo tests additionally refuse socket/DNS/bind/request attempts.",
+  "static_verification": {
+    "status": "passed",
+    "receipt": "final-static.json",
+    "scope": "All candidate paths staged before scan; final reporting artifacts will be rechecked on the sealed tree in the outer packaging receipt",
+    "unchanged_scanner_baseline_and_locks": true,
+    "secrets_exit_code": 0,
+    "staged_whitespace_exit_code": 0,
+    "worktree_whitespace_exit_code": 0
+  },
+  "patch_verification": "Separate delivery manifest and packaging receipt; not claimed by runtime tests",
+  "unavailable_checks": [
+    "Windows run for this combined candidate",
+    "Live source-provider/schema/credential certification",
+    "Live browser UI session",
+    "Production scheduler/export/model receipts",
+    "Private-state inspection"
+  ],
+  "not_claimed": [
+    "Human adjudication",
+    "Real pilot performance",
+    "Source-purpose or counsel approvals",
+    "Actual customer or cost evidence",
+    "Public push, merge, deployment or distribution"
+  ],
+  "ai_domain_labels": "pending_human_review",
+  "automatic_activation": false,
+  "synthetic_real_gate_credit": false
+}

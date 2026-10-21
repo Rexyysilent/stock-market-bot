@@ -1,0 +1,7 @@
+COMMAND ["/tmp/omni-venv311-20261020/bin/python", "-m", "compileall", "-q", "-x", "[/\\\\]\\.git[/\\\\]", "."]
+WORKING_DIRECTORY /workspace/scratch/3a31690b38a1/omni-completion-20261020
+STARTED 2026-10-20T18:24:27.855986+00:00
+
+
+COMPLETED 2026-10-20T18:24:28.171097+00:00
+EXIT_CODE 0

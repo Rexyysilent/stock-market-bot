@@ -10,13 +10,17 @@ import re
 
 from .evidence import check_document, source_decision, span
 from .identities import digest, time_interval
-from .amounts import CONTRACT_AMOUNTS, contract_amounts
+from .amounts import (CONTRACT_AMOUNTS, contract_amounts, MONEY_CUE, parse_amount_sentence,
+                     SCOPED_PREDICATE, SCOPED_QUALIFIERS, amount_projection, amount_semantic)
+from .clinical_numerics import (PREDICATE as NUMERIC_PREDICATE, QUALIFIERS as NUMERIC_QUALIFIERS,
+                               STATISTIC, parse_sentence, result_projection, semantic)
+from .clinical_tables import parse_tables
 
-VERSION = "omni-classifier-3"
+VERSION = "omni-classifier-5"
 TRIGGER = re.compile(r"\b(endpoint|trial|phase|approv|submit|accepted|hold|offering|financing|agreement|contract|outage|licens|pre.application|obligat|ceiling)", re.I)
-PHASE = re.compile(r"\bphase\s+(1/2|2/3|1|2b|2|3|4)\b", re.I)
-FUTURE = re.compile(r"\b(will|plans? to|intend\w* to|expects? to|anticipat\w*|may|could)\b", re.I)
-HISTORICAL = re.compile(r"\b(previously|prior|earlier|historical|five.year|5.year|background|follow.up)\b", re.I)
+PHASE = re.compile(r"\bphase\s+(1/2|2/3|1b|1|2b|2|3|4)\b", re.I)
+FUTURE = re.compile(r"\b(will|plans? to|intend\w* to|expects?|anticipat\w*|may|could)\b", re.I)
+HISTORICAL = re.compile(r"\b(previously|prior|earlier|historical|background)\b", re.I)
 
 
 def subject_issuers(sentence, resolved):
@@ -46,9 +50,9 @@ def predicates(text):
     # Scope each endpoint clause; a secondary win cannot flip a primary miss.
     for rank in ("primary", "secondary"):
         patterns = (
-            ("not_met", rf"(?:did not meet|(?:has |have |had )?not (?:met|achieved)|failed to (?:meet|achieve)|missed)\s+(?:(?:its|the|a|key)\s+)*{rank}\s+endpoint"),
+            ("not_met", rf"(?:did not meet|(?:has |have |had )?not (?:met|achieved)|failed to (?:meet|achieve)|missed)\s+(?:(?:its|the|a|key)\s+)*(?:pre[- ]?specified\s+)?{rank}\s+endpoint"),
             ("not_met", rf"{rank}\s+endpoint[^.;]{{0,45}}?\b(?:was not (?:met|achieved)|not achieved|not met)\b"),
-            ("met", rf"(?:met|achieved)\s+(?:(?:its|the|a|key)\s+)*{rank}\s+endpoint"),
+            ("met", rf"(?:met|achieved)\s+(?:(?:its|the|a|key)\s+)*(?:pre[- ]?specified\s+)?{rank}\s+endpoint"),
             ("met", rf"{rank}\s+endpoint[^.;]{{0,45}}?\b(?:was met|was achieved)\b"),
         )
         hits = [value for value, pattern in patterns if re.search(pattern, lower)]
@@ -130,20 +134,28 @@ def extract(doc, registry, policy, *, known_by):
     context = None
     context_support = None
     previous_end = 0
-    for start, end, sentence in sentences(doc["text"]):
+    tables = parse_tables(doc, registry, known_by=known_by)
+    leads.extend(tables["abstentions"])
+    table_rows = {(r["support"]["start"], r["support"]["end"]): r for r in tables["results"]}
+    units = [(s, e, t) for s, e, t in sentences(doc["text"])
+             if not any(s < hi and e > lo for lo, hi in tables["blocks"])]
+    units.extend((s, e, doc["text"][s:e]) for s, e in table_rows)
+    for start, end, sentence in sorted(units):
         if "\n" in doc["text"][previous_end:start]:
             context = None
             context_support = None
         previous_end = end
-        if not TRIGGER.search(sentence):
+        if not TRIGGER.search(sentence) and not STATISTIC.search(sentence) and not MONEY_CUE.search(sentence):
+            context = None
+            context_support = None
             continue
         scoped = registry.resolve(sentence, known_by=known_by)
         trials = sorted({m["entity_id"] for m in scoped["mentions"] if m["kind"] == "trial"})
-        explicit_trials = re.findall(r"\bNCT\d{8}\b", sentence)
+        explicit_trials = re.findall(r"\bNCT\d{8}\b", sentence, re.I)
         # Unknown trial identifiers remain distinct; they are never assigned to a
         # previously named known trial.
-        if explicit_trials and not trials:
-            trials = ["unresolved-trial:" + t for t in sorted(set(explicit_trials))]
+        trials = sorted(set(trials) | {"unresolved-trial:" + t.upper() for t in explicit_trials
+                                      if "trial:" + t.upper() not in trials})
         if trials:
             context = trials[0] if len(trials) == 1 else None
             context_support = span(doc, start, end) if context else None
@@ -152,15 +164,25 @@ def extract(doc, registry, policy, *, known_by):
             context_support = None
         # Context is allowed only for an immediately continuing endpoint sentence.
         scope = trials[0] if len(trials) == 1 else context if re.search(r"\b(?:the trial|the study|its primary|the primary)\b", sentence, re.I) else None
-        extracted = predicates(sentence)
+        table_row = table_rows.get((start, end))
+        extracted = [] if table_row else predicates(sentence)
+        numeric = {"results": [table_row], "abstentions": []} if table_row else parse_sentence(doc, start, end, registry, known_by=known_by)
+        leads.extend(numeric["abstentions"])
+        numerical_results = {r["result_id"]: r for r in numeric["results"]}
+        extracted.extend((NUMERIC_PREDICATE, result_id) for result_id in numerical_results)
+        amount_output = {"atoms": [], "abstentions": []} if table_row else parse_amount_sentence(doc, start, end)
+        leads.extend(amount_output["abstentions"])
+        amount_atoms = {a["amount_id"]: a for a in amount_output["atoms"]}
+        extracted.extend((SCOPED_PREDICATE, amount_id) for amount_id in amount_atoms)
         if not extracted:
             leads.append({"reason": "unclassified_event_lead", "support": span(doc, start, end)})
             continue
         subjects = subject_issuers(sentence, scoped)
         # A source reporting party is attribution, not an assertion of ownership.
         for predicate, value in extracted:
-            family = ("clinical_result" if predicate in ("phase", "primary_endpoint_status", "secondary_endpoint_status", "analysis_class") else
-                      "regulatory" if predicate == "regulatory_stage" else "financing" if predicate == "financing_stage" else "contract")
+            family = ("clinical_result" if predicate in ("phase", "primary_endpoint_status", "secondary_endpoint_status", "analysis_class", NUMERIC_PREDICATE) else
+                      "regulatory" if predicate == "regulatory_stage" else "financing" if predicate == "financing_stage"
+                      or predicate == SCOPED_PREDICATE and amount_atoms[value]["role"]["value"] in ("financing_authority", "gross_proceeds", "net_proceeds") else "contract")
             claim = {"predicate": predicate, "value": value, "scope_id": scope,
                      "subject_ids": subjects, "reporting_party": doc["reporting_party"],
                      "class": "attributed_report", "support": span(doc, start, end),
@@ -170,8 +192,22 @@ def extract(doc, registry, policy, *, known_by):
                      "numeric_result": value if predicate in CONTRACT_AMOUNTS else None,
                      "qualifiers": ["stated_contract_amount_not_revenue"] if predicate in CONTRACT_AMOUNTS else []}
             claim["claim_id"] = "claim:" + digest(claim)
+            if predicate == NUMERIC_PREDICATE:
+                claim["numeric_result"] = numerical_results[value]
+                claim["qualifiers"] = list(NUMERIC_QUALIFIERS)
+                claim["claim_id"] = "claim:" + digest({k: v for k, v in claim.items() if k != "claim_id"})
+            if predicate == SCOPED_PREDICATE:
+                claim["amount_atom"] = amount_atoms[value]
+                claim["qualifiers"] = list(SCOPED_QUALIFIERS)
+                claim["claim_id"] = "claim:" + digest({k: v for k, v in claim.items() if k != "claim_id"})
             claim["semantic_id"] = "meaning:" + digest({k: v for k, v in claim.items()
                 if k not in ("support", "scope_support", "claim_id")})
+            if predicate == NUMERIC_PREDICATE:
+                claim["semantic_id"] = "meaning:" + digest({k: semantic(v) if k == "numeric_result" else v
+                    for k, v in claim.items() if k not in ("support", "scope_support", "claim_id", "semantic_id")})
+            if predicate == SCOPED_PREDICATE:
+                claim["semantic_id"] = "meaning:" + digest({k: amount_semantic(v) if k == "amount_atom" else v
+                    for k, v in claim.items() if k not in ("support", "scope_support", "claim_id", "semantic_id")})
             key = (family, scope or "unresolved_scope", doc["origin_cluster_id"])
             event = next((e for e in events if tuple(e["identity_components"]) == key), None)
             if event is None:
@@ -185,6 +221,8 @@ def extract(doc, registry, policy, *, known_by):
         # The source-native origin is a conservative milestone discriminator.
         # Different disclosures are not merged merely for sharing a trial.
         event["event_revision"] = digest(sorted(c["semantic_id"] for c in event["claims"]))
+        if any(c.get("predicate") == SCOPED_PREDICATE for c in event["claims"]):
+            event["scoped_amounts"] = amount_projection(event["claims"])
         if event["family"] == "clinical_result":
             trial = registry.entities.get(event["scope_id"], {})
             event["clinical_context"] = {
@@ -193,7 +231,7 @@ def extract(doc, registry, policy, *, known_by):
                 "asset_ids": sorted({r["from_id"] for r in registry.data["relationships"]
                                      if r["to_id"] == event["scope_id"] and r["role"] in ("evaluated_in", "combination_and_comparator")}),
                 "comparator": None, "endpoint_definitions": None, "analysis_milestone": None,
-                "numerical_results": None, "overall_survival_status": "not_established",
+                "numerical_results": result_projection(event["claims"]), "overall_survival_status": "not_established",
                 "next_checkpoint": None, "regulatory_approval": "not_established",
             }
         event["resolution"] = resolved

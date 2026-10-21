@@ -1,0 +1,8 @@
+COMMAND ["/tmp/omni-venv312-20261020/bin/python", "-c", "import json,platform,sqlite3,sys; print(json.dumps({\"python\":sys.version,\"executable\":sys.executable,\"platform\":platform.platform(),\"sqlite\":sqlite3.sqlite_version},sort_keys=True))"]
+WORKING_DIRECTORY /workspace/scratch/3a31690b38a1/omni-completion-20261020
+STARTED 2026-10-20T18:22:27.882111+00:00
+
+{"executable": "/tmp/omni-venv312-20261020/bin/python", "platform": "Linux-6.18.55-x86_64-with-glibc2.39", "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]", "sqlite": "3.53.1"}
+
+COMPLETED 2026-10-20T18:22:27.914042+00:00
+EXIT_CODE 0

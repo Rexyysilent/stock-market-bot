@@ -3,12 +3,17 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from .classifier import predicates, subject_issuers
+from .classifier import predicates, subject_issuers, sentences, HISTORICAL, FUTURE
 from .evidence import check_document, check_span, source_decision
 from .identities import digest, instant
-from .amounts import CONTRACT_AMOUNTS
+from .amounts import (CONTRACT_AMOUNTS, SCOPED_PREDICATE, SCOPED_QUALIFIERS,
+                     parse_amount_sentence, amount_projection)
+from .clinical_numerics import (PREDICATE as NUMERIC_PREDICATE, QUALIFIERS as NUMERIC_QUALIFIERS,
+                               parse_sentence, phase_compatible, result_projection)
+from .clinical_tables import parse_tables
+from .clinical_scope import binding_documents
 
-VERSION = "omni-validator-3"
+VERSION = "omni-validator-5"
 
 
 def validate(event, documents, registry, policies, *, now, audience="internal", review=None,
@@ -68,15 +73,70 @@ def validate(event, documents, registry, policies, *, now, audience="internal", 
         if instant(doc["first_observed_at"]) > clock:
             reasons.add("future_observation_time")
     outcomes = {}
+    numeric_cache = {}
+    amount_cache = {}
     for claim in claims:
         support = claim.get("support", {})
         doc = docs.get(support.get("evidence_id"))
         if not doc or not check_span(doc, support):
             reasons.add("unsupported_claim")
             continue
-        if (claim.get("predicate"), claim.get("value")) not in predicates(support["text"]):
+        numeric_claim = claim.get("predicate") == NUMERIC_PREDICATE
+        amount_claim = claim.get("predicate") == SCOPED_PREDICATE
+        if numeric_claim:
+            # Parse the original complete sentence again. A cropped proof span
+            # must not erase a competing endpoint, negation or unknown trial.
+            cache_key = (doc["evidence_id"], doc["revision_id"])
+            if cache_key not in numeric_cache:
+                table = parse_tables(doc, registry, known_by=now)
+                numeric_cache[cache_key] = {
+                    (start, end): parse_sentence(doc, start, end, registry, known_by=now)["results"]
+                    for start, end, _ in sentences(doc["text"])
+                    if not any(start < hi and end > lo for lo, hi in table["blocks"])}
+                numeric_cache[cache_key].update({
+                    (r["support"]["start"], r["support"]["end"]): [r] for r in table["results"]})
+            expected = numeric_cache[cache_key].get((support["start"], support["end"]), [])
+            result = claim.get("numeric_result")
+            if (not isinstance(result, dict) or result not in expected
+                    or claim.get("value") != result.get("result_id")
+                    or claim.get("scope_id") != result.get("scope", {}).get("trial_id", {}).get("value")
+                    or event.get("family") != "clinical_result"
+                    or claim.get("units") is not None or claim.get("qualifiers") != NUMERIC_QUALIFIERS):
+                reasons.add("unsupported_clinical_numeric_result")
+                continue
+            if result.get("scope_binding"):
+                definition_docs = binding_documents(result["scope_binding"], registry)
+                if not definition_docs:
+                    reasons.add("clinical_scope_evidence_missing")
+                for definition_doc in definition_docs:
+                    current_policy = policies.get(definition_doc["source_policy_id"])
+                    for purpose in ("local_analysis", "review_display", *(('commercial_display',) if audience == "commercial" else ())):
+                        reason = source_decision(current_policy, definition_doc["url"], purpose)
+                        if reason:
+                            reasons.add(reason)
+                    if not current_policy or digest(current_policy) != definition_doc["source_policy_fingerprint"]:
+                        reasons.add("clinical_scope_policy_snapshot_mismatch")
+        elif amount_claim:
+            cache_key = (doc["evidence_id"], doc["revision_id"])
+            if cache_key not in amount_cache:
+                amount_cache[cache_key] = {(start, end): parse_amount_sentence(doc, start, end)["atoms"]
+                    for start, end, _ in sentences(doc["text"])}
+            expected = amount_cache[cache_key].get((support["start"], support["end"]), [])
+            amount = claim.get("amount_atom")
+            role = amount.get("role") if isinstance(amount, dict) else None
+            family = ("financing" if isinstance(role, dict) and
+                role.get("value") in ("financing_authority", "gross_proceeds", "net_proceeds") else "contract")
+            if (not isinstance(amount, dict) or amount not in expected or claim.get("value") != amount.get("amount_id")
+                    or event.get("family") != family or claim.get("units") is not None
+                    or claim.get("numeric_result") is not None or claim.get("qualifiers") != SCOPED_QUALIFIERS):
+                reasons.add("unsupported_scoped_amount")
+                continue
+        elif (claim.get("predicate"), claim.get("value")) not in predicates(support["text"]):
             reasons.add("unsupported_claim")
             continue
+        if (claim.get("historical") != bool(HISTORICAL.search(support["text"]))
+                or claim.get("future") != bool(FUTURE.search(support["text"]))):
+            reasons.add("claim_qualifier_mismatch")
         if claim.get("reporting_party") != doc["reporting_party"] or claim.get("class") != "attributed_report":
             reasons.add("attribution_mismatch")
         resolved = registry.resolve(support["text"], known_by=now)
@@ -92,8 +152,19 @@ def validate(event, documents, registry, policies, *, now, audience="internal", 
             if not scope or scope not in registry.entities or registry.entities[scope]["kind"] != "trial":
                 reasons.add("trial_unresolved")
                 missing.add("trial_identity")
-            elif claim["predicate"] == "phase" and registry.entities[scope].get("phase") not in (None, claim["value"]):
-                reasons.add("trial_phase_mismatch")
+            elif claim["predicate"] == "phase":
+                registered_phase = registry.entities[scope].get("phase")
+                if getattr(registry, "clinical_catalog", None) is not None:
+                    bindings = [c["numeric_result"]["scope_binding"] for c in claims
+                        if c.get("predicate") == NUMERIC_PREDICATE and isinstance(c.get("numeric_result"), dict)
+                        and c["numeric_result"].get("scope_binding") and c.get("scope_id") == scope
+                        and c.get("support", {}).get("evidence_id") == doc["evidence_id"]]
+                    phases = {b["phase"]["value"] for b in bindings}
+                    if len(phases) != 1:
+                        reasons.add("clinical_scope_phase_version_unavailable")
+                    registered_phase = next(iter(phases)) if len(phases) == 1 else None
+                if not phase_compatible(claim["value"], registered_phase):
+                    reasons.add("trial_phase_mismatch")
             named_trials = {m["entity_id"] for m in resolved["mentions"] if m["kind"] == "trial"}
             if named_trials and named_trials != {scope}:
                 reasons.add("trial_mismatch")
@@ -119,15 +190,34 @@ def validate(event, documents, registry, policies, *, now, audience="internal", 
                 reasons.add("unit_mismatch")
             if claim.get("numeric_result") != claim.get("value") or claim.get("qualifiers") != ["stated_contract_amount_not_revenue"]:
                 reasons.add("unsupported_claim")
-        elif claim.get("numeric_result") is not None:
+        elif claim.get("numeric_result") is not None and not numeric_claim:
             reasons.add("numeric_extraction_not_supported")
+        if claim.get("amount_atom") is not None and not amount_claim:
+            reasons.add("unsupported_scoped_amount")
+        if amount_claim and claim.get("future") and claim["amount_atom"]["role"]["value"] in (
+                "obligation", "gross_proceeds", "net_proceeds"):
+            reasons.add("planned_not_actual")
         if claim.get("value") in ("not_established", "approval_not_established", "regulatory_lead"):
             reasons.add("event_stage_not_established")
-        key = (scope, claim["predicate"])
+        key = (scope, claim["predicate"], claim["numeric_result"]["analysis_scope_id"] if numeric_claim else
+               claim["amount_atom"]["amount_scope_id"] if amount_claim else None)
         outcomes.setdefault(key, set()).add(claim["value"])
         supporting.append(claim["claim_id"])
     if any(len(values) > 1 for values in outcomes.values()):
         reasons.add("contradiction_unresolved")
+    if event.get("family") == "clinical_result":
+        try:
+            expected_results = result_projection(claims)
+        except (KeyError, TypeError, ValueError):
+            expected_results = None
+            reasons.add("unsupported_clinical_numeric_result")
+        if event.get("clinical_context", {}).get("numerical_results") != expected_results:
+            reasons.add("numeric_context_not_supported")
+    try:
+        if event.get("scoped_amounts") != amount_projection(claims):
+            reasons.add("amount_context_not_supported")
+    except (KeyError, TypeError, ValueError):
+        reasons.add("amount_context_not_supported")
     if require_novel and claims and all(c.get("semantic_id") in previously_seen_claims for c in claims):
         reasons.add("no_material_change")
     # A valid clinical card requires the primary outcome and preserves missing
@@ -157,6 +247,7 @@ def validate(event, documents, registry, policies, *, now, audience="internal", 
             "signal_exclusion_reasons": ["event_research_only", "family_not_approved"],
             "reason_codes": sorted(reasons), "supporting_claim_ids": sorted(set(supporting)),
             "missing_requirements": sorted(missing), "evidence_grade": grade,
-            "independent_origins": len({d["origin_cluster_id"] for d in docs.values()}),
+            "assertion_origin_units": len({d["origin_cluster_id"] for d in docs.values()}),
+            "independent_origins": None, "independence_assessed": False,
             "reviewer": review.get("reviewer") if approved else None,
             "reviewed_at": review.get("reviewed_at") if approved else None}

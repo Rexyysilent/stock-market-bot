@@ -7,6 +7,8 @@ import re
 
 from .acquisition import collect_edgar, Deferred, extract_document_text, filing_documents, parse_atom
 from .classifier import extract
+from .clinical_numerics import result_projection
+from .amounts import amount_projection
 from .evidence import document, source_decision
 from .identities import digest
 from .validator import validate
@@ -26,14 +28,37 @@ def analyze(doc, registry, policies, *, now):
     return output["events"], decisions, leads
 
 
-def watch_edgar(store, client, registry, *, now, hydrate=False, max_pages=3, reconcile=False, refresh_documents=False):
+def edgar_query_plan():
+    return {"route_id":"sec-current-filings","owner":"exclude","form_filter":"","page_size":100,
+            "sampling":"contiguous_head_to_prior_observed_watermark"}
+
+
+def watch_edgar(store, client, registry, *, now, hydrate=False, max_pages=3, reconcile=False, refresh_documents=False, policies=None,
+                target_family=None, measurement_proposal=None, measurement_arm=None, current_coverage=None,
+                instruments=None, allow_synthetic_measurement=False):
     """Persist every acquired candidate, including records deferred for hydration."""
     source_id=client.policy["policy_id"]
+    from .collection_context import prepare_scope
+    query_plan=edgar_query_plan()
+    family,measurement_metrics=prepare_scope(store,registry,policies or {source_id:client.policy},
+        source_id=source_id,route_id="sec-current-filings",query=query_plan,now=now,default_family="sec_filings",
+        target_family=target_family,measurement_proposal=measurement_proposal,measurement_arm=measurement_arm,
+        current_coverage=current_coverage,instruments=instruments,allow_synthetic_measurement=allow_synthetic_measurement)
     cursor=store.cursor(source_id)
     if reconcile and not cursor["continuation"]:
         raise ValueError("no queued filing reconciliation")
     acquisition=collect_edgar(client,watermark=cursor["watermark"],max_pages=max_pages,
                               continuation=cursor["continuation"] if reconcile else None)
+    from .coverage import observation_from_rows, feed_observation_window
+    window_start,window_end=feed_observation_window(store,source_id=source_id,route_id="sec-current-filings",family=family,
+        query_hash=digest(query_plan),policy_hash=digest(client.policy),proof=acquisition.get("coverage_proof"),now=now)
+    observations = [observation_from_rows(p["rows"], source_id=source_id, route_id="sec-current-filings",
+        family=family, acquired_at=now, window_start=window_start, window_end=window_end,
+        policy_hash=digest(client.policy), raw_response_hash=p["raw_sha256"],
+        query=query_plan, request_context={"offset":p["offset"],"previous_watermark":cursor["watermark"],
+            "page_result_cap_reached":p["result_cap_reached"]}, gaps=p["gaps"],
+        capped=p["result_cap_reached"] and not acquisition["complete"], end_of_results=acquisition["complete"])
+        for p in acquisition.get("page_observations", [])]
     if hydrate:
         combined={row["native_id"]:row for row in store.backlog(source_id)}
         combined.update({row["native_id"]:row for row in acquisition["rows"]})
@@ -42,6 +67,11 @@ def watch_edgar(store, client, registry, *, now, hydrate=False, max_pages=3, rec
     document_gaps=[]
     for row in acquisition["rows"]:
         previous=store.candidate(source_id,row["native_id"]) or {}
+        # Feed entries lack index registrants and filing-date metadata. Preserve
+        # those observations (including their separate snapshot/hash) on refresh.
+        for key in ("form","cik","submission_url","filed_date","registrants","index_day",
+                    "index_metadata","index_metadata_hash","index_observed_at","index_raw_sha256"):
+            if key in previous and key not in row: row[key]=previous[key]
         row["hydration_status"]=previous.get("hydration_status","metadata_only")
         if previous.get("document_listing"):
             row["document_listing"]=previous["document_listing"]
@@ -94,17 +124,19 @@ def watch_edgar(store, client, registry, *, now, hydrate=False, max_pages=3, rec
             document_gaps.extend(row_gaps)
             row["hydration_status"]=row_gaps[0] if row_gaps else "parsed"
             docs=list(filing_docs.values())
-            found,checked,new_leads=analyze_documents(docs,registry,{source_id:client.policy},now=now,gaps=row_gaps)
+            found,checked,new_leads=analyze_documents(docs,registry,policies or {source_id:client.policy},now=now,gaps=row_gaps)
             documents.extend(docs); events.extend(found); decisions.extend(checked); leads.extend(new_leads)
         except (Deferred, ValueError, PermissionError) as exc:
             row["hydration_status"]=str(exc); document_gaps.append(str(exc))
     cycle_id="cycle:"+digest([source_id,now,acquisition])
     receipt=store.commit_cycle(cycle_id=cycle_id,source_id=source_id,observed_at=now,
-        documents=documents,events=events,decisions=decisions,candidates=acquisition["rows"],document_jobs=jobs,leads=leads,
+        documents=documents,events=events,decisions=decisions,candidates=acquisition["rows"],document_jobs=jobs,leads=leads,registry=registry,
         watermark=acquisition["watermark"],complete=acquisition["complete"],initial_seed=acquisition["initial_seed"],
         continuation=acquisition["continuation"],gaps=acquisition["gaps"],
+        coverage_proof=acquisition.get("coverage_proof"),coverage_observations=observations,
         metrics={"metadata_candidates":len(acquisition["rows"]),"documents":len(documents),
-                 "document_gaps":sorted(set(document_gaps)),"request_counts":dict(client.counts),"leads":len(leads)})
+                 "document_gaps":sorted(set(document_gaps)),"request_counts":dict(client.counts),"leads":len(leads),
+                 **measurement_metrics})
     return {**receipt,"cycle_id":cycle_id,"coverage":acquisition,"document_gaps":sorted(set(document_gaps)),
             "local_review_items":len(store.pending()),"hydration_backlog":store.backlog_counts(source_id),"external_delivery":False}
 
@@ -131,6 +163,9 @@ def analyze_documents(documents, registry, policies, *, now, gaps=()):
             prior["first_observed_at"]=min(prior["first_observed_at"],event["first_observed_at"])
     decisions=[]
     for event in grouped.values():
+        event["scoped_amounts"] = amount_projection(event["claims"])
+        if event["family"] == "clinical_result":
+            event["clinical_context"]["numerical_results"] = result_projection(event["claims"])
         event["acquisition_gaps"]=sorted(set(gaps))
         meaning=sorted({c["semantic_id"] for c in event["claims"]})
         event["event_revision"]=digest([meaning,event["acquisition_gaps"]] if gaps else meaning)

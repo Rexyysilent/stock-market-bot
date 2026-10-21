@@ -1,0 +1,3137 @@
+{
+  "contract": "omni-migration-replay-1",
+  "status": "passed",
+  "scope": "Disposable synthetic main-CLI operator replay; no production database, real review, network collection or activation",
+  "checkpoint": {
+    "algorithm": "git_commit",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "h002"
+  },
+  "repo": {
+    "algorithm": "path",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "p001"
+  },
+  "work_dir": {
+    "algorithm": "path",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "p002"
+  },
+  "replay_script_sha256": {
+    "algorithm": "sha256",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "h003"
+  },
+  "invocation": [
+    {
+      "algorithm": "path",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "p003"
+    },
+    {
+      "algorithm": "path",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "p004"
+    },
+    "--repo",
+    {
+      "algorithm": "path",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "p001"
+    },
+    "--work-dir",
+    {
+      "algorithm": "path",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "p002"
+    },
+    "--receipt-prefix",
+    {
+      "algorithm": "path",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "p005"
+    }
+  ],
+  "python_version": "3.11.17 (main, Oct  3 2026, 01:05:36) [Clang 22.1.3 ]",
+  "python_executable": {
+    "algorithm": "path",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "p003"
+  },
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "sqlite_version": "3.53.1",
+  "dependency_lock_sha256": {
+    "requirements.lock": {
+      "algorithm": "sha256",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "h004"
+    },
+    "requirements-ci.lock": {
+      "algorithm": "sha256",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "h005"
+    }
+  },
+  "implementation_hash_before": {
+    "algorithm": "sha256",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "h006"
+  },
+  "started_at": "2026-10-20T18:17:44.435633+00:00",
+  "commands": [
+    {
+      "name": "git_head",
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:44.435652+00:00",
+      "completed_at": "2026-10-20T18:17:44.437164+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "@audit[migration-python311-hashes.txt#h007]\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h008"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "runtime_version",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "--version"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:44.437186+00:00",
+      "completed_at": "2026-10-20T18:17:44.439635+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "Python 3.11.17\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h009"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "locked_dependency_check",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:44.439655+00:00",
+      "completed_at": "2026-10-20T18:17:44.717886+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "No broken requirements found.\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h010"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "exact_checkpoint_store_source",
+      "argv": [
+        "git",
+        "show",
+        "@audit[migration-python311-hashes.txt#h002]:omni/store.py"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:44.717933+00:00",
+      "completed_at": "2026-10-20T18:17:44.720574+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": null,
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h011"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "backup_before_upgrade",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-backup",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p008"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:44.760396+00:00",
+      "completed_at": "2026-10-20T18:17:44.943752+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"contract\": \"omni-backup-1\",\n  \"path\": \"@audit[migration-python311-hashes.txt#p008]\",\n  \"sha256\": \"@audit[migration-python311-hashes.txt#h012]\",\n  \"bytes\": 167936,\n  \"method\": \"sqlite_online_backup\",\n  \"original_preserved\": true\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h013"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "backup_overwrite_refused",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-backup",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p008"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:44.945814+00:00",
+      "completed_at": "2026-10-20T18:17:45.109586+00:00",
+      "expected_exit_code": 1,
+      "exit_code": 1,
+      "stdout": "",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h014"
+      },
+      "stderr": "{\"status\": \"failed\", \"error\": \"ValueError\", \"detail\": \"backup destination already exists\"}\n"
+    },
+    {
+      "name": "first_upgrade",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-upgrade"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:45.109697+00:00",
+      "completed_at": "2026-10-20T18:17:45.278311+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"schema\": \"omni-extension-schema-1\",\n  \"status\": \"upgraded\",\n  \"legacy_records_rewritten\": false\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h015"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "second_upgrade",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-upgrade"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:45.281453+00:00",
+      "completed_at": "2026-10-20T18:17:45.530429+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"schema\": \"omni-extension-schema-1\",\n  \"status\": \"already_current\",\n  \"legacy_records_rewritten\": false\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h016"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "import_new_receipt_0",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "receipt-import",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p009"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:45.532192+00:00",
+      "completed_at": "2026-10-20T18:17:45.704178+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"contract\": \"omni-receipt-1\",\n  \"kind\": \"migration_fixture\",\n  \"observed_at\": \"2026-10-20T00:00:00Z\",\n  \"payload\": {\n    \"contract\": \"synthetic-migration-fixture-1\",\n    \"index\": 0,\n    \"evidence_kind\": \"synthetic\",\n    \"ai_label\": \"pending_human_review\",\n    \"actual_human_approval\": false,\n    \"automatic_activation\": false,\n    \"legacy_review_sha256\": \"@audit[migration-python311-hashes.txt#h017]\"\n  },\n  \"refs\": [],\n  \"receipt_id\": \"receipt:migration_fixture:@audit[migration-python311-hashes.txt#h018]\",\n  \"record_hash\": \"@audit[migration-python311-hashes.txt#h019]\"\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h020"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "import_new_receipt_1",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "receipt-import",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p010"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:45.704533+00:00",
+      "completed_at": "2026-10-20T18:17:45.901642+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"contract\": \"omni-receipt-1\",\n  \"kind\": \"migration_fixture\",\n  \"observed_at\": \"2026-10-20T00:00:00Z\",\n  \"payload\": {\n    \"contract\": \"synthetic-migration-fixture-1\",\n    \"index\": 1,\n    \"evidence_kind\": \"synthetic\",\n    \"ai_label\": \"pending_human_review\",\n    \"actual_human_approval\": false,\n    \"automatic_activation\": false,\n    \"legacy_review_sha256\": \"@audit[migration-python311-hashes.txt#h017]\"\n  },\n  \"refs\": [\n    \"receipt:migration_fixture:@audit[migration-python311-hashes.txt#h018]\"\n  ],\n  \"receipt_id\": \"receipt:migration_fixture:@audit[migration-python311-hashes.txt#h021]\",\n  \"record_hash\": \"@audit[migration-python311-hashes.txt#h022]\"\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h023"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "replay_new_receipt",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "receipt-import",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p010"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:45.901767+00:00",
+      "completed_at": "2026-10-20T18:17:46.050825+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"contract\": \"omni-receipt-1\",\n  \"kind\": \"migration_fixture\",\n  \"observed_at\": \"2026-10-20T00:00:00Z\",\n  \"payload\": {\n    \"actual_human_approval\": false,\n    \"ai_label\": \"pending_human_review\",\n    \"automatic_activation\": false,\n    \"contract\": \"synthetic-migration-fixture-1\",\n    \"evidence_kind\": \"synthetic\",\n    \"index\": 1,\n    \"legacy_review_sha256\": \"@audit[migration-python311-hashes.txt#h017]\"\n  },\n  \"receipt_id\": \"receipt:migration_fixture:@audit[migration-python311-hashes.txt#h021]\",\n  \"record_hash\": \"@audit[migration-python311-hashes.txt#h022]\",\n  \"refs\": [\n    \"receipt:migration_fixture:@audit[migration-python311-hashes.txt#h018]\"\n  ]\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h024"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "backup_upgraded_store",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-backup",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p011"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:46.052800+00:00",
+      "completed_at": "2026-10-20T18:17:46.220822+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"contract\": \"omni-backup-1\",\n  \"path\": \"@audit[migration-python311-hashes.txt#p011]\",\n  \"sha256\": \"@audit[migration-python311-hashes.txt#h025]\",\n  \"bytes\": 225280,\n  \"method\": \"sqlite_online_backup\",\n  \"original_preserved\": true\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h026"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "restore_legacy_to_new_path",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-restore",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p008"
+        },
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p012"
+        },
+        "--sha256",
+        {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h012"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:46.222710+00:00",
+      "completed_at": "2026-10-20T18:17:46.390513+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"status\": \"restored\",\n  \"path\": \"@audit[migration-python311-hashes.txt#p012]\",\n  \"sha256\": \"@audit[migration-python311-hashes.txt#h012]\",\n  \"original_preserved\": true\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h027"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "restore_upgraded_to_new_path",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-restore",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p011"
+        },
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p013"
+        },
+        "--sha256",
+        {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h025"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:46.390599+00:00",
+      "completed_at": "2026-10-20T18:17:46.544817+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"status\": \"restored\",\n  \"path\": \"@audit[migration-python311-hashes.txt#p013]\",\n  \"sha256\": \"@audit[migration-python311-hashes.txt#h025]\",\n  \"original_preserved\": true\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h028"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "open_restored_upgraded_store",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p013"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-upgrade"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:46.548433+00:00",
+      "completed_at": "2026-10-20T18:17:46.706231+00:00",
+      "expected_exit_code": 0,
+      "exit_code": 0,
+      "stdout": "{\n  \"schema\": \"omni-extension-schema-1\",\n  \"status\": \"already_current\",\n  \"legacy_records_rewritten\": false\n}\n",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h016"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "restore_over_existing_original_refused",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-restore",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p008"
+        },
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sha256",
+        {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h012"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:46.708137+00:00",
+      "completed_at": "2026-10-20T18:17:46.898594+00:00",
+      "expected_exit_code": 1,
+      "exit_code": 1,
+      "stdout": "",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h014"
+      },
+      "stderr": "{\"status\": \"failed\", \"error\": \"ValueError\", \"detail\": \"restore requires a new destination; existing store is preserved\"}\n"
+    },
+    {
+      "name": "restore_over_existing_restore_refused",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-restore",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p008"
+        },
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p012"
+        },
+        "--sha256",
+        {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h012"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:46.898702+00:00",
+      "completed_at": "2026-10-20T18:17:47.097912+00:00",
+      "expected_exit_code": 1,
+      "exit_code": 1,
+      "stdout": "",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h014"
+      },
+      "stderr": "{\"status\": \"failed\", \"error\": \"ValueError\", \"detail\": \"restore requires a new destination; existing store is preserved\"}\n"
+    },
+    {
+      "name": "wrong_restore_hash_refused",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p006"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-restore",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p008"
+        },
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p014"
+        },
+        "--sha256",
+        {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h029"
+        }
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:47.098018+00:00",
+      "completed_at": "2026-10-20T18:17:47.246532+00:00",
+      "expected_exit_code": 1,
+      "exit_code": 1,
+      "stdout": "",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h014"
+      },
+      "stderr": "{\"status\": \"failed\", \"error\": \"ValueError\", \"detail\": \"backup hash mismatch\"}\n"
+    },
+    {
+      "name": "unsupported_extension_refused",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p015"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-upgrade"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:47.249666+00:00",
+      "completed_at": "2026-10-20T18:17:47.444222+00:00",
+      "expected_exit_code": 1,
+      "exit_code": 1,
+      "stdout": "",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h014"
+      },
+      "stderr": "{\"status\": \"failed\", \"error\": \"ValueError\", \"detail\": \"unsupported OMNI extension schema\"}\n"
+    },
+    {
+      "name": "preexisting_non_omni_database_refused",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p016"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-upgrade"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:47.448600+00:00",
+      "completed_at": "2026-10-20T18:17:47.645336+00:00",
+      "expected_exit_code": 1,
+      "exit_code": 1,
+      "stdout": "",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h014"
+      },
+      "stderr": "{\"status\": \"failed\", \"error\": \"ValueError\", \"detail\": \"not an OMNI database\"}\n"
+    },
+    {
+      "name": "unsupported_store_contract_refused",
+      "argv": [
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p003"
+        },
+        "-m",
+        "omni",
+        "--db",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p017"
+        },
+        "--sources",
+        {
+          "algorithm": "path",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "p007"
+        },
+        "store-upgrade"
+      ],
+      "cwd": {
+        "algorithm": "path",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "p001"
+      },
+      "started_at": "2026-10-20T18:17:47.649655+00:00",
+      "completed_at": "2026-10-20T18:17:47.818163+00:00",
+      "expected_exit_code": 1,
+      "exit_code": 1,
+      "stdout": "",
+      "stdout_sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h014"
+      },
+      "stderr": "{\"status\": \"failed\", \"error\": \"ValueError\", \"detail\": \"unsupported OMNI database\"}\n"
+    }
+  ],
+  "checks": [
+    {
+      "name": "git_head:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "runtime_version:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "locked_dependency_check:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "exact_checkpoint_store_source:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "one_literal_legacy_schema",
+      "passed": true
+    },
+    {
+      "name": "legacy_schema_is_literal_text",
+      "passed": true
+    },
+    {
+      "name": "legacy_before_backup:integrity",
+      "passed": true
+    },
+    {
+      "name": "no_new_extensions_in_exact_legacy_schema",
+      "passed": true
+    },
+    {
+      "name": "backup_before_upgrade:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "backup_hash_matches_file",
+      "passed": true
+    },
+    {
+      "name": "legacy_backup_did_not_open_migrating_store",
+      "passed": true
+    },
+    {
+      "name": "legacy_backup:integrity",
+      "passed": true
+    },
+    {
+      "name": "legacy_backup_preserves_all_rows_and_schema",
+      "passed": true
+    },
+    {
+      "name": "backup_overwrite_refused:exit",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "backup_overwrite_refused:typed_refusal",
+      "passed": true,
+      "refusal": {
+        "status": "failed",
+        "error": "ValueError",
+        "detail": "backup destination already exists"
+      }
+    },
+    {
+      "name": "first_upgrade:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "first_upgrade_reports_upgraded",
+      "passed": true
+    },
+    {
+      "name": "after_first_upgrade:integrity",
+      "passed": true
+    },
+    {
+      "name": "legacy_rows_after_upgrade:integrity",
+      "passed": true
+    },
+    {
+      "name": "all_legacy_rows_retained_exactly",
+      "passed": true
+    },
+    {
+      "name": "legacy_review_and_evidence_payload_bytes_retained",
+      "passed": true
+    },
+    {
+      "name": "second_upgrade:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "second_upgrade_reports_already_current",
+      "passed": true
+    },
+    {
+      "name": "second_upgrade_preserves_schema_rows_and_migration_clock",
+      "passed": true
+    },
+    {
+      "name": "import_new_receipt_0:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "imported_receipt_0_exact",
+      "passed": true
+    },
+    {
+      "name": "import_new_receipt_1:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "imported_receipt_1_exact",
+      "passed": true
+    },
+    {
+      "name": "replay_new_receipt:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "new_receipt_import_is_idempotent",
+      "passed": true
+    },
+    {
+      "name": "upgraded_with_receipts:integrity",
+      "passed": true
+    },
+    {
+      "name": "two_append_only_receipts_present",
+      "passed": true
+    },
+    {
+      "name": "backup_upgraded_store:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "upgraded_backup_hash_matches_file",
+      "passed": true
+    },
+    {
+      "name": "upgraded_backup:integrity",
+      "passed": true
+    },
+    {
+      "name": "upgraded_backup_preserves_all_rows_and_schema",
+      "passed": true
+    },
+    {
+      "name": "restore_legacy_to_new_path:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "restore_upgraded_to_new_path:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "legacy_restore_is_byte_identical",
+      "passed": true
+    },
+    {
+      "name": "upgraded_restore_is_byte_identical",
+      "passed": true
+    },
+    {
+      "name": "legacy_restored:integrity",
+      "passed": true
+    },
+    {
+      "name": "old_restore_remains_old_without_automatic_open",
+      "passed": true
+    },
+    {
+      "name": "upgraded_restored:integrity",
+      "passed": true
+    },
+    {
+      "name": "new_restore_preserves_rows_and_extensions",
+      "passed": true
+    },
+    {
+      "name": "restored_receipt_hashes_and_links_validate",
+      "passed": true
+    },
+    {
+      "name": "open_restored_upgraded_store:exit",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "restored_new_store_opens_already_current",
+      "passed": true
+    },
+    {
+      "name": "restore_over_existing_original_refused:exit",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "restore_over_existing_original_refused:typed_refusal",
+      "passed": true,
+      "refusal": {
+        "status": "failed",
+        "error": "ValueError",
+        "detail": "restore requires a new destination; existing store is preserved"
+      }
+    },
+    {
+      "name": "restore_over_existing_restore_refused:exit",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "restore_over_existing_restore_refused:typed_refusal",
+      "passed": true,
+      "refusal": {
+        "status": "failed",
+        "error": "ValueError",
+        "detail": "restore requires a new destination; existing store is preserved"
+      }
+    },
+    {
+      "name": "wrong_restore_hash_refused:exit",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "wrong_restore_hash_refused:typed_refusal",
+      "passed": true,
+      "refusal": {
+        "status": "failed",
+        "error": "ValueError",
+        "detail": "backup hash mismatch"
+      }
+    },
+    {
+      "name": "wrong_hash_created_no_destination",
+      "passed": true
+    },
+    {
+      "name": "overwrite_refusals_preserved_original",
+      "passed": true
+    },
+    {
+      "name": "unsupported_extension_refused:exit",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "unsupported_extension_refused:typed_refusal",
+      "passed": true,
+      "refusal": {
+        "status": "failed",
+        "error": "ValueError",
+        "detail": "unsupported OMNI extension schema"
+      }
+    },
+    {
+      "name": "unsupported_extension_refusal_is_byte_preserving",
+      "passed": true
+    },
+    {
+      "name": "preexisting_non_omni_database_refused:exit",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "preexisting_non_omni_database_refused:typed_refusal",
+      "passed": true,
+      "refusal": {
+        "status": "failed",
+        "error": "ValueError",
+        "detail": "not an OMNI database"
+      }
+    },
+    {
+      "name": "preexisting_database_refusal_is_byte_preserving",
+      "passed": true
+    },
+    {
+      "name": "unsupported_store_contract_refused:exit",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "unsupported_store_contract_refused:typed_refusal",
+      "passed": true,
+      "refusal": {
+        "status": "failed",
+        "error": "ValueError",
+        "detail": "unsupported OMNI database"
+      }
+    },
+    {
+      "name": "wrong_contract_refusal_is_byte_preserving",
+      "passed": true
+    },
+    {
+      "name": "original_backups_preserved_throughout",
+      "passed": true
+    },
+    {
+      "name": "legacy_review_and_evidence_survive_both_restore_formats",
+      "passed": true
+    },
+    {
+      "name": "source_modules_unchanged_during_replay",
+      "passed": true
+    }
+  ],
+  "snapshots": {
+    "legacy_before_backup": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h030"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_evidence",
+        "event_heads",
+        "events",
+        "evidence",
+        "metadata",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "events": 0,
+        "evidence": 1,
+        "metadata": 1,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h033"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    },
+    "legacy_backup": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h030"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_evidence",
+        "event_heads",
+        "events",
+        "evidence",
+        "metadata",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "events": 0,
+        "evidence": 1,
+        "metadata": 1,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h033"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    },
+    "after_first_upgrade": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h038"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_change_links",
+        "event_evidence",
+        "event_heads",
+        "event_packet_heads",
+        "event_packets",
+        "event_versions",
+        "events",
+        "evidence",
+        "evidence_heads",
+        "metadata",
+        "omni_receipts",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_heads",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1",
+        "extensions_contract": "omni-extension-schema-1",
+        "extensions_migrated_at": "2026-10-20T18:17:45.241876+00:00"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_change_links": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "event_packet_heads": 0,
+        "event_packets": 0,
+        "event_versions": 0,
+        "events": 0,
+        "evidence": 1,
+        "evidence_heads": 1,
+        "metadata": 3,
+        "omni_receipts": 0,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_heads": 0,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_change_links": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packet_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_versions": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "evidence_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h039"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h040"
+        },
+        "omni_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    },
+    "legacy_rows_after_upgrade": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h038"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_change_links",
+        "event_evidence",
+        "event_heads",
+        "event_packet_heads",
+        "event_packets",
+        "event_versions",
+        "events",
+        "evidence",
+        "evidence_heads",
+        "metadata",
+        "omni_receipts",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_heads",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1",
+        "extensions_contract": "omni-extension-schema-1",
+        "extensions_migrated_at": "2026-10-20T18:17:45.241876+00:00"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "events": 0,
+        "evidence": 1,
+        "metadata": 1,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h033"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    },
+    "upgraded_with_receipts": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h038"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_change_links",
+        "event_evidence",
+        "event_heads",
+        "event_packet_heads",
+        "event_packets",
+        "event_versions",
+        "events",
+        "evidence",
+        "evidence_heads",
+        "metadata",
+        "omni_receipts",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_heads",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1",
+        "extensions_contract": "omni-extension-schema-1",
+        "extensions_migrated_at": "2026-10-20T18:17:45.241876+00:00"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_change_links": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "event_packet_heads": 0,
+        "event_packets": 0,
+        "event_versions": 0,
+        "events": 0,
+        "evidence": 1,
+        "evidence_heads": 1,
+        "metadata": 3,
+        "omni_receipts": 2,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_heads": 0,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_change_links": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packet_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_versions": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "evidence_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h039"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h040"
+        },
+        "omni_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h041"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    },
+    "upgraded_backup": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h038"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_change_links",
+        "event_evidence",
+        "event_heads",
+        "event_packet_heads",
+        "event_packets",
+        "event_versions",
+        "events",
+        "evidence",
+        "evidence_heads",
+        "metadata",
+        "omni_receipts",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_heads",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1",
+        "extensions_contract": "omni-extension-schema-1",
+        "extensions_migrated_at": "2026-10-20T18:17:45.241876+00:00"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_change_links": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "event_packet_heads": 0,
+        "event_packets": 0,
+        "event_versions": 0,
+        "events": 0,
+        "evidence": 1,
+        "evidence_heads": 1,
+        "metadata": 3,
+        "omni_receipts": 2,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_heads": 0,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_change_links": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packet_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_versions": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "evidence_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h039"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h040"
+        },
+        "omni_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h041"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    },
+    "legacy_restored": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h030"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_evidence",
+        "event_heads",
+        "events",
+        "evidence",
+        "metadata",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "events": 0,
+        "evidence": 1,
+        "metadata": 1,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h033"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    },
+    "upgraded_restored": {
+      "integrity_check": [
+        "ok"
+      ],
+      "schema_hash": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h038"
+      },
+      "tables": [
+        "acquisition_queue",
+        "backoff",
+        "budgets",
+        "cursors",
+        "discovery_leads",
+        "document_jobs",
+        "event_change_links",
+        "event_evidence",
+        "event_heads",
+        "event_packet_heads",
+        "event_packets",
+        "event_versions",
+        "events",
+        "evidence",
+        "evidence_heads",
+        "metadata",
+        "omni_receipts",
+        "outbox",
+        "pilot_records",
+        "reviews",
+        "source_cycles",
+        "source_heads",
+        "source_receipts",
+        "trial_changes",
+        "trial_heads",
+        "trial_snapshots"
+      ],
+      "metadata": {
+        "contract": "omni-store-1",
+        "extensions_contract": "omni-extension-schema-1",
+        "extensions_migrated_at": "2026-10-20T18:17:45.241876+00:00"
+      },
+      "row_counts": {
+        "acquisition_queue": 0,
+        "backoff": 0,
+        "budgets": 0,
+        "cursors": 0,
+        "discovery_leads": 0,
+        "document_jobs": 0,
+        "event_change_links": 0,
+        "event_evidence": 0,
+        "event_heads": 0,
+        "event_packet_heads": 0,
+        "event_packets": 0,
+        "event_versions": 0,
+        "events": 0,
+        "evidence": 1,
+        "evidence_heads": 1,
+        "metadata": 3,
+        "omni_receipts": 2,
+        "outbox": 0,
+        "pilot_records": 0,
+        "reviews": 1,
+        "source_cycles": 1,
+        "source_heads": 0,
+        "source_receipts": 0,
+        "trial_changes": 0,
+        "trial_heads": 0,
+        "trial_snapshots": 0
+      },
+      "table_row_hashes": {
+        "acquisition_queue": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "backoff": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "budgets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "cursors": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "discovery_leads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "document_jobs": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_change_links": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packet_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_packets": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "event_versions": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "events": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "evidence": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h032"
+        },
+        "evidence_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h039"
+        },
+        "metadata": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h040"
+        },
+        "omni_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h041"
+        },
+        "outbox": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "pilot_records": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "reviews": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h034"
+        },
+        "source_cycles": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h035"
+        },
+        "source_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "source_receipts": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_changes": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_heads": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        },
+        "trial_snapshots": {
+          "algorithm": "sha256",
+          "manifest": "migration-python311-hashes.txt",
+          "entry": "h031"
+        }
+      },
+      "review_payloads": [
+        {
+          "review_id": "synthetic-legacy-review",
+          "utf8_bytes": 155,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h017"
+          }
+        }
+      ],
+      "evidence_payloads": [
+        {
+          "evidence_id": "synthetic-legacy-evidence",
+          "revision_id": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h036"
+          },
+          "utf8_bytes": 135,
+          "sha256": {
+            "algorithm": "sha256",
+            "manifest": "migration-python311-hashes.txt",
+            "entry": "h037"
+          }
+        }
+      ]
+    }
+  },
+  "database_files_tracked": false,
+  "ai_labels": "pending_human_review",
+  "automatic_activation": false,
+  "git_head": {
+    "algorithm": "git_commit",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "h007"
+  },
+  "legacy_schema": {
+    "git_object": "@audit[migration-python311-hashes.txt#h002]:omni/store.py",
+    "source_sha256": {
+      "algorithm": "sha256",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "h011"
+    },
+    "schema_sha256": {
+      "algorithm": "sha256",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "h042"
+    },
+    "extraction": "ast.parse + ast.literal_eval; old module not executed",
+    "tables": [
+      "acquisition_queue",
+      "backoff",
+      "budgets",
+      "cursors",
+      "discovery_leads",
+      "document_jobs",
+      "event_evidence",
+      "event_heads",
+      "events",
+      "evidence",
+      "metadata",
+      "outbox",
+      "pilot_records",
+      "reviews",
+      "source_cycles",
+      "source_receipts",
+      "trial_changes",
+      "trial_heads",
+      "trial_snapshots"
+    ]
+  },
+  "implementation_hash_after": {
+    "algorithm": "sha256",
+    "manifest": "migration-python311-hashes.txt",
+    "entry": "h006"
+  },
+  "database_artifacts": [
+    {
+      "name": "legacy-backup.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h012"
+      },
+      "bytes": 167936
+    },
+    {
+      "name": "legacy-restored.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h012"
+      },
+      "bytes": 167936
+    },
+    {
+      "name": "legacy-working.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h043"
+      },
+      "bytes": 225280
+    },
+    {
+      "name": "synthetic-preexisting-production-ledger.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h044"
+      },
+      "bytes": 8192
+    },
+    {
+      "name": "unsupported-extension.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h045"
+      },
+      "bytes": 167936
+    },
+    {
+      "name": "unsupported-store-contract.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h046"
+      },
+      "bytes": 12288
+    },
+    {
+      "name": "upgraded-backup.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h025"
+      },
+      "bytes": 225280
+    },
+    {
+      "name": "upgraded-restored.sqlite3",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "migration-python311-hashes.txt",
+        "entry": "h025"
+      },
+      "bytes": 225280
+    }
+  ],
+  "completed_at": "2026-10-20T18:17:47.826912+00:00",
+  "summary": {
+    "commands": 21,
+    "main_cli_commands": 17,
+    "expected_refusals": 7,
+    "checks": 67,
+    "passed_checks": 67
+  },
+  "audit_hash_manifest": "migration-python311-hashes.txt",
+  "audit_rendering": {
+    "contract": "audit-reference-rendering-1",
+    "format": "scan-friendly rendering; not original raw command stdout",
+    "transformation": "Exact Git/SHA values and absolute execution paths are represented by adjacent plain-text manifest references; embedded values use @audit tokens.",
+    "original_file": {
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "original_json_file"
+    },
+    "original_sha256": {
+      "algorithm": "sha256",
+      "manifest": "migration-python311-hashes.txt",
+      "entry": "h001"
+    },
+    "original_bytes_preserved": true,
+    "reversible_content_check": "passed",
+    "test_rerun": false,
+    "scanner_baseline_and_rules_changed": false
+  }
+}

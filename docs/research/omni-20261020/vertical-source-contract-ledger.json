@@ -1,0 +1,224 @@
+{
+  "contract": "omni-vertical-source-contract-ledger-2",
+  "retrieved_date": "2026-10-20",
+  "base_public_revision": {
+    "algorithm": "git_commit",
+    "manifest": "vertical-source-hashes.txt",
+    "entry": "/base_public_revision"
+  },
+  "corrected_candidate": {
+    "algorithm": "git_commit",
+    "manifest": "vertical-source-hashes.txt",
+    "entry": "/corrected_candidate"
+  },
+  "source_policy_changes": 0,
+  "network_collectors_executed": 0,
+  "accounts_or_credentials_obtained": 0,
+  "all_new_adapters_disabled": true,
+  "human_review_status": "pending",
+  "sources": [
+    {
+      "source": "nrc-aps",
+      "url": "https://adams-search.nrc.gov/assets/APS-API-Guide.pdf",
+      "retrieval": "primary PDF retrieved; 24 pages; guide version 1.0",
+      "web_reference": "turn8view0",
+      "verified_contract": [
+        "POST /aps/api/search",
+        "GET /aps/api/search/{accessionNumber}",
+        "q/filters/anyFilters/legacyLibFilter/mainLibFilter/sort/sortDirection/skip",
+        "six text operators and two date properties",
+        "Appendix A metadata names",
+        "Appendix C results[].document envelope",
+        "Ocp-Apim-Subscription-Key header"
+      ],
+      "gaps": [
+        "No documented stable total or point-in-time pagination",
+        "No documented timezone for DateAddedTimestamp",
+        "Subscription not obtained; no API canary",
+        "Project/applicant/issuer and decision-scope identities need evidence review",
+        "Example content field intentionally unsupported by metadata request contract"
+      ]
+    },
+    {
+      "source": "nrc-licensing",
+      "url": "https://www.nrc.gov/materials/fuel-cycle-fac/new-fac-applicants/understanding-the-licensing-process",
+      "retrieval": "Primary page text retrieved with Exa; later web-tool re-open Internal Error turn8view3",
+      "verified_contract": [
+        "Separate licensing steps; pre-application/docket activity does not establish issued authorization"
+      ],
+      "gaps": [
+        "Text mention cannot establish project-specific authorization scope"
+      ]
+    },
+    {
+      "source": "eia-api",
+      "url": "https://www.eia.gov/opendata/documentation.php",
+      "retrieval": "Primary technical documentation retrieved; patch notes through March2026 v2.1.12",
+      "web_reference": "turn10view2",
+      "verified_contract": [
+        "metadata frequency/facets/data.units",
+        "numeric data strings",
+        "explicit sorts/offset/length",
+        "5000-row JSON cap",
+        "api_key query and request echo",
+        "apiVersion"
+      ],
+      "gaps": [
+        "Actual facility nuclear route metadata snapshot/units/facet values absent",
+        "Credential and exact source-purpose approval absent",
+        "Revised periods and mutable offsets need ongoing surveillance"
+      ]
+    },
+    {
+      "source": "eia-openapi",
+      "url": "https://www.eia.gov/opendata/eia-api-swagger.zip",
+      "retrieval": "Official ZIP linked by documentation, downloaded for schema inspection; JSON schema extracted",
+      "json_bytes": 319662,
+      "json_sha256": {
+        "algorithm": "sha256",
+        "manifest": "vertical-source-hashes.txt",
+        "entry": "/sources/3/json_sha256"
+      },
+      "verified_contract": [
+        "GET /v2/nuclear-outages/facility-nuclear-outages",
+        "GET /v2/nuclear-outages/facility-nuclear-outages/data",
+        "api_key security query location"
+      ],
+      "gaps": [
+        "Generic OpenAPI does not replace current route metadata"
+      ]
+    },
+    {
+      "source": "eia860-description",
+      "url": "https://www.eia.gov/electricity/data/eia860/",
+      "retrieval": "Primary page retrieved; final2025 ZIP link observed; owner absence rule verified",
+      "web_reference": "turn9view1",
+      "verified_contract": [
+        "Generator and ownership datasets are separate",
+        "Owner file includes joint/third-party ownership; complete matched absence implies operator owns unit at that vintage"
+      ],
+      "gaps": [
+        "Annual dataset is not exact current ownership/effective sale date",
+        "Listed parent and unit crosswalk need review"
+      ]
+    },
+    {
+      "source": "eia860-2025-schema",
+      "url": "https://www.eia.gov/electricity/data/eia860/xls/eia8602025.zip",
+      "retrieval": "Read-only public ZIP schema/header/number-format inspection; no raw real rows committed",
+      "zip_bytes": 23622347,
+      "zip_sha256": {
+        "algorithm": "sha256",
+        "manifest": "vertical-source-hashes.txt",
+        "entry": "/sources/5/zip_sha256"
+      },
+      "verified_contract": {
+        "generator_file": "3_1_Generator_Y2025.xlsx",
+        "generator_sheets": [
+          "Operable",
+          "Proposed",
+          "Retired and Canceled"
+        ],
+        "owner_file": "4___Owner_Y2025.xlsx",
+        "owner_sheet": "Ownership",
+        "header_row": 2,
+        "generator_selected_headers": [
+          "Utility ID",
+          "Utility Name",
+          "Plant Code",
+          "Plant Name",
+          "Generator ID",
+          "Status"
+        ],
+        "owner_additional_headers": [
+          "Owner Name",
+          "Ownership ID",
+          "Percent Owned"
+        ],
+        "percent_format": "0.00%",
+        "layout_description": "Percent of generator ownership"
+      },
+      "gaps": [
+        "Other vintages/layouts unsupported",
+        "Untrusted local bundle authenticity remains pending; byte hash records provenance, not authenticity"
+      ]
+    },
+    {
+      "source": "usaspending-awards",
+      "url": "https://github.com/fedspendingtransparency/usaspending-api/blob/a31240757e5987b994692322c317ae55668c6983/usaspending_api/api_contracts/contracts/v2/search/spending_by_award.md",
+      "retrieval": "Official contract via GitHub and exact pinned raw file; web raw fetch DisabledError, direct public read succeeded",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "vertical-source-hashes.txt",
+        "entry": "/sources/6/sha256"
+      },
+      "verified_contract": [
+        "POST /api/v2/search/spending_by_award/",
+        "Contract types A-D",
+        "Base fields include generated_internal_id and Recipient UEI",
+        "Contract fields include Award Amount, Total Outlays, NAICS, PSC",
+        "PageMetadataObject page/hasNext"
+      ],
+      "gaps": [
+        "Award aggregate does not identify individual transaction changes",
+        "Deleted/updated award completeness not established"
+      ]
+    },
+    {
+      "source": "usaspending-transactions",
+      "url": "https://github.com/fedspendingtransparency/usaspending-api/blob/277763cd72dc9e5838f52ec4176edbfef79fd5e6/usaspending_api/api_contracts/contracts/v2/transactions.md",
+      "retrieval": "Official contract via GitHub and exact pinned raw file; web raw fetch DisabledError, direct public read succeeded",
+      "sha256": {
+        "algorithm": "sha256",
+        "manifest": "vertical-source-hashes.txt",
+        "entry": "/sources/7/sha256"
+      },
+      "verified_contract": [
+        "POST /api/v2/transactions/",
+        "generated natural award_id preferred over deprecated surrogate",
+        "id/type/action_date/action_type/modification_number/federal_action_obligation",
+        "page/next/hasNext; documented maximum5000, implementation cap100"
+      ],
+      "gaps": [
+        "Currency is not explicit in inspected endpoint contract",
+        "Modification typed string but representative response null; parser preserves missing",
+        "Public arrival time, update/delete surveillance and parent identity unresolved"
+      ]
+    },
+    {
+      "source": "usaspending-delay",
+      "url": "https://www.usaspending.gov/data/about-the-data-download.pdf",
+      "retrieval": "Primary PDF retrieved, pages11/15; reporting/publication and DOD/USACE90-day delay verified",
+      "web_reference": "turn9view2",
+      "verified_contract": [
+        "Delayed publication; action_date is not public first availability"
+      ],
+      "gaps": [
+        "Delay description does not prove individual-record latency"
+      ]
+    }
+  ],
+  "failed_or_limited_checks": [
+    {
+      "check": "EIA nuclear browser shell",
+      "result": "No usable route field metadata; did not invent fields"
+    },
+    {
+      "check": "Web-tool ZIP downloads",
+      "result": "Unsupported content; read linked public schemas through bounded direct download"
+    },
+    {
+      "check": "NRC API subscription/canary",
+      "result": "Not attempted; outside authorized scope"
+    },
+    {
+      "check": "EIA API key/data canary",
+      "result": "Not attempted; outside authorized scope"
+    },
+    {
+      "check": "USAspending live query",
+      "result": "Not executed; documentation and synthetic fixtures only"
+    }
+  ],
+  "audit_hash_manifest": "vertical-source-hashes.txt"
+}

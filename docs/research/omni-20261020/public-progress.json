@@ -1,0 +1,102 @@
+{
+  "retrieved_at": "2026-10-20T18:12:47Z",
+  "request_url": "https://api.github.com/repos/Rexyysilent/stock-market-bot/pulls/11",
+  "url": "https://github.com/Rexyysilent/stock-market-bot/pull/11",
+  "number": 11,
+  "title": "Add opt-in OMNI workbench and validated scheduled exports",
+  "state": "open",
+  "draft": false,
+  "merged": false,
+  "merged_at": null,
+  "head_ref": "codex/omni-public-workbench-20261019",
+  "base_ref": "main",
+  "updated_at": "2026-10-19T07:47:44Z",
+  "public_mutations_performed": false,
+  "scope": "Public PR metadata only. Its checks do not verify this local completion candidate.",
+  "head_commit_url": "https://github.com/Rexyysilent/stock-market-bot/commit/d35f667aebd3c2590cabbbe80e51076b3a1fa788",
+  "base_commit_url": "https://github.com/Rexyysilent/stock-market-bot/commit/7bf1ace59acc43c7d05f2f6affbc39472060f2b9",
+  "check_run_scope": "Exact pinned public base only, not the new candidate",
+  "check_run_count": 10,
+  "check_runs": [
+    {
+      "name": "Python 3.12 on windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217695137/job/117945332415",
+      "started_at": "2026-10-19T07:42:19Z",
+      "completed_at": "2026-10-19T07:46:58Z"
+    },
+    {
+      "name": "Python 3.11 on ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217695137/job/117945332149",
+      "started_at": "2026-10-19T07:42:20Z",
+      "completed_at": "2026-10-19T07:43:41Z"
+    },
+    {
+      "name": "Python 3.12 on ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217695137/job/117945332024",
+      "started_at": "2026-10-19T07:42:19Z",
+      "completed_at": "2026-10-19T07:43:46Z"
+    },
+    {
+      "name": "Python 3.11 on windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217695137/job/117945331877",
+      "started_at": "2026-10-19T07:42:20Z",
+      "completed_at": "2026-10-19T07:46:39Z"
+    },
+    {
+      "name": "Dependency and secret scans",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217695137/job/117945331793",
+      "started_at": "2026-10-19T07:42:19Z",
+      "completed_at": "2026-10-19T07:42:53Z"
+    },
+    {
+      "name": "Python 3.12 on ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217677992/job/117945279320",
+      "started_at": "2026-10-19T07:42:11Z",
+      "completed_at": "2026-10-19T07:43:14Z"
+    },
+    {
+      "name": "Python 3.12 on windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217677992/job/117945279262",
+      "started_at": "2026-10-19T07:42:11Z",
+      "completed_at": "2026-10-19T07:45:47Z"
+    },
+    {
+      "name": "Python 3.11 on windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217677992/job/117945279150",
+      "started_at": "2026-10-19T07:42:12Z",
+      "completed_at": "2026-10-19T07:46:21Z"
+    },
+    {
+      "name": "Python 3.11 on ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217677992/job/117945279032",
+      "started_at": "2026-10-19T07:42:11Z",
+      "completed_at": "2026-10-19T07:43:30Z"
+    },
+    {
+      "name": "Dependency and secret scans",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rexyysilent/stock-market-bot/actions/runs/39217677992/job/117945278659",
+      "started_at": "2026-10-19T07:42:11Z",
+      "completed_at": "2026-10-19T07:42:46Z"
+    }
+  ]
+}

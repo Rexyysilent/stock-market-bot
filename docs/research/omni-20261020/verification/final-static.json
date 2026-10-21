@@ -1,0 +1,44 @@
+{
+  "contract": "omni-final-static-verification-1",
+  "started_at": "2026-10-20T18:31:49.284611+00:00",
+  "scope": "All candidate paths staged before scan; reporting artifacts are sealed and rechecked in the outer packaging receipt",
+  "commands": [
+    {
+      "name": "secrets",
+      "transcript": "final-static-secrets.txt",
+      "exit_code": 0,
+      "started_at": "2026-10-20T18:31:49.284630+00:00",
+      "completed_at": "2026-10-20T18:32:05.851849+00:00",
+      "duration_seconds": 16.567
+    },
+    {
+      "name": "whitespace-staged",
+      "transcript": "final-static-whitespace-staged.txt",
+      "exit_code": 0,
+      "started_at": "2026-10-20T18:32:05.852042+00:00",
+      "completed_at": "2026-10-20T18:32:05.868134+00:00",
+      "duration_seconds": 0.016
+    },
+    {
+      "name": "whitespace-worktree",
+      "transcript": "final-static-whitespace-worktree.txt",
+      "exit_code": 0,
+      "started_at": "2026-10-20T18:32:05.868249+00:00",
+      "completed_at": "2026-10-20T18:32:05.872000+00:00",
+      "duration_seconds": 0.004
+    },
+    {
+      "name": "unchanged-scanner-locks",
+      "transcript": "final-static-unchanged-scanner-locks.txt",
+      "exit_code": 0,
+      "started_at": "2026-10-20T18:32:05.872047+00:00",
+      "completed_at": "2026-10-20T18:32:05.875716+00:00",
+      "duration_seconds": 0.004
+    }
+  ],
+  "tracked_paths_scanned": 372,
+  "selected_inputs_still_match": true,
+  "selected_input_count": 256,
+  "completed_at": "2026-10-20T18:32:05.884142+00:00",
+  "status": "passed"
+}
