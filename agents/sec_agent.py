@@ -25,9 +25,12 @@ ALL_TICKERS = list(SIGNAL_ELIGIBLE_TICKERS)
 
 logger = logging.getLogger("SECAgent")
 
-# Form 4 "Code" column, verbatim from the filing: P open-market purchase,
-# S open-market sale, A award/grant, M option exercise, F tax withholding,
-# G gift. code_counts records whatever codes appear — no interpretation.
+# Form 4 transaction codes, verbatim from the filing: P purchase, S sale,
+# A award/grant, M exercise/conversion, F exercise-price/tax payment, G gift.
+# P/S can describe private as well as open-market trades, including derivatives;
+# code alone does not establish an open-market common-stock transaction.
+# SEC definitions: https://www.sec.gov/files/form4.pdf (Instruction 8).
+# code_counts records whatever codes appear — no interpretation.
 FORM4_CODE_RE = re.compile(r"<transactionCode>\s*([A-Za-z0-9])\s*</transactionCode>")
 # Reporting owner identity — a cluster is distinct filers, not distinct documents
 FORM4_OWNER_RE = re.compile(r"<rptOwnerCik>\s*0*(\d+)\s*</rptOwnerCik>")
@@ -340,17 +343,24 @@ class SECAgent:
 
     def detect_insider_clusters(self, days_back=30):
         """
-        Detect insider clusters — >=2 DISTINCT filers transacting the same
-        open-market direction (P or S) on one ticker inside the window.
+        Detect insider clusters — >=2 DISTINCT filers reporting the same
+        purchase/sale code (P or S) on one ticker inside the window.
         One insider filing many tranches is not a cluster. Identity comes from
         rptOwnerCik (EDGAR Form 4 XML) or the insider name (OpenInsider).
 
-        PURCHASE clusters are the headline signal (Cohen-Malloy-Pomorski):
-        multiple insiders buying open-market together is a strong positive
-        configured predictor. SALE clusters are kept
-        as LOW-level context only: sales are contaminated by diversification,
-        liquidity needs, and scheduled 10b5-1 plans, and carry weak predictive
-        content. Results are ordered buy > mixed > sell.
+        PURCHASE clusters receive priority as a configured research hypothesis;
+        alert levels describe filer counts/direction, not validated expected
+        returns. SALE clusters remain LOW-level context. Results are ordered
+        buy > mixed > sell. This scan does not resolve private purchases,
+        derivative securities, footnotes, or joint economic ownership from P/S.
+
+        Related cluster evidence uses different definitions and historical data:
+        Alldredge and Blank (2019), https://doi.org/10.1111/jfir.12172 .
+        Cohen, Malloy and Pomorski (2012) study routine versus opportunistic
+        trading, not this cluster rule; their headline result is long-short:
+        https://doi.org/10.1111/j.1540-6261.2012.01740.x . Neither study establishes
+        performance for this parser/window after its actual receipt delay and
+        execution costs.
 
         insider_count = distinct filers in the cluster direction; filing_count
         = documents; code_counts = transaction codes as filed.
@@ -423,7 +433,8 @@ class SECAgent:
                     continue
                 cluster["unique_dates"] = len(unique_dates)
                 cluster["filings"] = filings[:5]  # Top 5 for display
-                # the cluster became true when its newest filing landed
+                # Newest retrieved filing; this does not reconstruct when the
+                # cluster first became observable to a public-data collector.
                 cluster["as_of"] = newest(
                     to_utc_z(f.get("filed_at") or f.get("date")) for f in filings
                 )
@@ -675,7 +686,7 @@ class SECAgent:
     @staticmethod
     def _build_cluster(ticker, buyers, sellers, filing_count, owner_codes,
                        code_counts, period_days, source):
-        """Cluster gate + record. >=2 distinct filers must share an open-market
+        """Cluster gate + record. >=2 distinct filers must share a reported P/S
         direction. Buy clusters alert HIGH at >=3 buyers, MEDIUM at 2; mixed
         (equal buyers and sellers) is a contested buy cluster, MEDIUM; sell
         clusters are context only and never rise above LOW.
@@ -720,7 +731,7 @@ class SECAgent:
     @staticmethod
     def _cluster_direction(buyers, sellers):
         """buy/sell by distinct-filer majority; tie = mixed; null when no
-        filer transacted open-market at all (grants/exercises carry no direction)."""
+        filer has a P/S code (grants/exercises alone carry no direction)."""
         if buyers == 0 and sellers == 0:
             return None
         if buyers > sellers:
