@@ -3,15 +3,18 @@
 History (July 15 brief): the EDGAR fallback counted Form 4 documents with no
 transaction codes, so "COIN: 10 insiders, HIGH" could have been one CFO
 exercising options in ten tranches. A cluster is now >=2 DISTINCT filers
-transacting the same open-market direction; identity comes from rptOwnerCik
+reporting the same purchase/sale code (P/S); identity comes from rptOwnerCik
 (EDGAR XML) or the insider name (OpenInsider); records carry insider_count
-(humans), buyers/sellers, filing_count (documents), code_counts (measurements
+(reporting identities), buyers/sellers, filing_count (documents), code_counts (measurements
 straight off the filing), cluster_direction, and source.
 
-Alert asymmetry (Cohen-Malloy-Pomorski): purchase clusters are the headline
-signal (HIGH at >=3 buyers) — insiders only buy for one reason — while sale
-clusters are diversification/liquidity/10b5-1-contaminated context, capped at
-LOW and excluded from confluence.
+Alert asymmetry is a configured research hypothesis: purchase clusters receive
+HIGH at >=3 buyers, while sale clusters remain LOW context and are excluded
+from confluence. These thresholds do not establish expected returns. P/S can
+represent private or derivative transactions; codes alone do not verify
+open-market common-stock purchases or independent economic owners. See SEC
+Form 4 Instruction 8: https://www.sec.gov/files/form4.pdf . The related papers
+and a proposed falsifiable study are in docs/research/insider-purchase-hypothesis.md.
 """
 import sys
 
@@ -21,7 +24,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from agents.sec_agent import SECAgent, FORM4_CODE_RE, FORM4_OWNER_RE
 
-# --- direction: filer majority, tie = mixed, no open-market filers = null
+# --- direction: filer majority, tie = mixed, no P/S filers = null
 assert SECAgent._cluster_direction(3, 1) == "buy"
 assert SECAgent._cluster_direction(1, 4) == "sell"
 assert SECAgent._cluster_direction(2, 2) == "mixed"
@@ -62,7 +65,7 @@ assert SECAgent._build_cluster("COIN", 1, 1, 10, {"cfo": {"P", "S"}},
 assert SECAgent._build_cluster("COIN", 0, 0, 4, {"a": {"A"}, "b": {"M"}},
                                Counter({"A": 3, "M": 1}), 30, "edgar_fallback") is None
 
-# --- alert asymmetry (Cohen-Malloy-Pomorski): buys headline, sells context
+# --- configured alert asymmetry: purchases prioritized, sales context
 # three sellers -> sell cluster exists but never rises above LOW
 c = SECAgent._build_cluster("COIN", 1, 3, 10, {"a": {"S"}, "b": {"S"}, "c": {"S", "M"}, "d": {"P"}},
                             Counter({"S": 6, "M": 2, "P": 1}), 30, "edgar_fallback")

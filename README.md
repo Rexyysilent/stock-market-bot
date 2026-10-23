@@ -358,6 +358,37 @@ python -m event_history view --cutoff 2026-09-23T00:00:00Z
 python -m event_history status
 ```
 
+## Optional portfolio measurement lab
+
+`portfolio_lab` measures operator-supplied hypothetical exposures against a
+passive benchmark in an isolated private workspace. It adds a full adjusted
+return path, explicit costs, contribution accounting, later-session execution,
+separate evaluation periods, and a locally timestamped paper journal. It does
+not select a personal allocation, place orders, or connect a brokerage account.
+The collector, existing universes, scheduler, and brief schemas are unchanged.
+
+```sh
+python -m portfolio_lab demo --out workspaces/portfolio-demo --stress
+python -m portfolio_lab income --capital 100000 --currency INR --annual-rates="-20,0,4,8,12" --annual-fixed-cost 6000 --monthly-goal 10000
+```
+
+The demo is fabricated. The income command is arithmetic under supplied return
+assumptions, not an income forecast. Run the demo with an unused output path;
+earlier research is never overwritten. Use the locked environment on systems
+without an operating-system timezone database.
+
+See the [measurement guide](docs/PORTFOLIO_LAB.md), the
+[dated India/U.S. operating-path research](docs/research/investing-pipeline-20261023.md),
+and a [reproducible historical reference study](docs/research/portfolio-reference-20261023.md).
+The latter tests a fixed published-style rule, not a private bot, and does not
+establish predictive performance. Raw price acquisitions and private decisions
+stay in ignored workspaces.
+
+The legacy ledger now labels its pooled statistics explicitly and additionally
+reports development and holdout observations separately, excluding purged and
+unassigned observations from those two partitions. Date separation alone does
+not establish that a strategy was selected without seeing the later period.
+
 ## Tests
 
 Run the same deterministic, network-free suite used by CI:
@@ -378,7 +409,7 @@ python -m unittest -v test_dashboard_server test_dashboard_security
 Syntax check:
 
 ```powershell
-python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger scripts
+python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger portfolio_lab scripts
 ```
 
 CI repeats those checks on Python 3.11 and 3.12, installs only from hash-locked dependency files, audits runtime dependencies, and scans tracked files for secrets. `requirements.txt` and `requirements-ci.txt` remain the readable dependency inputs.
