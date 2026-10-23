@@ -247,6 +247,9 @@ class PortfolioReferenceStudyTests(unittest.TestCase):
     def test_cache_and_staging_cannot_be_created_at_repository_root(self):
         repository = self.root / "fake-repository"
         repository.mkdir()
+        # Match the real ROOT's resolved identity, including Windows temporary
+        # directories reached through short-name aliases or junctions.
+        repository = repository.resolve()
         self.output = repository / "workspaces"
         with patch.object(runner, "ROOT", repository), patch(
                 "portfolio_lab.__main__.__file__", str(repository / "portfolio_lab" / "__main__.py")):
