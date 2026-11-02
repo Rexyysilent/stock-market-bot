@@ -153,6 +153,34 @@ def _cell(rows, min_n):
     return result
 
 
+def _partitioned_cell(rows, min_n):
+    """Preserve legacy pooled descriptions and publish disjoint evaluations.
+
+    Boundary-crossing windows remain visible in the compatibility aggregate,
+    but cannot contribute to development or holdout statistics. Each partition
+    has its own raw, directional and matched-benchmark sample gates. Dates alone
+    cannot certify that a strategy or threshold was left untouched.
+    """
+    result = _cell(rows, min_n)
+    partitions = defaultdict(list)
+    for row in rows:
+        partitions[evaluation_partition(row["entry_session"], row["exit_session"])].append(row)
+    result["evaluation_scope"] = "pooled_descriptive_including_purged"
+    result["evaluation_partitions"] = {
+        name: {**_cell(partitions[name], min_n), "evaluation_scope": name,
+               "interpretation": "descriptive_only; date partition does not prove untouched choices"}
+        for name in ("development", "holdout")
+    }
+    purged = _cell(partitions["purged"], min_n)
+    result["evaluation_exclusions"] = {
+        "purged": {"rows": len(partitions["purged"]), "filled_clusters": purged["n"],
+                   "reason": "return window reaches holdout boundary from an earlier entry"},
+        "unassigned": {"rows": len(partitions[None]),
+                       "reason": "entry/exit window unavailable or invalid"},
+    }
+    return result
+
+
 def build_stats(db_path=DB_PATH, min_n=MIN_N):
     conn = connect(db_path)
     try:
@@ -187,7 +215,7 @@ def build_stats(db_path=DB_PATH, min_n=MIN_N):
             "key": key,
             "horizons": {},
         })
-        group["horizons"][str(horizon)] = _cell(members, min_n)
+        group["horizons"][str(horizon)] = _partitioned_cell(members, min_n)
 
     return {
         "schema_version": STATS_SCHEMA_VERSION,
@@ -201,6 +229,9 @@ def build_stats(db_path=DB_PATH, min_n=MIN_N):
             ),
             "inference": "withheld",
             "evaluation_design": evaluation_design(),
+            "evaluation_reporting_version": "partitioned-descriptive-1",
+            "pooled_scope": "legacy descriptive fields include development, purged and holdout rows",
+            "holdout_custody": "not established by date labels; untouched choices require separate evidence",
         },
         "segments": [
             {
@@ -210,6 +241,44 @@ def build_stats(db_path=DB_PATH, min_n=MIN_N):
             for version, groups in sorted(segments.items())
         ],
     }
+
+
+def _render_cells(horizons):
+    lines = ["| Horizon | n | Sessions | Unpriceable | Result |",
+             "|---:|---:|---:|---:|---|"]
+    for horizon, cell in sorted(horizons.items(), key=lambda item: int(item[0])):
+        if cell["status"] == "accumulating":
+            result = f"n={cell['n']} (accumulating)"
+        else:
+            pieces = []
+            if cell.get("directional_status") == "accumulating":
+                pieces.append(f"directional n={cell['n_directional']} (accumulating)")
+            if cell["hit_rate"] is not None:
+                pieces.append(f"hit {cell['hit_rate']:.1%}")
+                pieces.append(f"mean excess {cell['mean_signed_excess']:.2%}")
+                pieces.append(
+                    f"IQR [{cell['p25_signed_excess']:.2%}, "
+                    f"{cell['p75_signed_excess']:.2%}]"
+                )
+            if cell["energy"] is not None:
+                pieces.append(
+                    f"energy {cell['energy']:.2f}x "
+                    f"(pairs={cell['n_benchmark_pairs']})"
+                )
+            elif cell["energy_status"] == "accumulating":
+                pieces.append(f"energy pairs={cell['n_benchmark_pairs']} (accumulating)")
+            raw_only = cell["raw_only"]
+            if raw_only["n"]:
+                pieces.append(
+                    f"raw-only n={raw_only['n']}, mean {raw_only['mean_ret']:.2%}"
+                )
+            result = "; ".join(pieces) or "no directional statistic"
+        lines.append(
+            f"| +{horizon} | {cell['n']} | {cell['n_entry_sessions']} "
+            f"| {cell['n_unpriceable']} | {result} |"
+        )
+    lines.append("")
+    return lines
 
 
 def render_markdown(stats):
@@ -224,41 +293,25 @@ def render_markdown(stats):
         for group in segment["groups"]:
             lines.append(f"### {group['grain']}: {group['key']}")
             lines.append("")
-            lines.append("| Horizon | n | Sessions | Unpriceable | Result |")
-            lines.append("|---:|---:|---:|---:|---|")
+            lines.extend(["#### Pooled descriptive outcomes", "",
+                          "These compatibility statistics include development, purged and holdout windows; "
+                          "they are not holdout performance.", ""])
+            lines.extend(_render_cells(group["horizons"]))
+            for partition in ("development", "holdout"):
+                separated = {horizon: cell["evaluation_partitions"][partition]
+                             for horizon, cell in group["horizons"].items()
+                             if partition in cell.get("evaluation_partitions", {})}
+                if separated:
+                    lines.extend([f"#### {partition.title()} observations (descriptive)", "",
+                                  "Sample gates apply within this partition. Time labels alone do not prove "
+                                  "that choices were untouched, and inferential intervals remain withheld.", ""])
+                    lines.extend(_render_cells(separated))
             for horizon, cell in sorted(group["horizons"].items(), key=lambda item: int(item[0])):
-                if cell["status"] == "accumulating":
-                    result = f"n={cell['n']} (accumulating)"
-                else:
-                    pieces = []
-                    if cell.get("directional_status") == "accumulating":
-                        pieces.append(f"directional n={cell['n_directional']} (accumulating)")
-                    if cell["hit_rate"] is not None:
-                        pieces.append(f"hit {cell['hit_rate']:.1%}")
-                        pieces.append(f"mean excess {cell['mean_signed_excess']:.2%}")
-                        pieces.append(
-                            f"IQR [{cell['p25_signed_excess']:.2%}, "
-                            f"{cell['p75_signed_excess']:.2%}]"
-                        )
-                    if cell["energy"] is not None:
-                        pieces.append(
-                            f"energy {cell['energy']:.2f}x "
-                            f"(pairs={cell['n_benchmark_pairs']})"
-                        )
-                    elif cell["energy_status"] == "accumulating":
-                        pieces.append(
-                            f"energy pairs={cell['n_benchmark_pairs']} (accumulating)"
-                        )
-                    raw_only = cell["raw_only"]
-                    if raw_only["n"]:
-                        pieces.append(
-                            f"raw-only n={raw_only['n']}, mean {raw_only['mean_ret']:.2%}"
-                        )
-                    result = "; ".join(pieces) or "no directional statistic"
-                lines.append(
-                    f"| +{horizon} | {cell['n']} | {cell['n_entry_sessions']} "
-                    f"| {cell['n_unpriceable']} | {result} |"
-                )
+                exclusions = cell.get("evaluation_exclusions")
+                if exclusions:
+                    lines.append(f"+{horizon} excluded from both partition tables: "
+                                 f"{exclusions['purged']['rows']} purged rows; "
+                                 f"{exclusions['unassigned']['rows']} unassigned rows.")
             lines.append("")
     lines.extend([
         "## Standing caveats",
@@ -268,6 +321,8 @@ def render_markdown(stats):
         "- Directional statistics have their own minimum sample gate.",
         "- n counts ticker/session clusters, not independent episodes; the Sessions column shows distinct entry sessions.",
         "- No confidence interval is published: same-session market dependence and overlapping horizons require a blocked, forward-held-out evaluation that does not yet exist.",
+        "- Pooled fields preserve the historical descriptive aggregate. Development and holdout tables are calculated separately; purged and unassigned rows enter neither table.",
+        "- A holdout timestamp is not proof of an untouched model, threshold, or selection process. The separated results remain descriptive measurements, not a validated investing strategy.",
         (f"- Evaluation holdout {stats['config']['evaluation_design']['version']}: "
          f"entry sessions from {stats['config']['evaluation_design']['holdout_start']} "
          f"are reserved for evaluation (declared "

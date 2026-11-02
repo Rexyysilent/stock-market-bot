@@ -24,7 +24,7 @@ The same commands apply in a POSIX shell after activating `.venv/bin/activate`.
 Before opening a PR:
 
 ```powershell
-python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger scripts
+python -m compileall -q export_for_gemini.py openinsider_agent.py signals.py timeutil.py stateutil.py agents ledger portfolio_lab scripts
 python scripts/validate_export_schema.py
 python scripts/run_offline_checks.py
 python scripts/run_secret_scan.py
