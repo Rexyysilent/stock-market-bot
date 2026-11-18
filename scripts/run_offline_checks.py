@@ -54,6 +54,7 @@ CHECKS = (
     'test_sniper_signals.py',
     'test_timestamp_policy.py',
     'test_twitter_health.py',
+    'test_nitter_redirects.py',
     'test_apewisdom_social.py',
     'test_social_validity.py',
     'test_temporal_eligibility.py',
