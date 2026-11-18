@@ -76,13 +76,18 @@ class TwitterAgent:
             self.health["errors_omitted"] = self.health.get("errors_omitted", 0) + 1
 
     def _find_working_nitter(self):
-        """Try each Nitter instance until one responds."""
+        """Try each Nitter instance until one responds.
+
+        Redirects are refused on the probe and on feed requests, so a 200 is
+        always the configured instance answering and an instance cannot point
+        the collector at another host; a 3xx counts as unavailable.
+        """
         if self._working_instance:
             # Test if cached instance still works
             try:
                 resp = requests.get(
                     f"{self._working_instance}/{TWITTER_ACCOUNTS[0]}/rss",
-                    headers=self.headers, timeout=5
+                    headers=self.headers, timeout=5, allow_redirects=False
                 )
                 self._record_status("nitter_cached", resp.status_code)
                 if resp.status_code == 200:
@@ -99,7 +104,7 @@ class TwitterAgent:
             try:
                 resp = requests.get(
                     f"{instance}/{TWITTER_ACCOUNTS[0]}/rss",
-                    headers=self.headers, timeout=5
+                    headers=self.headers, timeout=5, allow_redirects=False
                 )
                 self._record_status("nitter_probe", resp.status_code)
                 if resp.status_code == 200:
@@ -132,7 +137,11 @@ class TwitterAgent:
         for account in accounts:
             try:
                 url = f"{instance}/{account}/rss"
-                resp = requests.get(url, headers=self.headers, timeout=10)
+                # Never follow a redirect: the instance would choose the next
+                # request's destination (possibly on the collector's network).
+                resp = requests.get(
+                    url, headers=self.headers, timeout=10, allow_redirects=False
+                )
                 self._record_status(f"nitter_{account}", resp.status_code)
 
                 if resp.status_code == 200:

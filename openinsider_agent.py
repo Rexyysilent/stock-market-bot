@@ -18,11 +18,24 @@ from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
+import urllib3
 from bs4 import BeautifulSoup
 
 from stateutil import atomic_write_json, load_json_state
 
 logger = logging.getLogger("OpenInsiderAgent")
+
+
+class _BoundedReadError(Exception):
+    """The response body broke the size, deadline or stream contract."""
+
+    def __init__(self, reason, message):
+        super().__init__(message)
+        self.reason = reason
+
+
+class _StreamIncomplete(requests.exceptions.ConnectionError):
+    """The connection failed part-way through the body; retryable like a reset."""
 
 
 class OpenInsiderAgent:
@@ -41,6 +54,9 @@ class OpenInsiderAgent:
     CACHE_SCHEMA_VERSION = 1
     DEFAULT_CACHE_PATH = os.path.join("state", "openinsider_last_good.json")
     RETRY_DELAYS_SECONDS = (2.0, 5.0, 10.0)
+    # A 500-row screener page is well under 1 MB; 8 MiB leaves ample headroom.
+    MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+    READ_DEADLINE_SECONDS = 45.0
     _SOURCE_REQUEST_GATE_LOCK = Lock()
     _SOURCE_LAST_REQUEST_STARTED = None
 
@@ -409,16 +425,14 @@ class OpenInsiderAgent:
             limit=self.run_limit,
         )
         response = None
+        html = read_error = None
         transport_scheme = "https"
 
         for attempt_index in range(len(self.RETRY_DELAYS_SECONDS) + 1):
             health["attempts"] += 1
             try:
-                response = self._session_get_with_gate(
-                    self.base_url,
-                    params=params,
-                    headers=self.headers,
-                    timeout=self.request_timeout,
+                response, html, read_error = self._get_and_read(
+                    self.base_url, params, "https"
                 )
             except requests.exceptions.Timeout as exc:
                 health["failure_reason"] = "timeout"
@@ -460,11 +474,8 @@ class OpenInsiderAgent:
             health["transport_scheme"] = "http"
             health["transport_secure"] = False
             try:
-                response = self._session_get_with_gate(
-                    self.insecure_fallback_url,
-                    params=params,
-                    headers=self.headers,
-                    timeout=self.request_timeout,
+                response, html, read_error = self._get_and_read(
+                    self.insecure_fallback_url, params, "http"
                 )
             except requests.exceptions.Timeout as exc:
                 health["failure_reason"] = "http_fallback_timeout"
@@ -521,15 +532,26 @@ class OpenInsiderAgent:
             logger.warning("OpenInsider returned %s", status_code)
             return self._failure_with_cache(health)
 
+        if read_error is not None:
+            health["status"] = "ERROR"
+            health["failure_reason"] = (
+                f"http_fallback_{read_error.reason}"
+                if transport_scheme == "http"
+                else read_error.reason
+            )
+            health["error"] = str(read_error)
+            logger.warning("OpenInsider response rejected: %s", read_error)
+            return self._failure_with_cache(health)
+
         try:
-            trades = self._parse_tables_with_pandas(response.text)
+            trades = self._parse_tables_with_pandas(html)
             health["parser"] = "pandas" if trades else None
             if not trades:
                 logger.info(
                     "OpenInsider pandas parser found no rows; "
                     "trying BeautifulSoup fallback"
                 )
-                trades = self._parse_tables_with_bs4(response.text)
+                trades = self._parse_tables_with_bs4(html)
                 health["parser"] = "beautifulsoup" if trades else None
                 health["fallback_used"] = True
         except Exception as exc:
@@ -728,15 +750,117 @@ class OpenInsiderAgent:
         with self._health_lock:
             self.health = deepcopy(health)
 
-    def _session_get_with_gate(self, url, **kwargs):
-        """Space and serialize physical OpenInsider requests process-wide."""
+    def _session_get_with_gate(self, url, reader=None, **kwargs):
+        """Space and serialize physical OpenInsider requests process-wide.
+
+        The body is streamed, so ``reader(response)`` runs while the gate is
+        still held: the whole download, not just the headers, stays serialized.
+        """
         with OpenInsiderAgent._SOURCE_REQUEST_GATE_LOCK:
             self._wait_for_request_slot_locked()
             # Redirect targets must be evaluated before any follow-up request.
             # Requests otherwise follows Location automatically, bypassing the
             # final response URL guard for the first off-host hop.
             kwargs["allow_redirects"] = False
-            return self.session.get(url, **kwargs)
+            kwargs["stream"] = True
+            response = self.session.get(url, **kwargs)
+            if reader is None:
+                return response
+            try:
+                return response, reader(response)
+            finally:
+                self._close_response(response)
+
+    def _get_and_read(self, url, params, scheme):
+        """One gated request; a trusted 200's body is read with the size cap.
+
+        Returns (response, html or None, _BoundedReadError or None). A transport
+        failure part-way through the body is raised as a ConnectionError so the
+        caller's retry policy applies, as it did before streaming.
+        """
+        def read(response):
+            if (getattr(response, "status_code", None) != 200
+                    or not self._trusted_response_url(
+                        getattr(response, "url", ""), expected_scheme=scheme)):
+                return None, None
+            try:
+                return self._read_bounded_text(response), None
+            except _BoundedReadError as exc:
+                if exc.reason == "response_stream_incomplete":
+                    raise _StreamIncomplete(str(exc)) from None
+                return None, exc
+
+        response, (html, read_error) = self._session_get_with_gate(
+            url,
+            reader=read,
+            params=params,
+            headers=self.headers,
+            timeout=self.request_timeout,
+        )
+        return response, html, read_error
+
+    def _read_bounded_text(self, response):
+        """Read at most MAX_RESPONSE_BYTES of decoded body within a total deadline.
+
+        The 500-row limit only applies after parsing, so the download itself
+        must be bounded before pandas or BeautifulSoup see it (this includes
+        the plaintext fallback, whose body an on-path party can shape). Mirrors
+        the OMNI acquisition client: stream, count decoded bytes, stop early.
+        Each socket read is bounded by request_timeout and the deadline is
+        checked after every read, so the worst case is READ_DEADLINE_SECONDS
+        plus one read timeout.
+        """
+        headers = getattr(response, "headers", None) or {}
+        length = str(headers.get("Content-Length") or "").strip()
+        if length.isdecimal() and int(length) > self.MAX_RESPONSE_BYTES:
+            raise _BoundedReadError(
+                "response_size_limit",
+                f"Declared length {length} exceeds {self.MAX_RESPONSE_BYTES} bytes",
+            )
+        deadline = float(self._clock()) + self.READ_DEADLINE_SECONDS
+        body = bytearray()
+        raw = getattr(response, "raw", None)
+        if isinstance(raw, urllib3.response.BaseHTTPResponse):
+            # read1 returns after at most one socket read, so the deadline is
+            # checked between reads. iter_content(n) blocks until n bytes have
+            # arrived, which a slow trickle can stretch indefinitely.
+            chunks = iter(lambda: raw.read1(65536, decode_content=True), b"")
+        else:
+            chunks = response.iter_content(65536)
+        try:
+            # Both paths yield decoded (decompressed) bytes, so the cap also
+            # bounds gzip/deflate expansion.
+            for chunk in chunks:
+                body.extend(chunk)
+                if len(body) > self.MAX_RESPONSE_BYTES:
+                    raise _BoundedReadError(
+                        "response_size_limit",
+                        f"Response exceeds {self.MAX_RESPONSE_BYTES} decoded bytes",
+                    )
+                if float(self._clock()) > deadline:
+                    raise _BoundedReadError(
+                        "read_deadline_exceeded",
+                        f"Response body took longer than {self.READ_DEADLINE_SECONDS}s",
+                    )
+        except (requests.exceptions.RequestException,
+                urllib3.exceptions.HTTPError, OSError) as exc:
+            raise _BoundedReadError(
+                "response_stream_incomplete", type(exc).__name__
+            ) from None
+        encoding = getattr(response, "encoding", None) or "utf-8"
+        try:
+            return bytes(body).decode(encoding, errors="replace")
+        except LookupError:
+            return bytes(body).decode("utf-8", errors="replace")
+
+    @staticmethod
+    def _close_response(response):
+        close = getattr(response, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:
+                pass
 
     def _wait_for_request_slot(self):
         """Reserve a process-wide request slot without performing I/O."""
@@ -784,6 +908,8 @@ class OpenInsiderAgent:
 
     @classmethod
     def _connection_failure_reason(cls, exc):
+        if isinstance(exc, _StreamIncomplete):
+            return "response_stream_incomplete"
         text = cls._error_text(exc).lower()
         if (
             "winerror 10061" in text
