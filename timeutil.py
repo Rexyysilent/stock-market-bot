@@ -169,16 +169,25 @@ def newest(stamps):
 def split_fresh_records(records, time_field, max_age_days, now=None):
     """Return (fresh, dropped) using the brief's source-time policy.
 
-    A missing or unparseable timestamp fails a freshness gate. Dropped rows are
-    copied and annotated for data_quality; source records are never mutated.
+    A missing, unparseable, or future timestamp fails a freshness gate. The
+    source-time window is closed at both ends: [now - max_age_days, now].
+    Dropped rows are copied and annotated for data_quality; source records
+    are never mutated. Scheduled event times belong in separate fields and
+    must not be used to establish a publication's freshness.
     """
     now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    now = now.astimezone(timezone.utc)
     cutoff = to_utc_z(now - timedelta(days=max_age_days))
+    latest = to_utc_z(now)
     fresh, dropped = [], []
     for record in records or []:
         stamp = to_utc_z(record.get(time_field))
         if stamp is None:
             dropped.append({**record, "as_of": None, "drop_reason": "undated"})
+        elif stamp > latest:
+            dropped.append({**record, "as_of": stamp, "drop_reason": "future"})
         elif stamp < cutoff:
             dropped.append({**record, "as_of": stamp, "drop_reason": "stale"})
         else:

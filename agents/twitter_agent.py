@@ -9,6 +9,7 @@ that never ran (CAPTCHA blocked, use_headless=False by default).
 import requests
 import xml.etree.ElementTree as ET
 import logging
+from collections import Counter
 from datetime import datetime, timezone
 from config import NITTER_INSTANCES, TWITTER_ACCOUNTS, TWITTER_MAX_AGE_DAYS
 from timeutil import split_fresh_records
@@ -57,7 +58,10 @@ class TwitterAgent:
             "nitter_accounts_expected": 0,
             "nitter_accounts_http_ok": 0,
             "nitter_accounts_with_items": 0,
+            "nitter_accounts_with_fresh_items": 0,
             "nitter_account_failures": [],
+            "freshness_contract": "bounded-source-time-1",
+            "freshness_dropped": {},
         }
 
     def _record_status(self, source, status_code):
@@ -227,17 +231,32 @@ class TwitterAgent:
         """
         self.health = self._empty_health()
         self.health["prefer_nitter"] = prefer_nitter
+        self._dropped_twitter_signals = []
         tweets = []
 
         if prefer_nitter:
             logger.info("Trying Nitter RSS for Twitter intel...")
             tweets = self.get_twitter_via_nitter(max_accounts=max_queries)
+            tweets, dropped = split_fresh_records(
+                tweets, "date", TWITTER_MAX_AGE_DAYS, now=self.now_utc
+            )
+            self._dropped_twitter_signals.extend(dropped)
+            self.health["nitter_accounts_with_fresh_items"] = len({
+                row["account"] for row in tweets if row.get("account")
+            })
 
+        # A 200 response containing only stale/invalid items is not usable
+        # primary coverage. Keep its exclusions when the fallback is tried.
         if not tweets:
             logger.info("Using Google News RSS fallback for Twitter intel...")
             tweets = self.get_twitter_via_rss(max_queries)
+            tweets, dropped = split_fresh_records(
+                tweets, "date", TWITTER_MAX_AGE_DAYS, now=self.now_utc
+            )
+            self._dropped_twitter_signals.extend(dropped)
 
-        # Deduplicate by link
+        # Filter before deduplication: an invalid occurrence of a link must
+        # not hide a later occurrence carrying a usable publication time.
         seen = set()
         unique_tweets = []
         for t in tweets:
@@ -246,9 +265,9 @@ class TwitterAgent:
                 seen.add(key)
                 unique_tweets.append(t)
 
-        unique_tweets, self._dropped_twitter_signals = split_fresh_records(
-            unique_tweets, "date", TWITTER_MAX_AGE_DAYS, now=self.now_utc
-        )
+        self.health["freshness_dropped"] = dict(Counter(
+            row["drop_reason"] for row in self._dropped_twitter_signals
+        ))
         self.health["signals"] = len(unique_tweets)
         if not unique_tweets:
             self.health["status"] = "WARN"
@@ -257,9 +276,12 @@ class TwitterAgent:
             self.health["status"] = "WARN"
         elif (
             self.health.get("nitter_accounts_expected", 0)
-            and self.health.get("nitter_accounts_with_items", 0)
+            and self.health.get("nitter_accounts_with_fresh_items", 0)
             < self.health.get("nitter_accounts_expected", 0)
         ):
+            self.health["status"] = "WARN"
+        elif any(self.health["freshness_dropped"].get(reason)
+                 for reason in ("future", "undated")):
             self.health["status"] = "WARN"
         else:
             self.health["status"] = "OK"
@@ -268,7 +290,7 @@ class TwitterAgent:
         return unique_tweets
 
     def get_dropped_twitter_signals(self):
-        """Stale/undated rows removed by the seven-day freshness gate."""
+        """Stale, undated, or future rows removed by the source-time gate."""
         return [dict(row) for row in self._dropped_twitter_signals]
 
     def format_for_context(self, tweets):

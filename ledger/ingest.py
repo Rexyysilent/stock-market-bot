@@ -161,6 +161,81 @@ def _generated_at(data, path):
     raise ValueError(f"brief has no usable generated_at: {path}")
 
 
+def _run_evidence(data, generated_at, brief_sha256):
+    """Retain quality assertions separately from signal extraction semantics.
+
+    A missing marker stays unknown/not-declared. It is never upgraded to OK,
+    independently verified real data, or an observed source timestamp.
+    """
+    health = data.get("health")
+    health = health if isinstance(health, dict) else {}
+    status = health.get("status")
+    status = status if status in ("OK", "WARN", "ERROR") else "UNKNOWN"
+    errors = health.get("errors")
+    sources = health.get("sources")
+    stages = sources.get("pipeline_stages") if isinstance(sources, dict) else None
+    failed = stages.get("failed") if isinstance(stages, dict) else None
+    containers = [data] + [data[key] for key in ("run_context", "fixture_metadata", "meta", "metadata")
+                           if isinstance(data.get(key), dict)]
+    marker_keys = ("synthetic", "is_synthetic", "demo", "is_demo", "is_fixture",
+                   "fabricated", "is_fabricated")
+    marker_values = [container[key] for container in containers for key in marker_keys
+                     if key in container]
+    synthetic_labels = {"synthetic", "synthetic-fixture", "synthetic_fixture", "fabricated",
+                        "demo", "fixture", "test-fixture"}
+    label_declares_synthetic = any(
+        isinstance(container.get(key), str) and container[key].strip().lower() in synthetic_labels
+        for container in containers
+        for key in ("data_kind", "evidence_kind", "kind", "origin", "data_origin", "source", "label")
+    )
+    if any(value is True for value in marker_values) or label_declares_synthetic:
+        synthetic = "declared_synthetic"
+    elif any(type(value) is not bool for value in marker_values):
+        synthetic = "invalid_marker"
+    elif marker_values:
+        synthetic = "declared_nonsynthetic"
+    else:
+        synthetic = "not_declared"
+    raw_time = data.get("generated_at")
+    time_origin = "recovered_or_unverified"
+    if isinstance(raw_time, str):
+        try:
+            parsed = datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
+            if (parsed.tzinfo is not None and parsed.utcoffset() is not None
+                    and to_utc_z(raw_time) == generated_at):
+                time_origin = "explicit_archive_timestamp"
+        except (ValueError, OverflowError):
+            pass
+    return {
+        "contract": "ledger-run-evidence-1", "brief_sha256": brief_sha256,
+        "source_schema_version": data.get("schema_version"),
+        "generated_at": generated_at,
+        "generated_at_origin": time_origin,
+        "health_status": status,
+        "health_error_count": len(errors) if isinstance(errors, list) else None,
+        "failed_stage_count": len(failed) if isinstance(failed, list) else None,
+        "failed_stage_shape_valid": failed is None or isinstance(failed, list),
+        "synthetic_status": synthetic,
+    }
+
+
+def _store_run_evidence(conn, run_id, metadata):
+    payload = _canonical(metadata)
+    digest = _digest(payload)
+    existing = conn.execute(
+        "SELECT brief_sha256,metadata_json,metadata_sha256 FROM run_evidence WHERE run_id=?",
+        (run_id,),
+    ).fetchone()
+    stored = (metadata["brief_sha256"], payload, digest)
+    if existing and tuple(existing) != stored:
+        raise ValueError(f"archive quality evidence mutation detected for run {run_id}")
+    conn.execute(
+        """INSERT OR IGNORE INTO run_evidence(
+             run_id,brief_sha256,metadata_json,metadata_sha256) VALUES(?,?,?,?)""",
+        (run_id, *stored),
+    )
+
+
 def _iter_signals(data, run_id, pipeline_version, cohort=None):
     sections = data.get("sections")
     if not isinstance(sections, dict):
@@ -400,6 +475,7 @@ def ingest_file(path, conn=None):
             "INSERT OR IGNORE INTO runs(run_id,generated_at,regime,brief_sha256,pipeline_version) VALUES(?,?,?,?,?)",
             (run_id, generated_at, regime, sha, pipeline_version),
         )
+        _store_run_evidence(conn, run_id, _run_evidence(data, generated_at, sha))
         _store_run_cohort(conn, run_id, cohort)
         for signal in _iter_signals(data, run_id, pipeline_version, cohort):
             inserted = conn.execute(

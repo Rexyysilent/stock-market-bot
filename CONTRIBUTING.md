@@ -10,7 +10,7 @@ This project is a local-first research pipeline. Contributions should preserve t
 - Describe new outputs as observations, measurements, source evidence, or compatibility labels. Do not add recommendations, target prices, position sizing, execution instructions, paid signal tiers, or performance marketing.
 - Preserve legacy `signal` and `alert` keys only where compatibility requires them; document their deterministic meaning rather than extending advisory terminology.
 
-Create a Python 3.11 or 3.12 virtual environment and install both locked sets.
+Create a Python 3.11.5+ (within 3.11) or 3.12 virtual environment and install both locked sets.
 `requirements.lock` contains runtime dependencies; `requirements-ci.lock` adds
 the contributor and CI tools used below:
 

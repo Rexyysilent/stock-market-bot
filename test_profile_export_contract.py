@@ -198,7 +198,7 @@ print(json.dumps({
         self.assertEqual(actual["news_editorial"], [])
         self.assertEqual(actual["config_mode"], "off")
         self.assertEqual(actual["schema"], "2.9")
-        self.assertEqual(actual["pipeline"], "2.6.5")
+        self.assertEqual(actual["pipeline"], "2.6.6")
         self.assertEqual(actual["policy_fmp"], ["AAA", "BBB", "SPY"])
         self.assertEqual(actual["watchlist"], ["AAA", "BBB", "SPY", "SI=F"])
 

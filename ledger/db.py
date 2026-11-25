@@ -15,6 +15,15 @@ CREATE TABLE IF NOT EXISTS runs (
   pipeline_version TEXT NOT NULL
 );
 
+-- Additive archive-quality evidence. Old runs remain unknown until the exact
+-- archive bytes are replayed; a migration must never fabricate healthy runs.
+CREATE TABLE IF NOT EXISTS run_evidence (
+  run_id TEXT PRIMARY KEY REFERENCES runs(run_id),
+  brief_sha256 TEXT NOT NULL,
+  metadata_json TEXT NOT NULL,
+  metadata_sha256 TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS run_cohorts (
   run_id TEXT PRIMARY KEY REFERENCES runs(run_id),
   status TEXT NOT NULL CHECK(status IN ('valid', 'refused', 'legacy_unfrozen')),

@@ -12,6 +12,15 @@ from diagnostics import diagnose
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_runtime_advice_matches_dependency_python_floor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for version, expected in (((3, 11, 4), "warning"), ((3, 11, 5), "ok"),
+                                      ((3, 12, 0), "ok"), ((3, 13, 0), "warning")):
+                with self.subTest(version=version), patch("diagnostics.sys.version_info", version):
+                    checks = {item["check"]: item for item in diagnose(Path(directory))["checks"]}
+                    self.assertEqual(checks["python"]["status"], expected)
+                    self.assertIn("3.11.5", checks["python"]["next_action"])
+
     def test_runtime_install_does_not_require_optional_validation_tools(self):
         with tempfile.TemporaryDirectory() as directory:
             with patch("diagnostics.importlib.util.find_spec",

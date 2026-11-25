@@ -1,6 +1,7 @@
 """Approved directory snapshots for the dated registry (T9). Public sources only.
 
     python registry_snapshot.py capture OUT_DIR
+    python registry_snapshot.py capture OUT_DIR --directory-only
     python registry_snapshot.py enrich OUT_DIR --write registry/instrument-registry.json
 
 capture  three bounded requests (SEC company_tickers_exchange.json, Nasdaq
@@ -22,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -58,66 +60,170 @@ def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def capture(out_dir, user_agent, *, opener=urllib.request.urlopen, now=None):
-    """Download the three directory parts once; returns the manifest."""
-    if not re.search(r"[^\s@]+@[^\s@]+\.[^\s@]+", str(user_agent or "")):
+DIRECTORY_PARTS = ("nasdaq_listed", "nasdaq_other_listed")
+
+
+def _instant(value):
+    value = value or _now()
+    stamp = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if stamp.tzinfo is None:
+        raise ValueError("snapshot time needs an explicit time zone")
+    return stamp.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _completeness(manifest, loaded):
+    requested = manifest.get("requested_parts", list(PARTS))
+    manifest["complete"] = set(loaded) == set(PARTS)
+    manifest["directory_complete"] = set(DIRECTORY_PARTS).issubset(loaded)
+    manifest["requested_complete"] = bool(requested) and set(requested).issubset(loaded)
+
+
+def capture(out_dir, user_agent=None, *, opener=urllib.request.urlopen, now=None,
+            directory_only=False):
+    """Capture once into a new snapshot; never replace prior files.
+
+    Directory-only mode performs exactly two Nasdaq requests. SEC remains
+    explicitly not_requested and full-snapshot completeness stays false.
+    """
+    if not directory_only and (
+            not re.search(r"[^\s@]+@[^\s@]+\.[^\s@]+", str(user_agent or ""))
+            or str(user_agent).strip() == "StockMarketBot contact@example.com"):
         raise ValueError("SEC requires a User-Agent with a real contact email")
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    captured_at = now or _now()
+    targets = [out / "manifest.json", *(out / p["file"] for p in PARTS.values())]
+    if any(p.exists() or p.is_symlink() for p in targets):
+        raise FileExistsError("snapshot files already exist; choose a new output directory")
+    captured_at = _instant(now)
     parts = {}
-    for part, spec in PARTS.items():
-        request = urllib.request.Request(spec["url"], headers={
-            "User-Agent": user_agent, "Accept-Encoding": "identity"})
-        record = {"source": spec["source"], "url": spec["url"], "file": spec["file"],
-                  "captured_at": captured_at}
-        try:
-            if spec["url"].startswith("https://www.sec.gov/"):
-                from source_request_gate import wait_for_sec
-                wait_for_sec()
-            with opener(request, timeout=30) as response:
-                data = response.read(MAX_PART_BYTES + 1)
-            if len(data) > MAX_PART_BYTES:
-                raise ValueError("part exceeds the size limit")
-            (out / spec["file"]).write_bytes(data)
-            record.update(status="captured", bytes=len(data),
-                          sha256=hashlib.sha256(data).hexdigest())
-        except Exception as error:  # recorded, not raised: a snapshot may be partial
-            record.update(status="failed", error=type(error).__name__)
-        parts[part] = record
-    manifest = {"contract": "registry-snapshot-1", "captured_at": captured_at, "parts": parts,
-                "complete": all(p["status"] == "captured" for p in parts.values())}
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    requested = list(DIRECTORY_PARTS) if directory_only else list(PARTS)
+    # Exclusive creation reserves the capture before any request. A crashed
+    # capture leaves an incomplete file that cannot be silently overwritten.
+    with (out / "manifest.json").open("x", encoding="utf-8") as manifest_file:
+        for part, spec in PARTS.items():
+            record = {"source": spec["source"], "url": spec["url"], "file": spec["file"],
+                      "captured_at": captured_at if part in requested else None}
+            if part not in requested:
+                record.update(status="not_requested", reason="directory_only")
+                parts[part] = record
+                continue
+            request = urllib.request.Request(spec["url"], headers={
+                "User-Agent": user_agent or "Heptarchy public directory research",
+                "Accept-Encoding": "identity"})
+            try:
+                if part == "sec_company_tickers_exchange":
+                    from source_request_gate import wait_for_sec
+                    wait_for_sec()
+                with opener(request, timeout=30) as response:
+                    data = response.read(MAX_PART_BYTES + 1)
+                if len(data) > MAX_PART_BYTES:
+                    raise ValueError("part exceeds the size limit")
+                with (out / spec["file"]).open("xb") as part_file:
+                    part_file.write(data)
+                record.update(status="captured", bytes=len(data),
+                              sha256=hashlib.sha256(data).hexdigest())
+            except Exception as error:  # recorded: a snapshot may be partial
+                record.update(status="failed", error=type(error).__name__)
+            parts[part] = record
+        manifest = {"contract": "registry-snapshot-1", "captured_at": captured_at,
+                    "requested_parts": requested, "parts": parts}
+        _completeness(manifest, {p for p, r in parts.items() if r["status"] == "captured"})
+        manifest_file.write(json.dumps(manifest, indent=2) + "\n")
     return manifest
 
 
 def _load_parts(folder):
     folder = Path(folder)
     manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("contract") != "registry-snapshot-1":
+        raise ValueError("unknown registry snapshot contract")
+    if not manifest.get("captured_at"):
+        raise ValueError("snapshot capture time is required")
+    _instant(manifest["captured_at"])
     loaded = {}
     for part, record in manifest["parts"].items():
         if record.get("status") != "captured":
             continue
-        data = (folder / record["file"]).read_bytes()
+        if part not in PARTS or record.get("file") != PARTS[part]["file"]:
+            record["status"] = "invalid_part"
+            continue
+        try:
+            with (folder / record["file"]).open("rb") as part_file:
+                data = part_file.read(MAX_PART_BYTES + 1)
+        except OSError:
+            record["status"] = "unavailable"
+            continue
+        if len(data) > MAX_PART_BYTES or len(data) != record.get("bytes"):
+            record["status"] = "integrity_failed"
+            continue
         if hashlib.sha256(data).hexdigest() != record["sha256"]:
             record["status"] = "integrity_failed"
             continue
-        loaded[part] = data.decode("utf-8")
-    manifest["complete"] = set(loaded) == set(PARTS)
+        try:
+            loaded[part] = data.decode("utf-8")
+        except UnicodeDecodeError:
+            record["status"] = "decode_failed"
+    _completeness(manifest, loaded)
     return manifest, loaded
 
 
-def _directory(text, symbol_column):
+def parse_directory(text, symbol_column):
+    """Retain all rows and parser diagnostics; never overwrite a duplicate symbol."""
     lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return [], None, {"complete": False, "errors": ["empty_file"], "malformed_rows": 0}
     header = lines[0].split("|")
-    rows, created = {}, None
-    for line in lines[1:]:
+    required = {symbol_column, "Security Name", "Test Issue", "ETF"}
+    if symbol_column == "ACT Symbol":
+        required.add("Exchange")
+    if not required.issubset(header) or len(set(header)) != len(header):
+        return [], None, {"complete": False, "errors": ["invalid_header"], "malformed_rows": 0}
+    rows, created, errors, malformed = [], None, [], 0
+    for line_number, line in enumerate(lines[1:], 2):
         if line.startswith("File Creation Time"):
-            created = line.split("|")[0].split(":", 1)[1].strip()
+            value = line.split("|")[0].partition(":")[2].strip()
+            if created is not None:
+                errors.append("duplicate_footer")
+            created = value
             continue
-        row = dict(zip(header, line.split("|")))
-        rows[row[symbol_column].strip().upper()] = row
-    return rows, created
+        values = line.split("|")
+        if created is not None:
+            errors.append("rows_after_footer")
+        if len(values) != len(header):
+            malformed += 1
+            continue
+        row = dict(zip(header, values))
+        symbol = row[symbol_column].strip().upper()
+        if not symbol or not row["Security Name"].strip():
+            malformed += 1
+            continue
+        rows.append(dict(row, _symbol=symbol, _line=line_number))
+    if not created:
+        errors.append("missing_footer")
+    else:
+        try:
+            datetime.strptime(created, "%m%d%Y%H:%M")
+        except ValueError:
+            errors.append("invalid_footer_time")
+    if malformed:
+        errors.append("malformed_rows")
+    return rows, created, {"complete": not errors, "errors": sorted(set(errors)),
+                           "malformed_rows": malformed, "parsed_rows": len(rows)}
+
+
+def directory_records(parts):
+    """Normalize both directory files without treating symbols as stable identities."""
+    records, created, diagnostics = [], {}, {}
+    for part, column in (("nasdaq_listed", "Symbol"), ("nasdaq_other_listed", "ACT Symbol")):
+        if part not in parts:
+            diagnostics[part] = {"complete": False, "errors": ["part_unavailable"],
+                                 "malformed_rows": 0, "parsed_rows": 0}
+            continue
+        rows, created[part], diagnostics[part] = parse_directory(parts[part], column)
+        for row in rows:
+            venue = "XNAS" if part == "nasdaq_listed" else OTHER_VENUES.get(row.get("Exchange"))
+            records.append(dict(row, _part=part, _venue=venue))
+    return records, created, diagnostics
 
 
 def _name_key(name):
@@ -163,19 +269,16 @@ def enrich(registry, folder):
         for values in payload["data"]:
             row = dict(zip(fields, values))
             sec.setdefault(str(row["ticker"]).upper(), []).append(row)
-    directory, created = {}, {}
-    for part, column in (("nasdaq_listed", "Symbol"), ("nasdaq_other_listed", "ACT Symbol")):
-        if part in parts:
-            rows, created[part] = _directory(parts[part], column)
-            for symbol, row in rows.items():
-                if row.get("Test Issue") == "Y":
-                    continue
-                venue = "XNAS" if part == "nasdaq_listed" else OTHER_VENUES.get(row.get("Exchange"))
-                directory[symbol] = dict(row, _part=part, _venue=venue)
+    records, created, directory_diagnostics = directory_records(parts)
+    occurrences = Counter(row["_symbol"] for row in records)
+    ambiguous = {symbol for symbol, count in occurrences.items() if count > 1}
+    directory = {row["_symbol"]: row for row in records
+                 if row["_symbol"] not in ambiguous and row.get("Test Issue") == "N"
+                 and directory_diagnostics[row["_part"]]["complete"]}
 
     refs = {part: f"snapshot:{part}@{record['sha256'][:16]}"
             for part, record in manifest["parts"].items() if part in parts}
-    data = registry.to_dict()
+    data = copy.deepcopy(registry.to_dict())
     data["snapshots"] = data.get("snapshots", []) + [
         {"part": part, **{k: record.get(k) for k in ("source", "url", "captured_at", "status",
                                                      "bytes", "sha256")},
@@ -183,14 +286,21 @@ def enrich(registry, folder):
         for part, record in manifest["parts"].items()]
     issuers = {i["issuer_id"]: i for i in data["issuers"]}
     instruments = {i["instrument_id"]: i for i in data["instruments"]}
-    report = {"snapshot_complete": manifest["complete"], "matched": [], "conflicts": {},
-              "not_in_directory": [], "inferred_delistings": [], "activations": []}
+    report = {"snapshot_complete": manifest["complete"],
+              "directory_complete": all(d["complete"] for d in directory_diagnostics.values()),
+              "directory_diagnostics": directory_diagnostics,
+              "ambiguous_symbols": sorted(ambiguous), "matched": [], "reconfirmed": [],
+              "conflicts": {}, "not_in_directory": [], "inferred_delistings": [],
+              "activations": []}
 
     for listing in data["listings"]:
         instrument = instruments[listing["instrument_id"]]
         if listing["valid_to"] is not None or instrument["tier"] == "catalogue_candidate":
             continue
         symbol = listing["symbol"].upper()
+        if symbol in ambiguous:
+            report["conflicts"][symbol] = "ambiguous_directory_symbol"
+            continue
         row = directory.get(symbol)
         if row is None:
             report["not_in_directory"].append(symbol)
@@ -200,9 +310,19 @@ def enrich(registry, folder):
             report["conflicts"][symbol] = "unmapped_venue"
             continue
         kind = _security_type(row["Security Name"], row.get("ETF"))
+        if row.get("ETF") not in ("Y", "N"):
+            report["conflicts"][symbol] = "unknown_etf_flag"
+            continue
+        if re.search(r"\b(?:warrants?|rights?|units?)\b", row["Security Name"], re.I):
+            report["conflicts"][symbol] = "unsupported_security_class"
+            continue
+        if listing["known_from"] > manifest["captured_at"]:
+            report["conflicts"][symbol] = "snapshot_predates_registry_knowledge"
+            continue
         sec_rows = sec.get(symbol, [])
         issuer_id = instrument["issuer_id"]
         evidence = [refs[row["_part"]]]     # only the sources actually consulted
+        issuer_changed = False
         if kind != "exchange_traded_product":
             if len(sec_rows) != 1:
                 reason = "no_sec_row" if not sec_rows else "several_sec_rows"
@@ -224,23 +344,37 @@ def enrich(registry, folder):
             issuer = issuers.setdefault(issuer_id, {"issuer_id": issuer_id, "legal_name": None,
                                                     "cik": None, "evidence": [],
                                                     "verification": "unverified"})
-            issuer.update(legal_name=issuer["legal_name"] or filer["name"], cik=cik,
-                          evidence=list(dict.fromkeys(issuer["evidence"] + evidence)))
-            if VERIFICATION_RANK[issuer["verification"]] < VERIFICATION_RANK["snapshot_matched"]:
-                issuer["verification"] = "snapshot_matched"
+            issuer_fields = {"legal_name": issuer["legal_name"] or filer["name"], "cik": cik,
+                             "verification": issuer["verification"]}
+            if VERIFICATION_RANK[issuer_fields["verification"]] < VERIFICATION_RANK["snapshot_matched"]:
+                issuer_fields["verification"] = "snapshot_matched"
+            issuer_changed = any(issuer.get(k) != v for k, v in issuer_fields.items())
+            if issuer_changed:
+                issuer.update(issuer_fields, evidence=list(dict.fromkeys(issuer["evidence"] + evidence)))
         share_class = re.search(r"\bclass ([a-z])\b", row["Security Name"], re.I)
         verification = instrument["verification"]
         if VERIFICATION_RANK[verification] < VERIFICATION_RANK["snapshot_matched"]:
             verification = "snapshot_matched"
         # A name the heuristic cannot type keeps the registry's existing type.
-        instrument.update(issuer_id=issuer_id,
-                          type=instrument["type"] if kind == "unknown" else kind,
-                          share_class=share_class.group(1).upper() if share_class else instrument["share_class"],
-                          verification=verification,
-                          evidence=list(dict.fromkeys(instrument["evidence"] + evidence)))
-        listing.update(venue=row["_venue"], calendar="XNYS", currency="USD", price_scale=1,
-                       known_from=manifest["captured_at"], verification=verification,
-                       evidence=list(dict.fromkeys(listing["evidence"] + evidence)))
+        instrument_fields = {"issuer_id": issuer_id,
+                             "type": instrument["type"] if kind == "unknown" else kind,
+                             "share_class": share_class.group(1).upper() if share_class else instrument["share_class"],
+                             "verification": verification}
+        instrument_changed = any(instrument.get(k) != v for k, v in instrument_fields.items())
+        if instrument_changed:
+            instrument.update(instrument_fields,
+                              evidence=list(dict.fromkeys(instrument["evidence"] + evidence)))
+        listing_fields = {"venue": row["_venue"], "calendar": "XNYS", "currency": "USD",
+                          "price_scale": 1, "verification": verification}
+        listing_changed = any(listing.get(k) != v for k, v in listing_fields.items())
+        if issuer_changed or instrument_changed or listing_changed:
+            # New facts become known at this capture. Identical refreshes keep
+            # the original fields and evidence, so later snapshots cannot
+            # erase a previously established strict known-by resolution.
+            listing.update(listing_fields, known_from=manifest["captured_at"],
+                           evidence=list(dict.fromkeys(listing["evidence"] + evidence)))
+        else:
+            report["reconfirmed"].append(symbol)
         report["matched"].append(symbol)
 
     report["not_in_directory"].sort()
@@ -250,7 +384,7 @@ def enrich(registry, folder):
     report["reconcile"] = reconcile_listing_snapshot(enriched, {
         "source": "nasdaq-trader-directories", "captured_at": manifest["captured_at"],
         "expected_pages": 2,
-        "successful_pages": sum(p in parts for p in ("nasdaq_listed", "nasdaq_other_listed")),
+        "successful_pages": sum(directory_diagnostics[p]["complete"] for p in DIRECTORY_PARTS),
         "symbols": list(directory)})["registry_symbols"]
     return enriched, report
 
@@ -261,6 +395,8 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     cap = sub.add_parser("capture")
     cap.add_argument("out", type=Path)
+    cap.add_argument("--directory-only", action="store_true",
+                     help="capture only Nasdaq directories; SEC is explicitly not requested")
     enr = sub.add_parser("enrich")
     enr.add_argument("folder", type=Path)
     enr.add_argument("--write", type=Path,
@@ -270,10 +406,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.command == "capture":
         from config import SEC_USER_AGENT
-        manifest = capture(args.out, SEC_USER_AGENT)
+        manifest = capture(args.out, None if args.directory_only else SEC_USER_AGENT,
+                           directory_only=args.directory_only)
         print(json.dumps({k: v for k, v in manifest.items() if k != "parts"}
                          | {"parts": {p: r["status"] for p, r in manifest["parts"].items()}}, indent=2))
-        return 0 if manifest["complete"] else 1
+        return 0 if manifest["requested_complete"] else 1
     # Build on the existing registry so dated listings, terminal assertions,
     # bindings, capabilities and earlier snapshot records survive a refresh.
     base_path = args.write or DEFAULT_PATH

@@ -11,7 +11,7 @@ Top-level fields:
 
 - `generated_at` - ISO timestamp for the export
 - `schema_version` - public JSON contract (`2.8`)
-- `pipeline_version` - upstream logic era (`2.6.5`; historical `2.6.3` and `2.6.4` remain valid); ledger statistics never pool eras
+- `pipeline_version` - upstream logic era (`2.6.6`; historical `2.6.3`, `2.6.4` and `2.6.5` remain valid); ledger statistics never pool eras
 - `run_context` - immutable UTC/NYSE clock shared by all stages, including
   market state and the latest completed/settled session
 - `pipeline_time_seconds` - total runtime
@@ -724,7 +724,7 @@ lanes, and scores, not unavailable source bodies or all dropped-only shadow labe
 ## Optional profile contract (schema 2.9)
 
 Legacy/default configuration still emits 2.8. Explicit profile launches emit 2.9
-with `universe_contract_version=2.9-profile-universe-1`, pipeline 2.6.5, and a
+with `universe_contract_version=2.9-profile-universe-1`, pipeline 2.6.6, and a
 normalized `universe.profile`. The full configuration SHA-256 is part of
 `universe.name`; ordered membership has its own eight-character fingerprints.
 All 1–64 profile members are instrumented; editorial-only membership is empty
@@ -751,3 +751,26 @@ cash flow. They carry the selected source fields, statement periods, currency
 availability, valid-quarter count and an explicit reason when a derived runway is
 unavailable. Missing cash flow, debt or market capitalization is null, not zero;
 free cash flow is not substituted for operating cash flow.
+
+## Measurement era 2.6.6
+
+Shared source freshness now uses a closed interval from the declared oldest
+eligible source time through the run's observation time. A future source
+timestamp is rejected with its original timestamp and `future`
+reason retained. Because this can change CEO.ca classifications and downstream
+signals, state and measurements use a new pipeline era. Historical fixtures and
+archives are not relabelled.
+
+Twitter health adds `freshness_contract=bounded-source-time-1`,
+`nitter_accounts_with_fresh_items`, and `freshness_dropped` reason counts.
+Fallback and duplicate selection consider usable fresh items first. Exporter
+health uses the usable-account count when available and retains the older
+field as a compatibility fallback. Invalid, undated and future observations
+produce explicit freshness warnings rather than successful coverage claims.
+
+The cohort verifier, frozen monitor, listing audit and planner have their own
+versioned research contracts. They do not add trade decisions or forecast
+probabilities to the daily brief. The verifier preserves run quality evidence
+alongside ledger ingestion so failed, synthetic, timestamp-ambiguous and
+unbackfilled legacy runs cannot silently enter its denominator. See
+[SIGNAL_VERIFICATION.md](SIGNAL_VERIFICATION.md) for the measurement definitions.

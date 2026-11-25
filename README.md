@@ -54,7 +54,7 @@ The JSON includes source health, run context, timestamps, coverage gaps, retries
 ## Current pipeline
 
 This public research-tooling checkout implements the current collection pipeline (`schema_version=2.8`,
-`pipeline_version=2.6.5`):
+`pipeline_version=2.6.6`):
 
 - publisher-diverse headlines from official SEC, Federal Reserve, FDA, and Nasdaq feeds; optional FMP and Alpha Vantage adapters; bounded GDELT discovery; capped Google News fill; and explicit universe, macro, and impact-gated discovery lanes
 - separate ordered universes: 29 instrumented/signal-eligible tickers and 13
@@ -123,8 +123,8 @@ The packet is an unvalidated prototype until the
 explicit 1–64 instrument universe without mixing legacy state or archives.
 Profile exports use schema **2.9**, carry the normalized profile, and disable the
 legacy editorial expansion. Default runs preserve schema **2.8** and OMNI-02.
-Both use measurement era **2.6.5**; historical 2.6/2.7/2.8 exports, including
-the 2.6.4 era, remain readable.
+Both use measurement era **2.6.6**; historical 2.6/2.7/2.8 exports, including
+the 2.6.4 and 2.6.5 eras, remain readable.
 The 45-symbol profile is an example, not verified coverage or a portfolio.
 
 Basket and pair returns require exact completed-session windows and full fixed
@@ -137,6 +137,11 @@ so overlapping provider revisions cannot combine endpoints from different
 adjustment vintages. Cash-runway measurements expose missing operating cash flow,
 period mismatch, currency ambiguity and missing debt as typed unknowns; they do
 not use an infinite-runway sentinel or treat missing financials as zero.
+
+Era 2.6.6 also rejects future-dated source observations from freshness windows.
+Social fallback and duplicate selection operate on usable fresh items; a stale
+response no longer hides a fresh fallback. These changes start a new state and
+measurement era rather than changing earlier archives.
 
 The ten-scenario Windows launcher regression checks real exit-code handling:
 stderr warnings alone do not fail a run. Profile-aware scheduling remains a
@@ -151,7 +156,7 @@ or drag-and-drop area; the file is read locally by the browser.
 
 Requirements:
 
-- Python 3.11 or 3.12
+- Python 3.11.5 or later within 3.11, or Python 3.12
 - network access to the configured public sources
 - a real SEC EDGAR contact string
 
@@ -202,7 +207,7 @@ The viewer displays saved observations, not a live market feed. See [WORKSPACES]
 Common setup failures:
 
 - If a locked install reports a hash or version mismatch, confirm that the
-  interpreter is Python 3.11 or 3.12 and recreate the virtual environment.
+  interpreter is Python 3.11.5+ within 3.11, or Python 3.12, and recreate the virtual environment.
 - If an export reports SEC configuration failure, set a real `SEC_USER_AGENT`
   identifying the operator; do not copy the example value unchanged.
 - If the viewer shows no brief, use `--demo`, point `--data-dir` at a directory
@@ -323,6 +328,42 @@ python -m ledger rebuild
 python -m ledger import-legacy
 ```
 
+### Whole-cohort verification and missed-move review
+
+The separate verifier includes **every frozen instrumented cohort member**, even
+when an archive recorded no classification for that member. It compares exact
+next-open to +1/+5/+20 session-close windows with SPY, records unavailable prices,
+and distinguishes event coverage from direction. Thresholds and friction are
+explicit diagnostic assumptions; the output is not a portfolio return.
+
+```sh
+python -m ledger monitor-init --workspace workspaces/verification-v1 --archives archive/briefs --policy-id review-v1 --move-threshold 0.05 --round-trip-cost-bps 20
+python -m ledger monitor-run --workspace workspaces/verification-v1 --fetch
+python -m ledger monitor-status --workspace workspaces/verification-v1
+```
+
+Initialization freezes the actual local declaration time and assumptions.
+Reviews append reports and linked receipts without rewriting earlier results.
+Omit `--fetch` for a cache-only review. A relocated archive directory can be
+supplied with `monitor-run --archives PATH`. A report with no eligible archives
+says so; elapsed weeks alone never establish accuracy. No scheduler is installed
+by these commands. See the [verification guide](docs/SIGNAL_VERIFICATION.md).
+
+### Listing coverage audit
+
+```sh
+python registry_snapshot.py capture workspaces/directory-snapshot --directory-only
+python marketbot.py listings --snapshot workspaces/directory-snapshot
+```
+
+Directory-only capture needs no SEC request. Full capture still requires a real
+SEC contact. Captures are immutable and report partial failures. The read-only
+audit exposes stale identity evidence, unknown listing dates, missing provider
+capability observations, and configured coverage within the captured directory.
+The denominator includes only the declared heuristic common/ADR/ETP subset;
+it is neither historical market recall nor execution eligibility. An absent
+symbol is not automatically marked delisted or removed from old cohorts.
+
 ## Evidence history (sidecar)
 
 `python -m event_history import` indexes archived briefs into a separate,
@@ -383,6 +424,20 @@ and a [reproducible historical reference study](docs/research/portfolio-referenc
 The latter tests a fixed published-style rule, not a private bot, and does not
 establish predictive performance. Raw price acquisitions and private decisions
 stay in ignored workspaces.
+
+The independent planning experiment compares MCTS with exhaustive search,
+equal-budget random search, myopic selection and a no-transaction control:
+
+```sh
+python -m portfolio_lab planning-demo --seed 17 --out workspaces/planning-demo.json
+python -m portfolio_lab planning-compare --problem path/to/scenarios.json --out workspaces/planning-review.json
+```
+
+One shared hypothetical action schedule is evaluated across supplied scenarios,
+with explicit proportional costs. The fabricated demo establishes accounting
+and search behavior, not market forecasting accuracy. See the [predictor and
+MCTS research programme](docs/research/mcts-and-predictor-programme-20261125.md)
+for baselines, leakage controls, and promotion criteria.
 
 The legacy ledger now labels its pooled statistics explicitly and additionally
 reports development and holdout observations separately, excluding purged and
