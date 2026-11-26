@@ -1228,7 +1228,8 @@ def build_export_health(
     else:
         twitter_expected = twitter_health.get("nitter_accounts_expected", 0)
         twitter_with_items = twitter_health.get(
-            "nitter_accounts_with_items", 0
+            "nitter_accounts_with_fresh_items",
+            twitter_health.get("nitter_accounts_with_items", 0),
         )
         if twitter_expected and twitter_with_items < twitter_expected:
             failed_accounts = [
@@ -1245,6 +1246,16 @@ def build_export_health(
                 f"Twitter/Nitter covered {twitter_with_items}/"
                 f"{twitter_expected} configured accounts{failure_detail}.",
             )
+
+    temporal_drops = twitter_health.get("freshness_dropped", {})
+    if isinstance(temporal_drops, dict):
+        rejected = sum(
+            count for reason, count in temporal_drops.items()
+            if reason in ("future", "undated", "invalid_timestamp")
+            and isinstance(count, int) and not isinstance(count, bool) and count > 0
+        )
+        if rejected:
+            _add_unique(warnings, f"Twitter/X excluded {rejected} future or undated source records.")
 
     expected_options_symbols = list(
         dict.fromkeys(WATCHLIST_STOCKS + WATCHLIST_VULTURE)
@@ -1397,8 +1408,8 @@ def _generate_daily_brief():
     news_agent = NewsAgent(now=run_now)
     social_agent = SocialAgent(now=run_now, openinsider=openinsider_agent)
     watcher_agent = WatcherAgent(run_context=run_context)
-    research_agent = ResearchAgent(now=run_now)
-    twitter_agent = TwitterAgent(now=run_now)
+    research_agent = ResearchAgent()
+    twitter_agent = TwitterAgent()
     sec_agent = SECAgent(now=run_now, openinsider=openinsider_agent)
 
     # ═══════════════════════════════════════════════════════════════════

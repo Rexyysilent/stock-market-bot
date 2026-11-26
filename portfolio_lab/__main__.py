@@ -68,6 +68,14 @@ def main(argv=None):
     demo.add_argument("--out", type=Path, required=True)
     demo.add_argument("--stress", action="store_true")
     demo.set_defaults(cost_multiplier=1.0, delay_sessions=0)
+    planning_demo = sub.add_parser("planning-demo", help="Compare bounded planners on fabricated scenarios")
+    planning_compare = sub.add_parser("planning-compare", help="Compare planners on supplied finite scenarios")
+    planning_compare.add_argument("--problem", type=Path, required=True)
+    for item in (planning_demo, planning_compare):
+        item.add_argument("--simulations", type=int, default=512)
+        item.add_argument("--seed", type=int, default=0)
+        item.add_argument("--no-exhaustive", action="store_true")
+        item.add_argument("--out", type=Path)
     validate = sub.add_parser("validate", help="Validate local inputs, not provider truth or trading suitability")
     for name in ("study", "dataset", "decisions"):
         validate.add_argument(f"--{name}", type=Path, required=True)
@@ -104,7 +112,20 @@ def main(argv=None):
     economics.add_argument("--monthly-goal", type=float, default=0.0)
     args = parser.parse_args(argv)
     try:
-        if args.command == "demo":
+        if args.command in ("planning-demo", "planning-compare"):
+            from .planning import compare_planners, synthetic_problem
+            problem = synthetic_problem() if args.command == "planning-demo" else load_json(args.problem)
+            result = compare_planners(problem, simulations=args.simulations, seed=args.seed,
+                                      include_exhaustive=not args.no_exhaustive)
+            if args.out:
+                target = _private_output(args.out)
+                atomic_write_json(target, result, indent=2)
+                _emit({"report": str(target), "scenario_kind": result["scenario_kind"],
+                       "accuracy_claim": result["accuracy_claim"],
+                       "finite_model_log_growth_gap": result.get("finite_model_log_growth_gap")})
+            else:
+                _emit(result)
+        elif args.command == "demo":
             from .demo import demo_inputs
             return _evaluate(*demo_inputs(), args)
         if args.command in ("validate", "evaluate"):

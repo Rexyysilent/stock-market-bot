@@ -191,6 +191,72 @@ class SameDayTests(PacketCase):
         self.assertNotIn("nothing happened", packet["scope_statement"].lower())
 
 
+class SubjectNamespaceTests(PacketCase):
+    """A listing-symbol assertion is not an issuer-identity assertion."""
+
+    def seed_claims(self):
+        self.extract("subjects.json", "2026-09-21T14:00:00Z", [
+            {"source_key": "synthetic:issuer:ALFA", "kind": "filing",
+             "subject_id": "issuer:ALFA", "claims": {"revenue": claim("20")}},
+            {"source_key": "synthetic:symbol:ALFA", "kind": "filing",
+             "subject_id": "symbol:ALFA", "claims": {"revenue": claim("7")}},
+        ])
+
+    def test_bare_symbol_preserves_each_subject_claim(self):
+        prev = self.brief("prev.json", "2026-09-20T22:00:00Z")
+        self.seed_claims()
+        packet = self.packet(prev, self.brief("curr.json", PREV))
+        claims = [c for c in packet["changes"] if c.get("claim") == "revenue"]
+        self.assertEqual(len(claims), 2)
+        self.assertEqual({c["subject_id"]: c["values"][0]["value"] for c in claims},
+                         {"issuer:ALFA": "20", "symbol:ALFA": "7"})
+        for change in claims:
+            self.assertEqual({s["subject_id"] for s in change["sources"]},
+                             {change["subject_id"]})
+            self.assertIn(change["subject_id"], change["what_changed"])
+        note = render_note(packet)
+        self.assertIn("issuer:ALFA", note)
+        self.assertIn("symbol:ALFA", note)
+
+    def test_unchanged_groups_preserve_their_subjects(self):
+        self.seed_claims()
+        packet = self.packet(self.brief("prev.json", PREV), self.brief("curr.json", CURR))
+        self.assertEqual(packet["changes"], [])
+        self.assertEqual({c["subject_id"] for c in packet["unchanged_claims"]},
+                         {"issuer:ALFA", "symbol:ALFA"})
+        note = render_note(packet)
+        self.assertIn("issuer:ALFA", note)
+        self.assertIn("symbol:ALFA", note)
+
+    def test_amendment_of_issuer_does_not_replace_symbol_group(self):
+        self.seed_claims()
+        prev = self.brief("prev.json", PREV)
+        self.extract("amendment.json", "2026-09-22T09:00:00Z", [{
+            "source_key": "synthetic:issuer:amendment", "kind": "filing",
+            "subject_id": "issuer:ALFA", "claims": {"revenue": claim("18")}}])
+        self.relate("synthetic:issuer:amendment", "synthetic:issuer:ALFA", "supersedes_claim",
+                    "2026-09-22T09:30:00Z", from_claim="/claims/revenue",
+                    to_claim="/claims/revenue")
+        packet = self.packet(prev, self.brief("curr.json", CURR))
+        changes = [c for c in packet["changes"] if c.get("claim") == "revenue"]
+        self.assertEqual(len(changes), 1)
+        self.assertEqual((changes[0]["subject_id"], changes[0]["kind"]),
+                         ("issuer:ALFA", "claim_corrected"))
+        self.assertEqual(changes[0]["values"][0]["value"], "18")
+        self.assertEqual(changes[0]["previous_values"][0]["value"], "20")
+        self.assertEqual([(c["subject_id"], c["values"][0]["value"])
+                          for c in packet["unchanged_claims"]], [("symbol:ALFA", "7")])
+
+    def test_explicit_namespace_remains_a_narrow_filter(self):
+        prev = self.brief("prev.json", "2026-09-20T22:00:00Z")
+        self.seed_claims()
+        curr = self.brief("curr.json", PREV)
+        for subject in ("issuer:ALFA", "symbol:ALFA"):
+            packet = self.packet(prev, curr, subject=subject)
+            self.assertEqual(len(packet["changes"]), 1)
+            self.assertEqual(packet["changes"][0]["subject_id"], subject)
+
+
 class RegulatoryConflictTests(PacketCase):
     """Card: conflicting regulatory report; a scheduled meeting is not a decision."""
 

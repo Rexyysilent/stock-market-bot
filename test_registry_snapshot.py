@@ -60,7 +60,8 @@ class SnapshotCase(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def captured(self, fail=None, sec=None, nasdaq=None, other=None):
+    def captured(self, fail=None, sec=None, nasdaq=None, other=None, *, out=None,
+                 now="2026-09-28T10:30:00Z", directory_only=False):
         bodies = {"sec_company_tickers_exchange": json.dumps(sec or SEC).encode(),
                   "nasdaq_listed": (nasdaq or NASDAQ).encode(),
                   "nasdaq_other_listed": (other or OTHER).encode()}
@@ -72,12 +73,26 @@ class SnapshotCase(unittest.TestCase):
             if part == fail:
                 raise OSError("synthetic network failure")
             return FakeResponse(bodies[part])
-        manifest = capture(self.dir, "Example research contact@example.org", opener=opener,
-                           now="2026-09-28T10:30:00Z")
+        manifest = capture(out or self.dir,
+                           None if directory_only else "Example research contact@example.org",
+                           opener=opener, now=now, directory_only=directory_only)
         return manifest, calls
 
 
 class CaptureTests(SnapshotCase):
+    def test_capture_time_reflects_completed_downloads(self):
+        from unittest.mock import patch
+        before = "2026-09-28T10:30:00Z"
+        after = "2026-09-28T10:31:00Z"
+        clock = [before]
+        def opener(request, timeout):
+            clock[0] = after
+            return FakeResponse(NASDAQ.encode())
+        with patch("registry_snapshot._now", side_effect=lambda: clock[0]):
+            manifest = capture(self.dir, None, opener=opener, directory_only=True)
+        self.assertEqual(manifest["captured_at"], after)
+        self.assertEqual(manifest["parts"]["nasdaq_listed"]["captured_at"], after)
+
     def test_three_bounded_requests_with_contact_user_agent(self):
         manifest, calls = self.captured()
         self.assertEqual(len(calls), 3)
@@ -94,6 +109,38 @@ class CaptureTests(SnapshotCase):
     def test_capture_requires_a_contact_user_agent(self):
         with self.assertRaisesRegex(ValueError, "contact"):
             capture(self.dir, "no-contact", opener=lambda r, timeout: None)
+
+    def test_default_placeholder_sec_contact_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "contact"):
+            capture(self.dir, "StockMarketBot contact@example.com",
+                    opener=lambda r, timeout: self.fail("no request should run"))
+
+    def test_directory_only_needs_no_sec_contact_and_reports_its_scope(self):
+        manifest, calls = self.captured(directory_only=True)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all("nasdaqtrader.com" in c.full_url for c in calls))
+        self.assertFalse(manifest["complete"])
+        self.assertTrue(manifest["directory_complete"])
+        self.assertTrue(manifest["requested_complete"])
+        self.assertEqual(manifest["parts"]["sec_company_tickers_exchange"]["status"],
+                         "not_requested")
+
+    def test_existing_snapshot_is_refused_without_requests_or_byte_changes(self):
+        self.captured()
+        before = {p.name: p.read_bytes() for p in self.dir.iterdir()}
+        with self.assertRaisesRegex(FileExistsError, "already exist"):
+            capture(self.dir, "Example contact@example.org",
+                    opener=lambda r, timeout: self.fail("no request should run"))
+        self.assertEqual({p.name: p.read_bytes() for p in self.dir.iterdir()}, before)
+
+    def test_part_without_manifest_also_prevents_reuse(self):
+        path = self.dir / PARTS["nasdaq_listed"]["file"]
+        path.write_bytes(b"earlier acquisition")
+        with self.assertRaises(FileExistsError):
+            capture(self.dir, directory_only=True,
+                    opener=lambda r, timeout: self.fail("no request should run"))
+        self.assertEqual(path.read_bytes(), b"earlier acquisition")
+        self.assertFalse((self.dir / "manifest.json").exists())
 
 
 class EnrichTests(SnapshotCase):
@@ -227,6 +274,48 @@ class ReviewFixTests(SnapshotCase):
         self.assertEqual(parts("ALFA"), {"snapshot:sec_company_tickers_exchange",
                                          "snapshot:nasdaq_listed"})
         self.assertEqual(parts("FUND"), {"snapshot:nasdaq_other_listed"})
+
+
+class SnapshotHistoryTests(SnapshotCase):
+    def test_enrichment_does_not_mutate_the_supplied_registry(self):
+        self.captured()
+        base = seed()
+        before = json.dumps(base.to_dict(), sort_keys=True)
+        enriched, _ = enrich(base, self.dir)
+        self.assertEqual(json.dumps(base.to_dict(), sort_keys=True), before)
+        self.assertNotEqual(enriched.fingerprint(), base.fingerprint())
+
+    def test_identical_refresh_preserves_earlier_known_by_resolution(self):
+        self.captured()
+        first, _ = enrich(seed(), self.dir)
+        previous = first.resolve("ALFA", on="2026-09-28", known_by="2026-09-28T11:00:00Z")
+        later = self.dir / "later"
+        self.captured(out=later, now="2026-09-29T10:30:00Z")
+        second, report = enrich(first, later)
+        self.assertEqual(second.resolve("ALFA", on="2026-09-28", known_by="2026-09-28T11:00:00Z"),
+                         previous)
+        self.assertIn("ALFA", report["reconfirmed"])
+        self.assertEqual(len(second.snapshots), 6)
+
+    def test_new_listing_facts_are_not_backdated(self):
+        self.captured()
+        enriched, _ = enrich(seed(), self.dir)
+        self.assertEqual(enriched.resolve("ALFA", on="2026-09-28",
+                                         known_by="2026-09-28T09:00:00Z")["status"], "unknown")
+        self.assertEqual(enriched.resolve("ALFA")["listing"]["known_from"], "2026-09-28T10:30:00Z")
+
+    def test_ambiguous_directory_symbol_never_overwrites_another_row(self):
+        duplicate = NASDAQ.replace("File Creation Time", "ALFA|Other Issuer Common Stock|Q|N|N|100|N|N\nFile Creation Time")
+        self.captured(nasdaq=duplicate)
+        enriched, report = enrich(seed(), self.dir)
+        self.assertEqual(report["conflicts"]["ALFA"], "ambiguous_directory_symbol")
+        self.assertEqual(enriched.instrument("seed1:ALFA"), seed().instrument("seed1:ALFA"))
+
+    def test_bad_directory_shape_is_partial_and_cannot_upgrade_members(self):
+        self.captured(nasdaq=NASDAQ.split("File Creation Time")[0])
+        enriched, report = enrich(seed(), self.dir)
+        self.assertFalse(report["directory_complete"])
+        self.assertEqual(enriched.instrument("seed1:ALFA")["verification"], "unverified")
 
 if __name__ == "__main__":
     unittest.main()

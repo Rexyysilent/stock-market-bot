@@ -117,9 +117,18 @@ def main(argv=None):
     doctor =sub.add_parser("doctor", help="Read-only local diagnostics; never contacts providers or prints secrets")
     doctor.add_argument("--workspace", type=Path)
     doctor.add_argument("--universe", type=Path)
+    listings = sub.add_parser("listings", help="Audit listing identity, source age and current directory coverage")
+    listings.add_argument("--registry", type=Path)
+    listings.add_argument("--snapshot", type=Path, help="Captured directory folder; no provider requests")
+    listings.add_argument("--as-of", help="Timezone-qualified audit cutoff")
     args = parser.parse_args(argv)
     try:
-        if args.command == "doctor":
+        if args.command == "listings":
+            from instrument_registry import load_registry
+            from listing_audit import build_listing_audit
+            output = build_listing_audit(load_registry(args.registry), args.snapshot, as_of=args.as_of)
+            print(json.dumps(output, indent=2, ensure_ascii=False, allow_nan=False))
+        elif args.command == "doctor":
             from diagnostics import diagnose
             profile = load_profile(args.universe) if args.universe else None
             print(json.dumps(diagnose(ROOT, args.workspace, profile), indent=2, allow_nan=False))

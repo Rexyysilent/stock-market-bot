@@ -13,6 +13,7 @@ logger = logging.getLogger("SignalLedger.Prices")
 
 DEFAULT_INTERVAL = "1d"
 DEFAULT_ADJUSTMENT_BASIS = "provider_adjusted"
+_ANY_CURRENCY = object()
 
 _CACHE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS price_acquisitions (
@@ -280,6 +281,114 @@ def cache_rows(
     return acquisition_id
 
 
+def _resolved_window(row, *, bound):
+    metadata = {name: row[name] for name in (
+        "acquisition_id", "provider", "interval", "requested_start",
+        "requested_end", "adjustment_basis", "currency", "acquired_at",
+        "content_sha256",
+    )}
+    opened, closed = _price(row["entry_open"]), _price(row["exit_close"])
+    pair = (opened, closed) if opened is not None and closed is not None else None
+    return {"metadata": metadata, "open_close": pair, "bound": bound}
+
+
+def resolve_cached_window(
+    conn, ticker, start, end, *, provider, interval=DEFAULT_INTERVAL,
+    adjustment_basis=DEFAULT_ADJUSTMENT_BASIS, currency=_ANY_CURRENCY, acquired_not_before=None,
+):
+    """Read one coherent cached window without creating tables or bindings.
+
+    An exact binding always wins, including an incompatible identity or an
+    invalid endpoint pair: the caller must reject it rather than silently
+    replace its recorded basis. Otherwise choose the earliest compatible
+    acquisition containing both endpoints and meeting the optional minimum
+    acquisition time. Exact bindings remain visible for callers to validate.
+    Return its unchanged metadata, ``open_close`` pair, and whether an
+    exact binding already existed.
+
+    An omitted currency makes no currency assumption; retained metadata still
+    exposes its value for the caller to check. Explicit ``None`` requires an
+    acquisition whose currency is unknown. Callers checking availability at
+    a historical cutoff must compare it to the original acquired_at.
+    """
+    first = start.isoformat() if isinstance(start, date) else str(start)
+    last = end.isoformat() if isinstance(end, date) else str(end)
+    if date.fromisoformat(last) < date.fromisoformat(first):
+        raise ValueError("price window end must not precede start")
+    present = conn.execute(
+        """SELECT COUNT(*) FROM sqlite_master WHERE type='table'
+           AND name IN ('price_acquisitions','price_points','price_windows')"""
+    ).fetchone()[0]
+    if present != 3:
+        return None
+    bound = conn.execute(
+        """SELECT a.*,p.open AS entry_open,q.close AS exit_close
+           FROM price_windows w
+           JOIN price_acquisitions a ON a.acquisition_id=w.acquisition_id
+           LEFT JOIN price_points p
+             ON p.acquisition_id=a.acquisition_id AND p.session=w.entry_session
+           LEFT JOIN price_points q
+             ON q.acquisition_id=a.acquisition_id AND q.session=w.exit_session
+           WHERE w.ticker=? AND w.entry_session=? AND w.exit_session=?""",
+        (ticker, first, last),
+    ).fetchone()
+    if bound is not None:
+        return _resolved_window(bound, bound=True)
+    currency_clause = "" if currency is _ANY_CURRENCY else " AND a.currency IS ?"
+    arguments = [first, last, ticker, provider, interval, adjustment_basis, first, last]
+    if currency is not _ANY_CURRENCY:
+        arguments.append(currency)
+    candidates = conn.execute(
+        """SELECT a.*,p.open AS entry_open,q.close AS exit_close
+           FROM price_acquisitions a
+           JOIN price_points p ON p.acquisition_id=a.acquisition_id AND p.session=?
+           JOIN price_points q ON q.acquisition_id=a.acquisition_id AND q.session=?
+           WHERE a.ticker=? AND a.provider=? AND a.interval=?
+             AND a.adjustment_basis=?
+             AND a.requested_start<=? AND a.requested_end>=?""" + currency_clause,
+        arguments,
+    ).fetchall()
+    usable = []
+    earliest = (datetime.fromisoformat(_utc_timestamp(acquired_not_before))
+                if acquired_not_before is not None else None)
+    for row in candidates:
+        resolved = _resolved_window(row, bound=False)
+        if resolved["open_close"] is None:
+            continue
+        try:
+            acquired = datetime.fromisoformat(_utc_timestamp(row["acquired_at"]))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if earliest is not None and acquired < earliest:
+            continue
+        usable.append((acquired, row["acquisition_id"], resolved))
+    if not usable:
+        return None
+    return min(usable, key=lambda item: item[:2])[2]
+
+
+def bind_cached_window(
+    conn, ticker, start, end, *, provider, interval=DEFAULT_INTERVAL,
+    adjustment_basis=DEFAULT_ADJUSTMENT_BASIS, currency=None, acquired_not_before=None,
+):
+    """Bind a coherent retained subwindow; existing bindings remain immutable."""
+    _ensure_cache_schema(conn)
+    resolved = resolve_cached_window(
+        conn, ticker, start, end, provider=provider, interval=interval,
+        adjustment_basis=adjustment_basis, currency=currency, acquired_not_before=acquired_not_before,
+    )
+    if resolved is None or resolved["bound"]:
+        return False
+    first = start.isoformat() if isinstance(start, date) else str(start)
+    last = end.isoformat() if isinstance(end, date) else str(end)
+    conn.execute(
+        """INSERT OR IGNORE INTO price_windows(ticker,entry_session,exit_session,acquisition_id)
+           VALUES(?,?,?,?)""",
+        (ticker, first, last, resolved["metadata"]["acquisition_id"]),
+    )
+    return True
+
+
 def ensure_window(
     conn,
     ticker,
@@ -292,6 +401,8 @@ def ensure_window(
     adjustment_basis=DEFAULT_ADJUSTMENT_BASIS,
     currency=None,
     acquired_at=None,
+    acquisition_clock=None,
+    acquired_not_before=None,
     now=None,
     run_memo=None,
 ):
@@ -301,7 +412,12 @@ def ensure_window(
     result is remembered, and the window is fetched at most once per
     PRICE_MISS_BACKOFF_DAYS once it ended more than PRICE_MISS_RECENT_DAYS
     ago. ``run_memo`` (a dict owned by one run) stops the same window being
-    fetched twice in that run. Without ``now`` every call fetches.
+    fetched twice in that run. Without ``now`` every uncached call fetches.
+    ``now`` controls request/backoff accounting, not acquisition availability.
+    New data are timestamped after the response has been read, using
+    ``acquisition_clock`` or the real UTC clock. An explicit ``acquired_at``
+    remains available for caller-asserted retained/synthetic acquisitions and
+    cannot be combined with ``acquisition_clock``.
 
     Returns ok, empty, incomplete, or error. An incomplete acquisition remains
     retryable. An incompatible cache identity returns error rather than serving
@@ -315,8 +431,19 @@ def ensure_window(
     """
     if end < start:
         raise ValueError("price window end must not precede start")
+    if acquisition_clock is not None:
+        if not callable(acquisition_clock):
+            raise ValueError("acquisition_clock must be callable")
+        if acquired_at is not None:
+            raise ValueError("choose acquired_at or acquisition_clock, not both")
     first, last = start.isoformat(), end.isoformat()
     expected_provider = provider_name or _provider_identity(provider)
+    earliest = (datetime.fromisoformat(_utc_timestamp(acquired_not_before))
+                if acquired_not_before is not None else None)
+    bind_cached_window(
+        conn, ticker, start, end, provider=expected_provider, interval=interval,
+        adjustment_basis=adjustment_basis, currency=currency, acquired_not_before=earliest,
+    )
     metadata = get_window_metadata(conn, ticker, first, last)
     if metadata is not None:
         expected = (
@@ -336,6 +463,8 @@ def ensure_window(
                 "price cache identity mismatch for %s %s..%s", ticker, first, last
             )
             return "error"
+        if earliest is not None and datetime.fromisoformat(metadata["acquired_at"]) < earliest:
+            return "incomplete"
         if get_open_close(conn, ticker, first, last) is not None:
             return "ok"
     if now is not None:
@@ -368,6 +497,12 @@ def ensure_window(
     if (endpoints.get(first, {}).get("open") is None
             or endpoints.get(last, {}).get("close") is None):
         return finish("incomplete", remember=True)
+    completed_at = acquired_at
+    if completed_at is None:
+        completed_at = (acquisition_clock() if acquisition_clock is not None
+                        else datetime.now(timezone.utc))
+    if earliest is not None and datetime.fromisoformat(_utc_timestamp(completed_at)) < earliest:
+        return finish("incomplete", remember=False)
     cache_rows(
         conn,
         ticker,
@@ -378,7 +513,7 @@ def ensure_window(
         requested_end=last,
         adjustment_basis=adjustment_basis,
         currency=currency,
-        acquired_at=acquired_at or now,
+        acquired_at=completed_at,
     )
     if get_open_close(conn, ticker, first, last) is None:
         # Both endpoints arrived, yet the window cannot be read: an existing

@@ -18,8 +18,10 @@ def diagnose(root, workspace=None, profile=None):
     def add(name, status, action):
         checks.append({"check": name, "status": status, "next_action": action})
 
-    supported = sys.version_info[:2] in ((3, 11), (3, 12))
-    add("python", "ok" if supported else "warning", "Use Python 3.11 or 3.12 for the supported collection environment.")
+    supported = (sys.version_info[:2] == (3, 12)
+                 or (sys.version_info[:2] == (3, 11) and sys.version_info[:3] >= (3, 11, 5)))
+    add("python", "ok" if supported else "warning",
+        "Use Python 3.11.5+ within 3.11, or Python 3.12, for the supported collection environment.")
     required = ("dotenv", "requests", "pandas", "numpy", "yfinance", "pandas_market_calendars")
     missing = [name for name in required if importlib.util.find_spec(name) is None]
     add("provider_dependencies", "missing" if missing else "ok", "Install requirements.lock with --require-hashes." if missing else "Collection dependencies are installed; availability was not tested.")

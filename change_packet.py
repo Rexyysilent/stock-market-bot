@@ -147,7 +147,10 @@ def _summary(payload):
 
 
 def _claim_groups(view, subject_ids):
-    return {(g["claim"], g["period"], g["unit"]): g for g in view["claims"]
+    # A bare symbol queries both namespaces, but does not prove they denote
+    # the same issuer. Keep the qualified subject in the comparison key so
+    # one group's values (or amendment) cannot overwrite another's.
+    return {(g["subject_id"], g["claim"], g["period"], g["unit"]): g for g in view["claims"]
             if g["subject_id"] in subject_ids}
 
 
@@ -157,7 +160,7 @@ def _ref_source(ref, evidence):
 
 
 def _claim_change(key, group, before, sources, view):
-    name, period, unit = key
+    subject_id, name, period, unit = key
     values, superseded = [], []
     for ref in group["values"]:
         version_id, source_key = _ref_source(ref, sources.evidence)
@@ -210,8 +213,10 @@ def _claim_change(key, group, before, sources, view):
         what = f"{name} for {period}: {shown}."
     else:
         what = f"{name} for {period} now attributed as {shown}."
-    change = {"kind": kind, "claim": name, "period": period, "unit": unit,
-              "what_changed": what, "values": values, "superseded": superseded,
+    change = {"kind": kind, "subject_id": subject_id,
+              "subject_match": _subject_match(subject_id),
+              "claim": name, "period": period, "unit": unit,
+              "what_changed": f"{subject_id}: {what}", "values": values, "superseded": superseded,
               "origins": origins, "sources": [sources.public(v) for v in version_ids],
               "limitations": limitations, "next_evidence": needs}
     if before is not None:
@@ -455,7 +460,8 @@ def build_packet(conn, previous_path, current_path, subject, *, registry=None):
         before = prev_claims.get(key)
         if before is not None and (before["values"], before["superseded"]) == (
                 group["values"], group["superseded"]):
-            unchanged.append({"claim": key[0], "period": key[1], "unit": key[2],
+            unchanged.append({"subject_id": key[0], "subject_match": _subject_match(key[0]),
+                              "claim": key[1], "period": key[2], "unit": key[3],
                               "values": [{"value": r["value"],
                                           "source_key": _ref_source(r, sources.evidence)[1]}
                                          for r in group["values"]]})
@@ -561,7 +567,7 @@ def render_note(packet):
         lines.append("")
     if packet["unchanged_claims"]:
         lines += ["## Unchanged claims", ""]
-        lines += [f"- {u['claim']} for {u['period']}: "
+        lines += [f"- {u.get('subject_id', packet['subject'])}: {u['claim']} for {u['period']}: "
                   + ", ".join(f"{v['value']} ({v['source_key']})" for v in u["values"])
                   for u in packet["unchanged_claims"]]
         lines.append("")
