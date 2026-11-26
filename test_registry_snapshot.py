@@ -80,6 +80,19 @@ class SnapshotCase(unittest.TestCase):
 
 
 class CaptureTests(SnapshotCase):
+    def test_capture_time_reflects_completed_downloads(self):
+        from unittest.mock import patch
+        before = "2026-09-28T10:30:00Z"
+        after = "2026-09-28T10:31:00Z"
+        clock = [before]
+        def opener(request, timeout):
+            clock[0] = after
+            return FakeResponse(NASDAQ.encode())
+        with patch("registry_snapshot._now", side_effect=lambda: clock[0]):
+            manifest = capture(self.dir, None, opener=opener, directory_only=True)
+        self.assertEqual(manifest["captured_at"], after)
+        self.assertEqual(manifest["parts"]["nasdaq_listed"]["captured_at"], after)
+
     def test_three_bounded_requests_with_contact_user_agent(self):
         manifest, calls = self.captured()
         self.assertEqual(len(calls), 3)

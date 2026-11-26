@@ -334,9 +334,7 @@ def _inventory(root, source, *, cutoff, now, conn, previous, source_paths=None,
                 raise ValueError("missing_or_invalid_health_errors")
             if health.get("errors"):
                 raise ValueError("failed_archive")
-            stages = health.get("sources", {})
-            stages = stages.get("pipeline_stages", {}) if isinstance(stages, dict) else {}
-            if isinstance(stages, dict) and stages.get("failed"):
+            if evidence["failed_stage_count"] or not evidence["failed_stage_shape_valid"]:
                 raise ValueError("failed_archive")
             if not isinstance(data.get("sections"), dict):
                 raise ValueError("missing_sections")
@@ -361,6 +359,8 @@ def _inventory(root, source, *, cutoff, now, conn, previous, source_paths=None,
                           health=status, reason=None, run_id=identity)
             encountered.add(identity)
             accepted[identity] = record
+        except RecursionError:
+            record["reason"] = "archive_nesting_too_deep"
         except (OSError, ValueError, TypeError, OverflowError) as exc:
             record["reason"] = str(exc)[:300] or type(exc).__name__
         rows.append(record)
@@ -478,9 +478,15 @@ def run_monitor(workspace, fetch=False, as_of=None, archive_dir=None):
             except Exception as exc:
                 errors.append({"stage": "verification", "error_type": type(exc).__name__})
                 status = "failed"
-        window = _window(manifest, policy, accepted, cutoff)
+        # Earlier receipts may retain an archive the verifier now excludes.
+        # Keep its bytes and receipt, but do not count it toward readiness.
+        excluded_runs = verification["excluded_runs"] if verification else []
+        excluded = {row["run_id"] for row in excluded_runs
+                    if row["reason"] != "superseded_same_entry_session"}
+        eligible_archives = {key: row for key, row in accepted.items() if key not in excluded}
+        window = _window(manifest, policy, eligible_archives, cutoff)
         if status == "collecting":
-            if not accepted:
+            if not eligible_archives:
                 status = "awaiting_archives"
             elif not window["post_freeze_archive_dates"]:
                 status = "historical_only"

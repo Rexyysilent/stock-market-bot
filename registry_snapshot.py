@@ -94,7 +94,7 @@ def capture(out_dir, user_agent=None, *, opener=urllib.request.urlopen, now=None
     targets = [out / "manifest.json", *(out / p["file"] for p in PARTS.values())]
     if any(p.exists() or p.is_symlink() for p in targets):
         raise FileExistsError("snapshot files already exist; choose a new output directory")
-    captured_at = _instant(now)
+    fixed_time = _instant(now) if now is not None else None
     parts = {}
     requested = list(DIRECTORY_PARTS) if directory_only else list(PARTS)
     # Exclusive creation reserves the capture before any request. A crashed
@@ -102,7 +102,7 @@ def capture(out_dir, user_agent=None, *, opener=urllib.request.urlopen, now=None
     with (out / "manifest.json").open("x", encoding="utf-8") as manifest_file:
         for part, spec in PARTS.items():
             record = {"source": spec["source"], "url": spec["url"], "file": spec["file"],
-                      "captured_at": captured_at if part in requested else None}
+                      "captured_at": None}
             if part not in requested:
                 record.update(status="not_requested", reason="directory_only")
                 parts[part] = record
@@ -120,11 +120,13 @@ def capture(out_dir, user_agent=None, *, opener=urllib.request.urlopen, now=None
                     raise ValueError("part exceeds the size limit")
                 with (out / spec["file"]).open("xb") as part_file:
                     part_file.write(data)
-                record.update(status="captured", bytes=len(data),
+                record.update(status="captured", captured_at=fixed_time or _now(), bytes=len(data),
                               sha256=hashlib.sha256(data).hexdigest())
             except Exception as error:  # recorded: a snapshot may be partial
                 record.update(status="failed", error=type(error).__name__)
             parts[part] = record
+        captured_at = max([fixed_time or _now()] +
+                          [part["captured_at"] for part in parts.values() if part["captured_at"]])
         manifest = {"contract": "registry-snapshot-1", "captured_at": captured_at,
                     "requested_parts": requested, "parts": parts}
         _completeness(manifest, {p for p, r in parts.items() if r["status"] == "captured"})

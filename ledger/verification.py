@@ -246,13 +246,14 @@ def _signal_summary(rows, generated, cutoff):
 
 
 def _price_window(conn, ticker, entry, exit_, *, provider, fetch, cutoff,
-                  strict_price_cutoff, memo):
+                  exit_close, strict_price_cutoff, memo):
     key = (ticker, entry, exit_)
     if key in memo:
         return memo[key]
     expected_provider = _provider_identity(provider)
     state = "not_cached"
-    resolved = resolve_cached_window(conn, ticker, entry, exit_, provider=expected_provider)
+    resolved = resolve_cached_window(conn, ticker, entry, exit_, provider=expected_provider,
+                                     acquired_not_before=exit_close)
     metadata = resolved["metadata"] if resolved else None
     if fetch and metadata is None:
         # The network acquisition's clock is real. An explicit old cutoff never
@@ -260,9 +261,10 @@ def _price_window(conn, ticker, entry, exit_, *, provider, fetch, cutoff,
         acquired = _now()
         state = ensure_window(
             conn, ticker, date.fromisoformat(entry), date.fromisoformat(exit_),
-            provider, now=acquired, acquisition_clock=_now, run_memo={},
+            provider, now=acquired, acquisition_clock=_now, acquired_not_before=exit_close, run_memo={},
         )
-        resolved = resolve_cached_window(conn, ticker, entry, exit_, provider=expected_provider)
+        resolved = resolve_cached_window(conn, ticker, entry, exit_, provider=expected_provider,
+                                         acquired_not_before=exit_close)
         metadata = resolved["metadata"] if resolved else None
     result = {"status": state, "return": None, "metadata": metadata}
     if metadata is not None:
@@ -274,7 +276,9 @@ def _price_window(conn, ticker, entry, exit_, *, provider, fetch, cutoff,
             try:
                 acquired = _instant(metadata["acquired_at"], "price acquired_at")
                 known_by = cutoff if strict_price_cutoff else _now()
-                if acquired > known_by:
+                if acquired < exit_close:
+                    result["status"] = "price_acquired_before_exit_close"
+                elif acquired > known_by:
                     result["status"] = "price_acquired_after_cutoff"
                 else:
                     pair = resolved["open_close"]
@@ -479,11 +483,11 @@ def build_verification(db_path=DB_PATH, *, policy, as_of=None, fetch=False,
                     else:
                         stock = _price_window(
                             conn, ticker, row["entry_session"], exit_session,
-                            provider=provider, fetch=fetch, cutoff=cutoff,
+                            provider=provider, fetch=fetch, cutoff=cutoff, exit_close=exit_close,
                             strict_price_cutoff=as_of is not None, memo=price_memo)
                         benchmark = _price_window(
                             conn, policy.benchmark, row["entry_session"], exit_session,
-                            provider=provider, fetch=fetch, cutoff=cutoff,
+                            provider=provider, fetch=fetch, cutoff=cutoff, exit_close=exit_close,
                             strict_price_cutoff=as_of is not None, memo=price_memo)
                         row.update(price=stock, benchmark_price=benchmark,
                                    raw_return=stock["return"], benchmark_return=benchmark["return"])

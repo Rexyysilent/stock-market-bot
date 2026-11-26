@@ -107,6 +107,44 @@ class VerificationMonitorTests(unittest.TestCase):
         self.assertEqual(result["status"], "awaiting_archives")
         self.assertEqual(result["report"]["archive_inventory"]["skip_reasons"], {"synthetic_archive": 1})
 
+    def test_one_over_nested_archive_does_not_abort_review_of_healthy_sibling(self):
+        self.freeze()
+        self.save("healthy.json", archive(FROZEN + timedelta(hours=1)))
+        (self.archives / "nested.json").write_bytes(b"[" * 3000 + b"]" * 3000)
+        result = self.review()
+        inventory = result["report"]["archive_inventory"]
+        self.assertEqual(inventory["skip_reasons"], {"archive_nesting_too_deep": 1})
+        self.assertEqual(inventory["accepted_files"], 1)
+        self.assertEqual(monitor_status(self.workspace)["review_count"], 1)
+
+    def test_malformed_failed_stage_field_cannot_extend_the_observation_window(self):
+        self.freeze()
+        bad = archive(FROZEN + timedelta(hours=1))
+        bad["health"]["sources"] = {"pipeline_stages": {"failed": {}}}
+        self.save("bad-stages.json", bad)
+        report = self.review()["report"]
+        self.assertEqual(report["archive_inventory"]["accepted_files"], 0)
+        self.assertEqual(report["observation_window"]["post_freeze_archive_dates"], 0)
+
+    def test_previously_retained_excluded_archive_is_preserved_but_not_counted(self):
+        from ledger.ingest import _run_evidence
+        self.freeze()
+        bad = archive(FROZEN + timedelta(hours=1))
+        bad["health"]["sources"] = {"pipeline_stages": {"failed": {}}}
+        source = self.save("legacy.json", bad)
+        # The earlier inventory admitted this input, although the verifier
+        # already excluded it. Reproduce that receipt without changing it.
+        inventory_evidence = dict(_run_evidence(bad, bad["generated_at"], ""), failed_stage_shape_valid=True)
+        with patch("ledger.monitor._run_evidence", return_value=inventory_evidence):
+            first = self.review()
+        self.assertEqual(first["report"]["archive_inventory"]["accepted_files"], 1)
+        source.unlink()
+        result = self.review()["report"]
+        self.assertEqual(result["status"], "awaiting_archives")
+        self.assertEqual(result["archive_inventory"]["retained_unique_archives"], 1)
+        self.assertEqual(result["observation_window"]["post_freeze_archive_dates"], 0)
+        self.assertEqual(monitor_status(self.workspace)["review_count"], 2)
+
     def test_run_context_fixture_and_malformed_markers_are_excluded(self):
         self.freeze()
         for name, extra in (("context", {"run_context": {"synthetic": True}}),

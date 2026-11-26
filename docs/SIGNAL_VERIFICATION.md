@@ -54,6 +54,11 @@ verification opens the ledger read-only and makes no provider request. An
 already-cached larger coherent acquisition can supply a smaller window without
 writing a new binding.
 
+The verifier requires an acquisition timestamp at or after the exchange close
+of the exit session, including on early-close days. A pre-close exact binding
+stays in the cache and yields an unavailable outcome. For an unbound subwindow,
+the verifier selects the earliest compatible acquisition that meets this limit.
+
 An explicit `--as-of` is a strict availability cutoff for both archives and
 price acquisitions. A historical bar downloaded today is not evidence that
 this system held that price vintage last month. For a current review that

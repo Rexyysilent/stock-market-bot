@@ -103,6 +103,7 @@ class CoherentSubwindowTests(unittest.TestCase):
         results = [_price_window(
             self.conn, "ALFA", "2026-09-02", "2026-09-04", provider=forbidden,
             fetch=fetch, cutoff=datetime(2026, 9, 10, tzinfo=timezone.utc),
+            exit_close=datetime(2026, 9, 4, 20, tzinfo=timezone.utc),
             strict_price_cutoff=True, memo={},
         ) for fetch in (False, True)]
         self.assertEqual(results[0], results[1])
@@ -250,7 +251,7 @@ class AcquisitionCompletionTests(unittest.TestCase):
     def test_verifier_cutoff_between_request_and_response_rejects_new_bytes(self):
         from ledger.verification import _price_window
         settings = dict(provider=self.provider, memo={}, entry=self.start.isoformat(),
-                        exit_=self.end.isoformat())
+                        exit_=self.end.isoformat(), exit_close=datetime(2026, 9, 3, 20, tzinfo=timezone.utc))
         with patch("ledger.verification._now", side_effect=lambda: self.clock):
             acquired = _price_window(self.conn, "ALFA", fetch=True, cutoff=self.requested,
                                      strict_price_cutoff=False, **settings)

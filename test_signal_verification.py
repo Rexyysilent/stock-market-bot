@@ -128,6 +128,46 @@ class VerificationTests(unittest.TestCase):
         self.assertIsNone(row["large_move"])
         self.assertIsNone(row["capture_class"])
 
+    def test_price_bound_before_exit_close_cannot_supply_a_completed_return(self):
+        self.archive(members=("AAA",))
+        self.prices("AAA", .5, acquired="2026-09-15T19:59:59Z")
+        self.prices("SPY", .01, acquired="2026-09-15T20:00:00Z")
+        row = self.report()["observations"][0]
+        self.assertEqual(row["status"], "unavailable")
+        self.assertEqual(row["price"]["status"], "price_acquired_before_exit_close")
+        self.assertIsNone(row["raw_return"])
+        self.assertEqual(row["benchmark_price"]["status"], "ok")
+
+    def test_subwindow_uses_earliest_acquisition_with_a_completed_exit(self):
+        self.archive(members=("AAA",))
+        self.prices("SPY")
+        for acquired, close in (("2026-09-15T18:00:00Z", 110), ("2026-09-16T12:00:00Z", 120)):
+            cache_rows(self.conn, "AAA", [{"session": "2026-09-14", "open": 100},
+                                          {"session": "2026-09-15", "close": close}],
+                       requested_start="2026-09-11", requested_end="2026-09-15",
+                       acquired_at=acquired, provider=_provider_identity(no_network))
+        self.conn.commit()
+        row = self.report()["observations"][0]
+        self.assertAlmostEqual(row["raw_return"], .2)
+        self.assertEqual(row["price"]["metadata"]["acquired_at"], "2026-09-16T12:00:00Z")
+
+    def test_fetch_can_replace_an_unbound_preclose_candidate(self):
+        calls = []
+        def provider(ticker, start, end):
+            calls.append(ticker)
+            return [{"session": start.isoformat(), "open": 100},
+                    {"session": end.isoformat(), "close": 120}]
+        self.archive(members=("AAA",))
+        self.prices("SPY", provider=provider)
+        cache_rows(self.conn, "AAA", [{"session": "2026-09-14", "open": 100},
+                                      {"session": "2026-09-15", "close": 110}],
+                   requested_start="2026-09-11", requested_end="2026-09-15",
+                   provider=_provider_identity(provider), acquired_at="2026-09-15T18:00:00Z")
+        self.conn.commit()
+        row = self.report(as_of=None, fetch=True, provider=provider)["observations"][0]
+        self.assertEqual(calls, ["AAA"])
+        self.assertAlmostEqual(row["raw_return"], .2)
+
     def test_missing_benchmark_retains_raw_but_withholds_relative_label(self):
         self.archive()
         self.prices("AAA", 0.30)

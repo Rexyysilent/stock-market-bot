@@ -294,21 +294,22 @@ def _resolved_window(row, *, bound):
 
 def resolve_cached_window(
     conn, ticker, start, end, *, provider, interval=DEFAULT_INTERVAL,
-    adjustment_basis=DEFAULT_ADJUSTMENT_BASIS, currency=_ANY_CURRENCY,
+    adjustment_basis=DEFAULT_ADJUSTMENT_BASIS, currency=_ANY_CURRENCY, acquired_not_before=None,
 ):
     """Read one coherent cached window without creating tables or bindings.
 
     An exact binding always wins, including an incompatible identity or an
     invalid endpoint pair: the caller must reject it rather than silently
     replace its recorded basis. Otherwise choose the earliest compatible
-    acquisition containing both endpoints. Return its unchanged metadata,
-    ``open_close`` pair, and whether an exact binding already existed.
+    acquisition containing both endpoints and meeting the optional minimum
+    acquisition time. Exact bindings remain visible for callers to validate.
+    Return its unchanged metadata, ``open_close`` pair, and whether an
+    exact binding already existed.
 
     An omitted currency makes no currency assumption; retained metadata still
     exposes its value for the caller to check. Explicit ``None`` requires an
-    acquisition whose currency is unknown. This function neither certifies
-    historical availability nor applies a cutoff: use the original acquired_at
-    for that check, never the time this subwindow was resolved.
+    acquisition whose currency is unknown. Callers checking availability at
+    a historical cutoff must compare it to the original acquired_at.
     """
     first = start.isoformat() if isinstance(start, date) else str(start)
     last = end.isoformat() if isinstance(end, date) else str(end)
@@ -348,6 +349,8 @@ def resolve_cached_window(
         arguments,
     ).fetchall()
     usable = []
+    earliest = (datetime.fromisoformat(_utc_timestamp(acquired_not_before))
+                if acquired_not_before is not None else None)
     for row in candidates:
         resolved = _resolved_window(row, bound=False)
         if resolved["open_close"] is None:
@@ -355,6 +358,8 @@ def resolve_cached_window(
         try:
             acquired = datetime.fromisoformat(_utc_timestamp(row["acquired_at"]))
         except (TypeError, ValueError, OverflowError):
+            continue
+        if earliest is not None and acquired < earliest:
             continue
         usable.append((acquired, row["acquisition_id"], resolved))
     if not usable:
@@ -364,13 +369,13 @@ def resolve_cached_window(
 
 def bind_cached_window(
     conn, ticker, start, end, *, provider, interval=DEFAULT_INTERVAL,
-    adjustment_basis=DEFAULT_ADJUSTMENT_BASIS, currency=None,
+    adjustment_basis=DEFAULT_ADJUSTMENT_BASIS, currency=None, acquired_not_before=None,
 ):
     """Bind a coherent retained subwindow; existing bindings remain immutable."""
     _ensure_cache_schema(conn)
     resolved = resolve_cached_window(
         conn, ticker, start, end, provider=provider, interval=interval,
-        adjustment_basis=adjustment_basis, currency=currency,
+        adjustment_basis=adjustment_basis, currency=currency, acquired_not_before=acquired_not_before,
     )
     if resolved is None or resolved["bound"]:
         return False
@@ -397,6 +402,7 @@ def ensure_window(
     currency=None,
     acquired_at=None,
     acquisition_clock=None,
+    acquired_not_before=None,
     now=None,
     run_memo=None,
 ):
@@ -432,9 +438,11 @@ def ensure_window(
             raise ValueError("choose acquired_at or acquisition_clock, not both")
     first, last = start.isoformat(), end.isoformat()
     expected_provider = provider_name or _provider_identity(provider)
+    earliest = (datetime.fromisoformat(_utc_timestamp(acquired_not_before))
+                if acquired_not_before is not None else None)
     bind_cached_window(
         conn, ticker, start, end, provider=expected_provider, interval=interval,
-        adjustment_basis=adjustment_basis, currency=currency,
+        adjustment_basis=adjustment_basis, currency=currency, acquired_not_before=earliest,
     )
     metadata = get_window_metadata(conn, ticker, first, last)
     if metadata is not None:
@@ -455,6 +463,8 @@ def ensure_window(
                 "price cache identity mismatch for %s %s..%s", ticker, first, last
             )
             return "error"
+        if earliest is not None and datetime.fromisoformat(metadata["acquired_at"]) < earliest:
+            return "incomplete"
         if get_open_close(conn, ticker, first, last) is not None:
             return "ok"
     if now is not None:
@@ -491,6 +501,8 @@ def ensure_window(
     if completed_at is None:
         completed_at = (acquisition_clock() if acquisition_clock is not None
                         else datetime.now(timezone.utc))
+    if earliest is not None and datetime.fromisoformat(_utc_timestamp(completed_at)) < earliest:
+        return finish("incomplete", remember=False)
     cache_rows(
         conn,
         ticker,
