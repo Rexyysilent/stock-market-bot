@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ledger.monitor import freeze_monitor, monitor_status, run_monitor
+from ledger.monitor import _decode, freeze_monitor, monitor_status, run_monitor
 from ledger.verification import VerificationPolicy
 
 
@@ -110,8 +110,17 @@ class VerificationMonitorTests(unittest.TestCase):
     def test_one_over_nested_archive_does_not_abort_review_of_healthy_sibling(self):
         self.freeze()
         self.save("healthy.json", archive(FROZEN + timedelta(hours=1)))
-        (self.archives / "nested.json").write_bytes(b"[" * 3000 + b"]" * 3000)
-        result = self.review()
+        nested = b"[[[]]]"
+        (self.archives / "nested.json").write_bytes(nested)
+
+        def decode(raw):
+            # The native decoder's recursion threshold varies by platform.
+            if raw == nested:
+                raise RecursionError
+            return _decode(raw)
+
+        with patch("ledger.monitor._decode", side_effect=decode):
+            result = self.review()
         inventory = result["report"]["archive_inventory"]
         self.assertEqual(inventory["skip_reasons"], {"archive_nesting_too_deep": 1})
         self.assertEqual(inventory["accepted_files"], 1)
