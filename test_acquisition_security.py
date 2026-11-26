@@ -1,3 +1,5 @@
+import gzip
+import io
 import os
 import subprocess
 import sys
@@ -7,6 +9,7 @@ import unittest
 from pathlib import Path
 
 import requests
+import urllib3
 from requests.adapters import BaseAdapter
 from requests.models import Response
 
@@ -135,6 +138,215 @@ class OpenInsiderRedirectTests(unittest.TestCase):
                         self.assertIsNone(health["parser"])
                         self.assertFalse(health["cache_used"])
                         self.assertFalse(cache_path.exists())
+
+
+class _CountingRaw(io.BytesIO):
+    """A raw body that records how many bytes the client pulled from the wire."""
+
+    def __init__(self, data):
+        super().__init__(data)
+        self.bytes_read = 0
+
+    def read(self, size=-1, *args, **kwargs):
+        chunk = super().read(size)
+        self.bytes_read += len(chunk)
+        return chunk
+
+
+class BodyAdapter(BaseAdapter):
+    """Serves one 200 response per request with a caller-built raw body."""
+
+    def __init__(self, make_raw, *, headers=None, refuse_https=False):
+        self.make_raw = make_raw
+        self.headers = headers or {}
+        self.refuse_https = refuse_https
+        self.urls = []
+        self.raws = []
+        self.stream_flags = []
+
+    def send(self, request, **kwargs):
+        self.urls.append(request.url)
+        self.stream_flags.append(kwargs.get("stream"))
+        if self.refuse_https and request.url.startswith("https://"):
+            raise requests.exceptions.ConnectionError("connection refused")
+        response = Response()
+        response.status_code = 200
+        response.url = request.url
+        response.headers.update({"Content-Type": "text/html; charset=utf-8", **self.headers})
+        response.encoding = "utf-8"
+        response.raw = self.make_raw()
+        self.raws.append(response.raw)
+        response.request = request
+        return response
+
+    def close(self):
+        pass
+
+
+class RecordingParserAgent(OpenInsiderAgent):
+    parsed = None
+
+    def _parse_tables_with_pandas(self, html):
+        type(self).parsed = html
+        return [{"ticker": "ROKU", "filing_date": "2026-08-18 10:00:00",
+                 "trade_type": "P - Purchase", "insider_name": "Fixture",
+                 "value": "$1", "source": "OpenInsider",
+                 "link": "https://openinsider.com/screener"}]
+
+
+class OpenInsiderBoundedReadTests(unittest.TestCase):
+    LIMIT = OpenInsiderAgent.MAX_RESPONSE_BYTES
+
+    def setUp(self):
+        OpenInsiderAgent._reset_source_request_gate_for_tests()
+
+    def _run(self, adapter, agent_cls=ParserMustNotRunAgent, **kwargs):
+        session = requests.Session()
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        with tempfile.TemporaryDirectory() as directory:
+            cache_path = Path(directory) / "cache.json"
+            agent = agent_cls(session=session, cache_path=cache_path,
+                              min_request_interval=0, sleep=lambda _s: None,
+                              jitter=lambda: 0, **kwargs)
+            rows = agent.acquire_run_trades()
+            return rows, agent.get_health(), cache_path.exists()
+
+    def test_oversized_https_body_is_cut_off_before_any_parser(self):
+        adapter = BodyAdapter(lambda: _CountingRaw(b"<tr>" * (self.LIMIT // 4 + 4096)))
+        rows, health, cached = self._run(adapter)
+        self.assertEqual(rows, [])
+        self.assertEqual(health["failure_reason"], "response_size_limit")
+        self.assertIsNone(health["parser"])
+        self.assertFalse(cached)
+        self.assertEqual(adapter.stream_flags, [True])
+        # Stopped within one chunk of the cap rather than downloading everything.
+        self.assertLessEqual(adapter.raws[0].bytes_read, self.LIMIT + 65536)
+
+    def test_oversized_plaintext_fallback_body_is_also_bounded(self):
+        adapter = BodyAdapter(lambda: _CountingRaw(b"<tr>" * (self.LIMIT // 4 + 4096)),
+                              refuse_https=True)
+        rows, health, cached = self._run(adapter)
+        self.assertEqual(rows, [])
+        self.assertTrue(adapter.urls[-1].startswith("http://"))
+        self.assertEqual(health["failure_reason"], "http_fallback_response_size_limit")
+        self.assertIsNone(health["parser"])
+        self.assertFalse(cached)
+        self.assertLessEqual(adapter.raws[-1].bytes_read, self.LIMIT + 65536)
+
+    def test_declared_oversized_length_is_rejected_without_reading(self):
+        adapter = BodyAdapter(lambda: _CountingRaw(b"small"),
+                              headers={"Content-Length": str(self.LIMIT + 1)})
+        rows, health, _cached = self._run(adapter)
+        self.assertEqual(rows, [])
+        self.assertEqual(health["failure_reason"], "response_size_limit")
+        self.assertEqual(adapter.raws[0].bytes_read, 0)
+
+    def test_decompression_bomb_is_bounded_by_decoded_bytes(self):
+        bomb = gzip.compress(b"\0" * (self.LIMIT * 4))
+        self.assertLess(len(bomb), self.LIMIT // 100)
+
+        def raw():
+            return urllib3.response.HTTPResponse(
+                body=io.BytesIO(bomb), headers={"Content-Encoding": "gzip"},
+                status=200, preload_content=False, decode_content=True)
+
+        adapter = BodyAdapter(raw, headers={"Content-Encoding": "gzip",
+                                            "Content-Length": str(len(bomb))})
+        rows, health, _cached = self._run(adapter)
+        self.assertEqual(rows, [])
+        self.assertEqual(health["failure_reason"], "response_size_limit")
+        self.assertIsNone(health["parser"])
+
+    @staticmethod
+    def _wire(fp):
+        return urllib3.response.HTTPResponse(
+            body=fp, headers={}, status=200, preload_content=False, decode_content=True)
+
+    def test_deadline_is_checked_per_socket_read_not_per_64k_chunk(self):
+        # Review 2026-11-18: a 1-byte-per-read trickle never filled a 64 KiB
+        # iter_content chunk, so the deadline was never consulted.
+        reads = []
+
+        class Trickle(io.RawIOBase):
+            def readable(self):
+                return True
+
+            def readinto(self, buffer):
+                reads.append(1)
+                if len(reads) > 1000:
+                    return 0
+                buffer[0:1] = b"x"
+                return 1
+
+        ticks = iter(range(0, 1_000_000, 20))
+        adapter = BodyAdapter(lambda: self._wire(io.BufferedReader(Trickle(), buffer_size=1)))
+        rows, health, _cached = self._run(adapter, clock=lambda: float(next(ticks)))
+        self.assertEqual(rows, [])
+        self.assertEqual(health["failure_reason"], "read_deadline_exceeded")
+        self.assertLess(len(reads), 20)
+
+    def test_mid_body_reset_is_retried_like_a_connection_error(self):
+        page = b"<table><tr><td>ok</td></tr></table>"
+
+        class Reset(io.RawIOBase):
+            sent = False
+
+            def readable(self):
+                return True
+
+            def readinto(self, buffer):
+                if not self.sent:
+                    self.sent = True
+                    buffer[0:4] = b"<tab"
+                    return 4
+                raise ConnectionResetError("connection reset by peer")
+
+        bodies = iter([lambda: self._wire(io.BufferedReader(Reset(), buffer_size=4)),
+                       lambda: self._wire(io.BytesIO(page))])
+        adapter = BodyAdapter(lambda: next(bodies)())
+        rows, health, _cached = self._run(adapter, agent_cls=RecordingParserAgent)
+        self.assertEqual(len(rows), 1, health)
+        self.assertEqual(len(adapter.urls), 2)
+        self.assertEqual(health["retries"], 1)
+        self.assertEqual(RecordingParserAgent.parsed, page.decode())
+
+    def test_body_download_stays_inside_the_request_gate(self):
+        held = []
+
+        class Watch(io.RawIOBase):
+            done = False
+
+            def readable(self):
+                return True
+
+            def readinto(self, buffer):
+                held.append(OpenInsiderAgent._SOURCE_REQUEST_GATE_LOCK.locked())
+                if self.done:
+                    return 0
+                self.done = True
+                buffer[0:2] = b"ok"
+                return 2
+
+        adapter = BodyAdapter(lambda: self._wire(io.BufferedReader(Watch(), buffer_size=2)))
+        self._run(adapter, agent_cls=RecordingParserAgent)
+        self.assertTrue(held and all(held), held)
+
+    def test_total_read_deadline_stops_a_slow_trickle(self):
+        ticks = iter(range(0, 10_000, 20))
+        adapter = BodyAdapter(lambda: _CountingRaw(b"x" * (65536 * 8)))
+        rows, health, _cached = self._run(adapter, clock=lambda: float(next(ticks)))
+        self.assertEqual(rows, [])
+        self.assertEqual(health["failure_reason"], "read_deadline_exceeded")
+        self.assertIsNone(health["parser"])
+
+    def test_normal_page_is_read_fully_and_parsed(self):
+        page = "<table><tr><td>Fixture é</td></tr></table>".encode("utf-8")
+        adapter = BodyAdapter(lambda: _CountingRaw(page))
+        rows, health, _cached = self._run(adapter, agent_cls=RecordingParserAgent)
+        self.assertNotEqual(health["status"], "ERROR", health)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(RecordingParserAgent.parsed, page.decode("utf-8"))
 
 
 class GradeExtractionTests(unittest.TestCase):

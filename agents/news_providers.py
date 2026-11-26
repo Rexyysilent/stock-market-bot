@@ -700,11 +700,14 @@ class FMPNewsProvider:
         if self.tickers:
             params["symbols"] = ",".join(self.tickers)
         try:
+            # The key travels in a custom header, which Requests keeps on an
+            # off-origin redirect; never follow one, and treat it as an error.
             response = self.request_get(
                 self.endpoint,
                 params=params,
                 headers=headers,
                 timeout=self.timeout,
+                allow_redirects=False,
             )
             status_code = int(getattr(response, "status_code", 0))
             primary_status_code = status_code
@@ -715,8 +718,12 @@ class FMPNewsProvider:
                     params={"page": 0, "limit": self.limit},
                     headers=headers,
                     timeout=self.timeout,
+                    allow_redirects=False,
                 )
                 status_code = int(getattr(response, "status_code", 0))
+            # A primary 3xx never reaches the fallback (only 402 does).
+            if 300 <= status_code < 400:
+                raise ValueError(f"http_redirect_{status_code}")
             if status_code != 200:
                 raise ValueError(f"http_status_{status_code}")
             payload = _response_json(response)

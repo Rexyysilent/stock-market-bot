@@ -1,11 +1,16 @@
 """Loopback HTTP checks. These tests never contact external hosts."""
 import http.client
 import json
+import os
 from pathlib import Path
+import stat
+from types import SimpleNamespace
 import tempfile
 import threading
 import unittest
+from unittest import mock
 
+import serve_dump
 from serve_dump import BoundedDashboardServer, create_server, resolve_dashboard_path
 
 
@@ -88,6 +93,99 @@ class DashboardServerTests(unittest.TestCase):
         except (OSError, NotImplementedError):
             return
         self.assertIsNone(resolve_dashboard_path("/dashboard/link.txt", assets))
+
+    def _outside_secret(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        secret = Path(outside.name) / "secret.txt"
+        secret.write_text("outside-data-dir-secret", encoding="utf-8")
+        return secret
+
+    def test_brief_routes_refuse_symlinks_out_of_the_data_dir(self):
+        secret = self._outside_secret()
+        for route, name in (("/api/brief", "daily_brief.json"), ("/api/txt", "daily_brief.txt"),
+                            ("/raw", "daily_brief.txt")):
+            with self.subTest(route=route):
+                brief = self.root / name
+                if brief.exists() or brief.is_symlink():
+                    brief.unlink()
+                try:
+                    brief.symlink_to(secret)
+                except (OSError, NotImplementedError):
+                    self.skipTest("symlinks unavailable on this platform/account")
+                status, _headers, body = self.request(route)
+                self.assertEqual(status, 403)
+                self.assertNotIn(b"outside-data-dir-secret", body)
+                # The lstat fallback (Windows) refuses the same link.
+                with mock.patch.object(serve_dump.os, "supports_dir_fd", set()):
+                    with self.assertRaises(serve_dump.UnsafeLocalFile):
+                        serve_dump.open_brief_file(self.root, name)
+
+    def test_brief_routes_refuse_non_regular_files(self):
+        (self.root / "daily_brief.json").unlink()
+        (self.root / "daily_brief.json").mkdir()
+        (self.root / "daily_brief.txt").mkdir()
+        for route in ("/api/brief", "/api/txt"):
+            with self.subTest(route=route):
+                self.assertEqual(self.request(route)[0], 403)
+
+    def test_text_route_serves_a_regular_brief(self):
+        (self.root / "daily_brief.txt").write_text("plain brief", encoding="utf-8")
+        status, _headers, body = self.request("/api/txt")
+        self.assertEqual((status, body), (200, b"plain brief"))
+
+    def test_check_then_open_fallback_refuses_a_swapped_file(self):
+        # The lstat + same-file path used where dir_fd/O_NOFOLLOW are missing
+        # (Windows): a file swapped in between the check and the open is refused.
+        secret = self._outside_secret()
+        real_open = serve_dump.os.open
+
+        def swapped_open(path, flags, *args, **kwargs):
+            if str(path).endswith("daily_brief.json"):
+                path = str(secret)
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(serve_dump.os, "supports_dir_fd", set()), \
+                mock.patch.object(serve_dump.os, "open", swapped_open):
+            with self.assertRaises(serve_dump.UnsafeLocalFile):
+                serve_dump.open_brief_file(self.root, "daily_brief.json")
+        with mock.patch.object(serve_dump.os, "supports_dir_fd", set()):
+            with serve_dump.open_brief_file(self.root, "daily_brief.json") as handle:
+                self.assertEqual(handle.read(), b'{"synthetic":true}')
+
+    def test_brief_names_must_be_plain_filenames(self):
+        for name in ("../daily_brief.json", "sub/daily_brief.json", "..", "C:daily_brief.json", ""):
+            with self.subTest(name=name):
+                with self.assertRaises(serve_dump.UnsafeLocalFile):
+                    serve_dump.open_brief_file(self.root, name)
+
+    def test_brief_routes_refuse_hard_links_to_outside_files(self):
+        secret = self._outside_secret()
+        brief = self.root / "daily_brief.txt"
+        try:
+            os.link(secret, brief)
+        except (OSError, NotImplementedError):
+            self.skipTest("hard links unavailable here")
+        for route in ("/api/txt", "/raw"):
+            with self.subTest(route=route):
+                status, _headers, body = self.request(route)
+                self.assertEqual(status, 403)
+                self.assertNotIn(b"outside-data-dir-secret", body)
+        with mock.patch.object(serve_dump.os, "supports_dir_fd", set()):
+            with self.assertRaises(serve_dump.UnsafeLocalFile):
+                serve_dump.open_brief_file(self.root, "daily_brief.txt")
+
+    def test_only_link_type_reparse_points_are_refused(self):
+        # OneDrive/Cloud Files placeholders are reparse points but not links;
+        # symlinks, junctions and WSL symlinks carry the name-surrogate bit.
+        def entry(tag):
+            return SimpleNamespace(st_mode=stat.S_IFREG | 0o644, st_file_attributes=0x400,
+                                   st_reparse_tag=tag)
+        for tag in (0x9000001A, 0x9000101A, 0x80000013):  # cloud, cloud, dedup
+            self.assertFalse(serve_dump._is_link_entry(entry(tag)), hex(tag))
+        for tag in (0xA000000C, 0xA0000003, 0xA000001D):  # symlink, junction, LX symlink
+            self.assertTrue(serve_dump._is_link_entry(entry(tag)), hex(tag))
+        self.assertTrue(serve_dump._is_link_entry(SimpleNamespace(st_mode=stat.S_IFLNK | 0o777)))
 
 
 if __name__ == "__main__":

@@ -295,6 +295,36 @@ assert all(
     call[1]["headers"]["apikey"] == "fmp-basic-key"
     for call in fmp_fallback_calls
 )
+assert all(call[1]["allow_redirects"] is False for call in fmp_fallback_calls)
+assert fmp_call["allow_redirects"] is False
+
+
+# FMP_API_KEY rides in a custom header that Requests keeps across an
+# off-origin redirect: neither request may follow one, and a redirect is a
+# provider error (no records, no further request, key not echoed).
+for redirect_status in (301, 302, 303, 307, 308):
+    for redirect_on in ("primary", "fallback"):
+        redirect_calls = []
+
+        def fmp_redirect_get(url, _on=redirect_on, _status=redirect_status, **kwargs):
+            redirect_calls.append((url, kwargs))
+            if _on == "primary" or not url.endswith("/news/stock"):
+                return Response(status=_status)
+            return Response(status=402)
+
+        redirected = FMPNewsProvider(
+            "fmp-redirect-key",
+            tickers=["ROKU"],
+            now=NOW,
+            request_get=fmp_redirect_get,
+        ).fetch()
+        assert redirected.status == "error", (redirect_on, redirect_status)
+        assert redirected.records == []
+        assert redirected.error == f"http_redirect_{redirect_status}"
+        assert "fmp-redirect-key" not in (redirected.error or "")
+        assert len(redirect_calls) == (1 if redirect_on == "primary" else 2)
+        assert all(call[1]["allow_redirects"] is False for call in redirect_calls)
+
 fmp_bad = FMPNewsProvider(
     "do-not-leak",
     request_get=lambda *a, **k: Response(payload={"Error Message": "bad do-not-leak"}),

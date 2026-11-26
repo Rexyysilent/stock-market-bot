@@ -63,8 +63,17 @@ class Response:
     status_code = 200
     text = "trusted table"
 
+    headers = {}
+    encoding = "utf-8"
+
     def __init__(self, url):
         self.url = url
+
+    def iter_content(self, _chunk_size=1):
+        yield self.text.encode("utf-8")
+
+    def close(self):
+        pass
 
 
 class Session:

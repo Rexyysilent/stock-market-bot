@@ -64,6 +64,18 @@ class Response:
         self.status_code = status_code
         self.text = text
         self.url = url
+        self.headers = {}
+        self.encoding = "utf-8"
+        self.closed = False
+
+    def iter_content(self, chunk_size=1):
+        # The agent streams the body (bounded read), like requests.Response.
+        data = self.text.encode("utf-8")
+        for start in range(0, len(data), chunk_size):
+            yield data[start:start + chunk_size]
+
+    def close(self):
+        self.closed = True
 
 
 class FakeSession:

@@ -6,6 +6,7 @@ fixtures without installing collection dependencies or contacting providers.
 from __future__ import annotations
 
 import argparse
+import errno
 import http.server
 import ipaddress
 import mimetypes
@@ -13,6 +14,7 @@ import ntpath
 import os
 import socket
 import socketserver
+import stat
 import threading
 import time
 from pathlib import Path
@@ -48,6 +50,72 @@ def resolve_dashboard_path(request_target, dashboard_root=None):
         return candidate
     except (TypeError, ValueError, UnicodeError, OSError, RuntimeError):
         return None
+
+
+class UnsafeLocalFile(Exception):
+    """A brief path is a link or not a regular file."""
+
+
+_REPARSE_POINT = 0x400  # FILE_ATTRIBUTE_REPARSE_POINT
+# Microsoft's "name surrogate" bit marks reparse tags that redirect to another
+# path (symlinks, junctions, WSL/LX symlinks). Cloud placeholders (OneDrive),
+# dedup and similar tags lack it and are ordinary files for our purposes.
+_NAME_SURROGATE = 0x20000000
+
+
+def _is_link_entry(info):
+    return bool(stat.S_ISLNK(info.st_mode)
+                or (getattr(info, "st_file_attributes", 0) & _REPARSE_POINT
+                    and getattr(info, "st_reparse_tag", 0) & _NAME_SURROGATE))
+
+
+def open_brief_file(directory, name):
+    """Open a fixed brief filename inside a trusted directory, refusing links.
+
+    The name is opened relative to the directory without following a link at
+    open time, and the opened object must be a regular file with a single
+    link (a hard link would otherwise expose a file from elsewhere). On POSIX
+    this is dir_fd + O_NOFOLLOW (+ O_NONBLOCK so a FIFO cannot stall the
+    worker). Where those are unavailable (Windows) the entry is lstat'ed first
+    and the opened handle must be that same file, so a swap between the check
+    and the open is refused rather than followed.
+    """
+    name = os.fspath(name)
+    if (not name or name in (".", "..") or "/" in name or "\\" in name
+            or "\x00" in name or ntpath.splitdrive(name)[0]):
+        raise UnsafeLocalFile("brief name must be a plain filename")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NONBLOCK", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if nofollow and os.open in os.supports_dir_fd:
+        dir_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            try:
+                fd = os.open(name, flags | nofollow, dir_fd=dir_fd)
+            except OSError as exc:
+                if exc.errno in (errno.ELOOP, getattr(errno, "EMLINK", None), getattr(errno, "EFTYPE", None)):
+                    raise UnsafeLocalFile("brief is a link") from exc
+                raise
+        finally:
+            os.close(dir_fd)
+        expected = None
+    else:
+        path = os.path.join(directory, name)
+        expected = os.lstat(path)
+        if _is_link_entry(expected) or not stat.S_ISREG(expected.st_mode):
+            raise UnsafeLocalFile("brief is a link or not a regular file")
+        fd = os.open(path, flags)
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode):
+            raise UnsafeLocalFile("brief is not a regular file")
+        if opened.st_nlink > 1:
+            raise UnsafeLocalFile("brief has other hard links")
+        if expected is not None and (opened.st_dev, opened.st_ino) != (expected.st_dev, expected.st_ino):
+            raise UnsafeLocalFile("brief changed while it was being opened")
+        return os.fdopen(fd, "rb")
+    except BaseException:
+        os.close(fd)
+        raise
 
 
 def _authority(value):
@@ -118,12 +186,13 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
             else:
                 self.serve_file(asset, mimetypes.guess_type(asset)[0] or "application/octet-stream")
         elif path == "/api/brief":
-            self.serve_file(self.server.brief_path, "application/json")
+            brief = Path(self.server.brief_path)
+            self.serve_brief(brief.parent, brief.name, "application/json")
         elif path in ("/api/txt", "/raw"):
             if self.server.demo:
                 self.serve_demo_text()
             else:
-                self.serve_file(self.server.data_dir / "daily_brief.txt", "text/plain")
+                self.serve_brief(self.server.data_dir, "daily_brief.txt", "text/plain")
         else:
             self.send_error(404)
 
@@ -134,32 +203,33 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
-    def serve_file(self, filepath, content_type):
+    def serve_file(self, filepath, content_type, *, brief=False, prefix=b"",
+                   missing="No local brief. Generate one, select --data-dir, or use --demo."):
+        """Send one capped local file. ``brief=True`` uses open_brief_file:
+        the fixed name inside its trusted directory, links refused."""
         try:
-            with Path(filepath).open("rb") as handle:
-                content = handle.read(MAX_FILE_BYTES + 1)
-            if len(content) > MAX_FILE_BYTES:
-                self.send_error(413, "Local file exceeds viewer size limit")
-                return
-            self._send_bytes(content, content_type)
-        except FileNotFoundError:
-            self.send_error(404, "No local brief. Generate one, select --data-dir, or use --demo.")
-        except OSError:
-            self.send_error(500, "Local file could not be read")
-
-    def serve_demo_text(self):
-        prefix = b"SYNTHETIC DEMO. Not live market data.\n"
-        try:
-            with self.server.brief_path.open("rb") as handle:
+            path = Path(filepath)
+            handle = open_brief_file(path.parent, path.name) if brief else path.open("rb")
+            with handle:
                 content = handle.read(MAX_FILE_BYTES - len(prefix) + 1)
             if len(prefix) + len(content) > MAX_FILE_BYTES:
                 self.send_error(413, "Local file exceeds viewer size limit")
                 return
-            self._send_bytes(prefix + content, "text/plain")
+            self._send_bytes(prefix + content, content_type)
         except FileNotFoundError:
-            self.send_error(404, "Bundled synthetic brief is unavailable")
+            self.send_error(404, missing)
+        except UnsafeLocalFile:
+            self.send_error(403, "Local brief must be a regular file, not a link")
         except OSError:
-            self.send_error(500, "Bundled synthetic brief could not be read")
+            self.send_error(500, "Local file could not be read")
+
+    def serve_brief(self, directory, name, content_type):
+        self.serve_file(Path(directory) / name, content_type, brief=True)
+
+    def serve_demo_text(self):
+        self.serve_file(self.server.brief_path, "text/plain", brief=True,
+                        prefix=b"SYNTHETIC DEMO. Not live market data.\n",
+                        missing="Bundled synthetic brief is unavailable")
 
     def log_message(self, format, *args):
         pass
