@@ -755,8 +755,10 @@ free cash flow is not substituted for operating cash flow.
 ## Measurement era 2.6.6
 
 Shared source freshness now uses a closed interval from the declared oldest
-eligible source time through the run's observation time. A future source
-timestamp is rejected with its original timestamp and `future`
+eligible source time through the time of observation. Live Twitter and CEO.ca research
+feeds evaluate freshness after collecting their posts, so posts published
+during collection can qualify. A future source timestamp is rejected with its
+original timestamp and `future`
 reason retained. Because this can change CEO.ca classifications and downstream
 signals, state and measurements use a new pipeline era. Historical fixtures and
 archives are not relabelled.

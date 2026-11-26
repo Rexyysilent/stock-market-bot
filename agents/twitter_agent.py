@@ -10,7 +10,6 @@ import requests
 import xml.etree.ElementTree as ET
 import logging
 from collections import Counter
-from datetime import datetime, timezone
 from config import NITTER_INSTANCES, TWITTER_ACCOUNTS, TWITTER_MAX_AGE_DAYS
 from timeutil import split_fresh_records
 
@@ -19,10 +18,8 @@ logger = logging.getLogger("TwitterAgent")
 
 class TwitterAgent:
     def __init__(self, now=None):
-        now = now or datetime.now(timezone.utc)
-        if now.tzinfo is None:
-            now = now.replace(tzinfo=timezone.utc)
-        self.now_utc = now.astimezone(timezone.utc)
+        # A supplied cutoff is fixed. Live feeds use the clock after each fetch.
+        self._freshness_as_of = now
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
@@ -238,7 +235,7 @@ class TwitterAgent:
             logger.info("Trying Nitter RSS for Twitter intel...")
             tweets = self.get_twitter_via_nitter(max_accounts=max_queries)
             tweets, dropped = split_fresh_records(
-                tweets, "date", TWITTER_MAX_AGE_DAYS, now=self.now_utc
+                tweets, "date", TWITTER_MAX_AGE_DAYS, now=self._freshness_as_of
             )
             self._dropped_twitter_signals.extend(dropped)
             self.health["nitter_accounts_with_fresh_items"] = len({
@@ -251,7 +248,7 @@ class TwitterAgent:
             logger.info("Using Google News RSS fallback for Twitter intel...")
             tweets = self.get_twitter_via_rss(max_queries)
             tweets, dropped = split_fresh_records(
-                tweets, "date", TWITTER_MAX_AGE_DAYS, now=self.now_utc
+                tweets, "date", TWITTER_MAX_AGE_DAYS, now=self._freshness_as_of
             )
             self._dropped_twitter_signals.extend(dropped)
 

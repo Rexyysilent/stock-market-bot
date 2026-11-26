@@ -1408,8 +1408,8 @@ def _generate_daily_brief():
     news_agent = NewsAgent(now=run_now)
     social_agent = SocialAgent(now=run_now, openinsider=openinsider_agent)
     watcher_agent = WatcherAgent(run_context=run_context)
-    research_agent = ResearchAgent(now=run_now)
-    twitter_agent = TwitterAgent(now=run_now)
+    research_agent = ResearchAgent()
+    twitter_agent = TwitterAgent()
     sec_agent = SECAgent(now=run_now, openinsider=openinsider_agent)
 
     # ═══════════════════════════════════════════════════════════════════

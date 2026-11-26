@@ -451,7 +451,9 @@ def run_monitor(workspace, fetch=False, as_of=None, archive_dir=None):
             # not just rows that happened to reach SQLite. Every candidate must
             # pass the same archive checks plus its content-addressed filename;
             # failed recovery candidates remain visible as exclusions.
-            recovered, accepted = _inventory(root, root / "inputs", cutoff=cutoff,
+            # Reconcile retained inputs through the actual review start. The
+            # verifier separately excludes archives after the requested cutoff.
+            recovered, accepted = _inventory(root, root / "inputs", cutoff=started,
                                               now=started, conn=conn, previous=accepted,
                                               retained=True)
             inventory["records"].extend(recovered["records"])

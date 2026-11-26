@@ -35,6 +35,7 @@ except ImportError:
 
 class ResearchAgent:
     def __init__(self, now=None):
+        self._freshness_as_of = now
         now = now or datetime.now(timezone.utc)
         if now.tzinfo is None:
             now = now.replace(tzinfo=timezone.utc)
@@ -631,7 +632,7 @@ class ResearchAgent:
         raw_signals.extend(self._fetch_uranium_sector_news())
 
         signals, self._dropped_ceo_signals = split_fresh_records(
-            raw_signals, "date", CEO_CA_MAX_AGE_DAYS, now=self.now_utc
+            raw_signals, "date", CEO_CA_MAX_AGE_DAYS, now=self._freshness_as_of
         )
         fresh_count = len(signals)
         quality_signals = []

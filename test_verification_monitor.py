@@ -266,6 +266,26 @@ class VerificationMonitorTests(unittest.TestCase):
         self.assertEqual(monitor_status(self.workspace)["retained_archives"], 1)
         self.assertEqual(len(monitor_status(self.workspace)["orphan_reports"]), 2)
 
+    def test_earlier_cutoff_after_ingest_crash_recovers_without_counting_later_archive(self):
+        self.freeze()
+        generated = FROZEN + timedelta(hours=2)
+        source = self.save("later.json", archive(generated))
+        # Verification starts after ingestion. Interrupt before any receipt exists.
+        with patch("ledger.monitor.build_verification", side_effect=KeyboardInterrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                self.review()
+        source.unlink()
+        earlier = self.review(as_of=(generated - timedelta(seconds=1)).isoformat())
+        report = earlier["report"]
+        self.assertEqual(earlier["receipt"]["sequence"], 1)
+        self.assertEqual(earlier["status"], "awaiting_archives")
+        self.assertEqual(report["verification"]["summary"]["selected_runs"], 0)
+        self.assertEqual(report["observation_window"]["post_freeze_archive_dates"], 0)
+        later = self.review(as_of=generated.isoformat())
+        self.assertEqual(later["receipt"]["sequence"], 2)
+        self.assertEqual(later["report"]["verification"]["summary"]["selected_runs"], 1)
+        self.assertEqual(monitor_status(self.workspace)["retained_archives"], 1)
+
     def test_pre_ingest_crash_recovers_retained_input_without_source_or_database_row(self):
         self.freeze()
         source = self.save("valid.json", archive(FROZEN + timedelta(hours=1)))

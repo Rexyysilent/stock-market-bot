@@ -2,12 +2,19 @@
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import unittest
+from unittest.mock import patch
 
 from agents.twitter_agent import TwitterAgent
 from timeutil import split_fresh_records
 
 
 NOW = datetime(2026, 11, 25, 12, tzinfo=timezone.utc)
+
+
+class FeedCompletionTime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return cls(2026, 11, 25, 12, 1, tzinfo=timezone.utc).astimezone(tz)
 
 
 def post(identity, date, *, account="@first"):
@@ -17,6 +24,20 @@ def post(identity, date, *, account="@first"):
 
 
 class FreshnessTests(unittest.TestCase):
+    def test_daily_brief_initializes_live_post_feeds_without_a_fixed_cutoff(self):
+        import export_for_gemini as exporter
+        from timeutil import build_run_context
+
+        # Stop before the executor can submit any provider requests.
+        with patch.object(exporter, "build_run_context", return_value=build_run_context(NOW)), \
+                patch.object(exporter, "ResearchAgent") as research, \
+                patch.object(exporter, "TwitterAgent") as twitter, \
+                patch.object(exporter, "ThreadPoolExecutor", side_effect=StopIteration):
+            with self.assertRaises(StopIteration):
+                exporter._generate_daily_brief()
+        research.assert_called_once_with()
+        twitter.assert_called_once_with()
+
     def test_window_is_closed_at_both_ends(self):
         rows = [{"date": "2026-11-18T12:00:00Z", "id": "cutoff"},
                 {"date": "2026-11-25T12:00:00Z", "id": "now"},
@@ -51,8 +72,8 @@ class FreshnessTests(unittest.TestCase):
 
 
 class SyntheticTwitter(TwitterAgent):
-    def __init__(self, primary=(), fallback=(), *, accounts=("first",)):
-        super().__init__(now=NOW)
+    def __init__(self, primary=(), fallback=(), *, accounts=("first",), now=NOW):
+        super().__init__(now=now)
         self.primary = list(primary)
         self.fallback = list(fallback)
         self.accounts = accounts
@@ -72,6 +93,18 @@ class SyntheticTwitter(TwitterAgent):
 
 
 class TwitterFreshnessTests(unittest.TestCase):
+    def test_live_primary_and_fallback_use_time_after_fetch(self):
+        fresh = post("during-fetch", "2026-11-25T12:00:30Z")
+        for primary in (True, False):
+            with self.subTest(primary=primary):
+                agent = SyntheticTwitter([fresh] if primary else [], [fresh], now=None)
+                with patch("timeutil.datetime", FeedCompletionTime):
+                    rows = agent.get_twitter_intel()
+                self.assertEqual(rows, [fresh])
+                self.assertEqual(agent.health["freshness_dropped"], {})
+                self.assertEqual(agent.fallback_calls, 0 if primary else 1)
+                self.assertEqual(agent.health["status"], "OK" if primary else "WARN")
+
     def test_stale_only_primary_uses_fresh_fallback(self):
         agent = SyntheticTwitter([post("stale", "2026-10-01T12:00:00Z")],
                                  [post("fresh", "2026-11-25T11:00:00Z", account="GoogleNews")])
@@ -156,6 +189,20 @@ class TwitterFreshnessTests(unittest.TestCase):
 
 
 class ResearchFreshnessTests(unittest.TestCase):
+    def test_live_research_keeps_mid_run_posts_and_rejects_posts_after_fetch(self):
+        from agents.research_agent import ResearchAgent
+
+        with patch("agents.research_agent.datetime") as start_clock:
+            start_clock.now.return_value = NOW
+            agent = ResearchAgent()
+        agent.uranium_tickers = []
+        fresh = {"source": "CEO.ca", "date": "2026-11-25T12:00:30Z", "context_relevant": True}
+        future = {**fresh, "date": "2026-11-25T12:01:01Z"}
+        with patch.object(agent, "_fetch_uranium_sector_news", return_value=[fresh, future]), \
+                patch("timeutil.datetime", FeedCompletionTime):
+            self.assertEqual(agent.get_ceo_ca_signals(), [fresh])
+        self.assertEqual([row["drop_reason"] for row in agent.get_dropped_ceo_signals()], ["future"])
+
     def test_future_qualified_ceo_row_is_excluded_before_rendering_and_mining(self):
         from agents.research_agent import ResearchAgent
 

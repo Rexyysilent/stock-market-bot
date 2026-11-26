@@ -42,6 +42,11 @@ the actual local creation time and assumptions. Repeated reviews retain report
 history; they do not silently change the collector or a trading strategy. Each
 invocation performs one local review. It does not itself install a scheduler.
 
+After an interrupted review, the next run reconciles validated retained
+archives with the ledger even if its requested cutoff is earlier than the
+interrupted attempt's. Archives dated after that cutoff become eligible on a
+later review. Each committed review still sets the earliest cutoff for the next.
+
 For an existing ledger and a separately retained policy, a cache-only report is:
 
 ```sh
